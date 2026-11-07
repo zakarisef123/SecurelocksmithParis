@@ -18,7 +18,8 @@
   if (isNaN(h)) h = new Date().getHours();
   h = h % 24;
   var current = h >= 8 && h < 18 ? "jour" : (h >= 18 && h < 22 ? "soir" : "nuit");
-  var labels = {jour:"journée (8h – 18h)", soir:"soirée (18h – 22h)", nuit:"nuit (22h – 8h)"};
+  function fmtH(x){ return (x % 12 || 12) + (x < 12 ? "am" : "pm"); }
+  var labels = {jour:"day (8am – 6pm)", soir:"evening (6pm – 10pm)", nuit:"night (10pm – 8am)"};
   document.querySelectorAll("[data-tarifs]").forEach(function(card){
     var tabs = card.querySelectorAll(".slot-tabs button"), now = card.querySelector(".slot-now");
     function show(slot){
@@ -30,8 +31,8 @@
       card.querySelectorAll(".pv[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== slot; });
       if (now) {
         now.innerHTML = slot === current
-          ? "<i></i>Il est " + h + "h à Paris : voici nos tarifs de " + labels[slot] + "."
-          : "Tarifs de " + labels[slot] + ". Il est actuellement " + h + "h à Paris.";
+          ? "<i></i>It is " + fmtH(h) + " in Paris: these are our " + labels[slot] + " prices."
+          : "Prices for " + labels[slot] + ". It is currently " + fmtH(h) + " in Paris.";
         now.hidden = false;
       }
     }
@@ -65,7 +66,7 @@
       e.preventDefault();
       if (!form.reportValidity()) return;
       var btn = form.querySelector("button[type=submit]"), label = btn.innerHTML;
-      btn.disabled = true; btn.textContent = "Envoi…";
+      btn.disabled = true; btn.textContent = "Sending…";
       fetch("/", {method: "POST", headers: {"Content-Type": "application/x-www-form-urlencoded"},
                   body: new URLSearchParams(new FormData(form)).toString()})
         .then(function(r){
