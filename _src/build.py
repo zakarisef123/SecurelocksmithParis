@@ -18,7 +18,7 @@ import json
 import os
 import re
 
-from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, MARQUES, SERVICES, TARIFS
+from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF, INCLUS, MARQUES, SERVICES, TARIFS
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -43,7 +43,7 @@ CONFIG = {
     "avis_url": "",
     # Note Google affichée sur le site : à tenir à jour (laisser vide pour ne rien afficher)
     "avis_note": "5,0",
-    "avis_nombre": 95,
+    "avis_nombre": 101,
     # Mesure d'audience (chargée seulement après accord du visiteur)
     "gtm_id": "GTM-N742H7F8",
     "ga_id": "G-GL99Q7CQKN",
@@ -57,6 +57,9 @@ CONFIG = {
     "siret": "",   # 14 chiffres
     "responsable": "",
     "mediateur": "",  # nom et site du médiateur de la consommation
+    # Facultatif, affiché seulement si rempli (ne mettez que des informations exactes et vérifiables)
+    "experience": "",  # ex. "Serruriers depuis 2015"
+    "assurance_rc": "",  # ex. "Assurance responsabilité civile professionnelle AXA, contrat n° …"
 }
 
 TODAY = datetime.date.today().isoformat()
@@ -339,24 +342,27 @@ SLOTS = [("jour", "i-sun", "Journée", "8h – 18h"), ("soir", "i-sunset", "Soir
 def tarif_table():
     urg = [t for t in TARIFS if all(t[1:])]
     trav = [t for t in TARIFS if not all(t[1:])]
-    head = "".join(f'<th scope="col" data-slot="{k}">{ico(i)}<span>{l}</span><small>{h}</small></th>' for k, i, l, h in SLOTS)
 
-    def cell(v):
-        if v.startswith("À partir de"):
-            return f'<small>dès</small>{E(v[12:])}'
-        return E(v)
-    rows = "".join(f'<tr><th scope="row">{E(p)}</th>' + "".join(f'<td data-slot="{k}" data-label="{l}">{cell(v)}</td>' for (k, _, l, _), v in zip(SLOTS, prix)) + "</tr>"
-                   for p, *prix in urg)
-    trv = "".join(f'<li><span>{E(p)}</span><b>{cell(j)}</b></li>' for p, j, *_ in trav)
+    def prix_html(v):
+        apd = v.startswith("À partir de")
+        m = (v[12:] if apd else v).replace(" ", "\u202f").replace("\u202f€", "\u00a0€")
+        return f'<span class="pv-from">{"à partir de" if apd else ""}</span><b class="pv-num">{E(m)}</b>'
+    tabs = "".join(f'<button type="button" role="tab" data-slot="{k}" aria-selected="{"true" if k == "jour" else "false"}">{ico(i)}<span><b>{l}</b><small>{h}</small></span></button>'
+                   for k, i, l, h in SLOTS)
+    rows = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price">'
+                   + "".join(f'<span class="pv" data-slot="{k}"{"" if k == "jour" else " hidden"}>{prix_html(v)}</span>' for (k, _, _, _), v in zip(SLOTS, prix))
+                   + "</span></li>" for p, *prix in urg)
+    trv = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price"><span class="pv">{prix_html(j)}</span></span></li>' for p, j, *_ in trav)
     return f'''<div class="tarifs">
-  <div class="tarif-card main">
-    <div class="tc-head"><div><span class="eyebrow light">Dépannage 24h/24</span><h3>Tarifs selon l'heure d'intervention</h3></div><span class="tc-ttc">Prix TTC</span></div>
-    <div class="table-wrap"><table class="tarif-table" data-tarifs><thead><tr><th scope="col">Prestation</th>{head}</tr></thead><tbody>{rows}</tbody></table></div>
-    <p class="tarif-now" hidden></p>
+  <div class="tarif-card main" data-tarifs>
+    <div class="tc-head"><div><span class="eyebrow light">Dépannage 24h/24</span><h3>Le tarif change selon l'heure</h3></div><span class="tc-ttc">Prix TTC</span></div>
+    <div class="slot-tabs" role="tablist" aria-label="Heure d'intervention">{tabs}</div>
+    <p class="slot-now" hidden></p>
+    <ul class="price-list">{rows}</ul>
   </div>
   <div class="tarif-card">
     <div class="tc-head light"><div><span class="eyebrow">Sur rendez-vous</span><h3>Travaux et pose</h3></div></div>
-    <ul class="tarif-list">{trv}</ul>
+    <ul class="price-list">{trv}</ul>
     <p class="tarif-foot">Prix de départ en journée. Devis détaillé gratuit après visite.</p>
   </div>
 </div>
@@ -448,6 +454,26 @@ def map_embed():
             f'<a class="map-link" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}Voir notre fiche Google</a></div>')
 
 
+def comparatif_block():
+    rows = "".join(f'<li><div class="cmp-bad"><span class="cmp-ic">×</span><p>{E(b)}</p></div><div class="cmp-good">{ico("i-check")}<p>{E(g)}</p></div></li>'
+                   for b, g in COMPARATIF)
+    return f'''<div class="cmp">
+  <div class="cmp-head"><span>Les pratiques abusives à fuir</span><span>Chez {E(NOM)}</span></div>
+  <ul>{rows}</ul>
+</div>'''
+
+
+def inclus_block(titre="Ce qui est compris dans le prix"):
+    lis = "".join(f"<li>{ico('i-check')}<span>{E(i)}</span></li>" for i in INCLUS)
+    return f'<div class="inclus"><h3>{E(titre)}</h3><ul>{lis}</ul></div>'
+
+
+def engagements_short():
+    lis = "".join(f'<li>{ico(i)}<span><b>{E(t.split(". ", 1)[1])}</b></span></li>' for i, t, _ in CHARTE[:6])
+    return f'''<div class="eng-short"><h3>Nos engagements, par écrit</h3><ul>{lis}</ul>
+  <a class="text-link" href="/nos-engagements/">Lire notre charte de confiance {ico("i-arrow", "ic sm")}</a></div>'''
+
+
 def company_card():
     rows = [("i-building", "Entreprise", f"{E(CONFIG['raison_sociale'])}")]
     if CONFIG["siret"]:
@@ -455,6 +481,10 @@ def company_card():
     rows += [("i-pin", "Siège", E(adresse_txt())), ("i-phone", "Téléphone", f'<a href="{TEL_HREF}">{TEL}</a>'),
              ("i-mail", "E-mail", f'<a href="mailto:{CONFIG["email"]}">{CONFIG["email"]}</a>'),
              ("i-card", "Paiement", "Carte bancaire, espèces, virement")]
+    if CONFIG["experience"]:
+        rows.insert(1, ("i-award", "Expérience", E(CONFIG["experience"])))
+    if CONFIG["assurance_rc"]:
+        rows.append(("i-shield", "Assurance", E(CONFIG["assurance_rc"])))
     lis = "".join(f'<li>{ico(i)}<span><small>{l}</small>{v}</span></li>' for i, l, v in rows)
     return f'''<div class="company">
   <div class="company-head"><img src="/assets/img/logo-112.webp" width="56" height="56" alt=""><div><b>{E(NOM)}</b><small>Fiche d'identité</small></div></div>
@@ -466,8 +496,8 @@ def company_card():
 # ---------------------------------------------------------------------------
 # Gabarit de page
 # ---------------------------------------------------------------------------
-NAV = [("Services", "/services/"), ("Tarifs", "/tarifs/"), ("Arrondissements", "/serrurier-paris/"),
-       ("Avis", "/avis/"), ("Conseils", "/conseils/"), ("Contact", "/contact/")]
+NAV = [("Services", "/services/"), ("Tarifs", "/tarifs/"), ("Nos engagements", "/nos-engagements/"),
+       ("Arrondissements", "/serrurier-paris/"), ("Avis", "/avis/"), ("Contact", "/contact/")]
 SITEMAP = []
 
 
@@ -503,7 +533,7 @@ def footer():
         <p class="foot-id">{E(CONFIG["raison_sociale"])}<br>{E(adresse_txt())}{siret}</p>
       </div>
       <div><h4>Services</h4><ul>{svc}</ul></div>
-      <div><h4>Informations</h4><ul><li><a href="/tarifs/">Tarifs</a></li><li><a href="/assurance/">Assurance et remboursement</a></li><li><a href="/avis/">Avis clients</a></li><li><a href="/questions-frequentes/">Questions fréquentes</a></li><li><a href="/conseils/">Conseils</a></li><li><a href="/contact/">Contact</a></li></ul></div>
+      <div><h4>Informations</h4><ul><li><a href="/nos-engagements/">Nos engagements</a></li><li><a href="/tarifs/">Tarifs</a></li><li><a href="/assurance/">Assurance et remboursement</a></li><li><a href="/avis/">Avis clients</a></li><li><a href="/questions-frequentes/">Questions fréquentes</a></li><li><a href="/conseils/">Conseils</a></li><li><a href="/contact/">Contact</a></li></ul></div>
       <div><h4>Contact</h4><ul class="foot-contact"><li><a href="{TEL_HREF}" data-track="call_footer">{ico("i-phone", "ic sm")}{TEL}</a></li><li><a href="mailto:{CONFIG["email"]}">{ico("i-mail", "ic sm")}{CONFIG["email"]}</a></li><li><a href="{CONFIG["instagram"]}" target="_blank" rel="noopener me">{ico("i-insta", "ic sm")}Instagram</a></li></ul>
         <h4 class="mt">Arrondissements</h4><div class="arr-mini">{arr}</div></div>
     </div>
@@ -772,9 +802,22 @@ def build_home():
       <span class="eyebrow">Pourquoi nous faire confiance</span>
       <h2>Un serrurier parisien identifié, qui s'engage par écrit</h2>
       <p class="lead-dark">Le dépannage en serrurerie a mauvaise réputation, souvent à juste titre. Chez {E(NOM)}, nous avons fait le choix inverse : une entreprise identifiée, des tarifs publics, et des engagements que vous pouvez vérifier.</p>
+      <p class="about-p">Quand on est bloqué devant sa porte, souvent tard le soir, on n'a ni le temps ni l'envie de comparer. C'est précisément dans ces moments-là que les mauvaises surprises arrivent. Notre réponse est simple : vous connaissez le prix avant que le serrurier ne parte, vous signez un devis avant qu'il ne commence, et vous recevez une facture détaillée à la fin. Pas de « supplément » découvert sur place, pas de serrure changée sans raison.</p>
+      <p class="about-p">Nous intervenons uniquement à Paris. Cette spécialisation nous permet d'arriver vite et de bien connaître les portes parisiennes : portes palières d'immeubles haussmanniens, portes blindées multipoints, serrures anciennes, résidences récentes à badge.</p>
       {engagements()}
+      <a class="btn btn-navy" style="margin-top:34px" href="/nos-engagements/">{ico("i-file")}<span>Lire notre charte de confiance</span></a>
     </div>
     <div class="about-side">{about_visual}{company_card() if equipe else ""}</div>
+  </div>
+</section>
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head split">
+      <div><span class="eyebrow">Arnaques au serrurier</span><h2>Ce que vous ne verrez jamais chez nous</h2></div>
+      <p>Le dépannage en serrurerie fait partie des secteurs qui suscitent le plus de signalements auprès de la répression des fraudes (DGCCRF). Voici, point par point, les pratiques abusives les plus courantes et la façon dont nous travaillons à la place.</p>
+    </div>
+    {comparatif_block()}
+    <p class="cmp-foot">Un doute sur un dépanneur ? Lisez notre guide <a href="/conseils/reconnaitre-serrurier-honnete/">Comment reconnaître un serrurier honnête</a>.</p>
   </div>
 </section>
 <section class="sec" id="tarifs">
@@ -873,6 +916,9 @@ def build_services():
   {secs}
   <h2>{E(s["court"])} : choisissez votre arrondissement</h2>
   {arr_grid(link=lambda z: combo_url(s, z), cls="arr-grid compact")}
+  <h2>Un prix clair, tout compris</h2>
+  <p>Le tarif qui vous est annoncé au téléphone est un prix TTC, main d'œuvre comprise. Il est confirmé par un devis écrit avant l'intervention : si la situation sur place est différente de ce que vous avez décrit, le serrurier vous l'explique et vous propose un nouveau devis, que vous êtes libre de refuser.</p>
+  <div class="trust-duo">{inclus_block()}{engagements_short()}</div>
   <h2>Questions fréquentes</h2>
   {faq_html(s["faq"])}
   <h2>Nos autres services</h2><div class="chips">{others}</div>
@@ -957,6 +1003,7 @@ def build_arr_pages():
     <div>{ico("i-pin")}<h3>Population</h3><p>{fmt_int(z["pop"])} habitants (INSEE)</p></div>
   </div>
   <h2>Pourquoi nous appeler {E(z["a"])} ?</h2>
+  <p>Quand on cherche un serrurier en urgence {E(z["a_court"])}, on tombe souvent sur des numéros anonymes et des prix d'appel irréalistes. Chez {E(NOM)}, vous savez à qui vous parlez : une entreprise identifiée, des tarifs publiés, un devis signé avant chaque intervention et des avis clients publics sur Google.</p>
   <ul class="check-list">
     <li>{ico("i-check")}<span><strong>Prix annoncé au téléphone</strong>, puis devis écrit signé avant l'intervention.</span></li>
     <li>{ico("i-check")}<span><strong>Ouverture sans casse</strong> dans la grande majorité des cas.</span></li>
@@ -1086,6 +1133,7 @@ def build_combo_pages():
   <ol class="steps-list">{etapes}</ol>
   <h2>{E(t2)}</h2><p>{c2}</p>
   <div class="note-box tip">{ico("i-award")}<p><strong>Le conseil du serrurier :</strong> {E(loc["conseil"])}</p></div>
+  <div class="trust-duo">{inclus_block()}{engagements_short()}</div>
   <h2>Questions fréquentes</h2>
   {faq_html(faq)}
   <h2>Autres services {E(z["a_court"])}</h2>
@@ -1243,6 +1291,27 @@ def build_static():
            f"Politique de confidentialité | {NOM}", f"Politique de confidentialité du site {NOM}.", aside=False)
 
 
+def build_charte():
+    items = "".join(f'<div class="charte-item">{ico(i)}<div><h2>{E(t)}</h2><p>{E(d)}</p></div></div>' for i, t, d in CHARTE)
+    body = hero([("Nos engagements", None)], "Notre charte de confiance",
+                "Huit engagements concrets, appliqués à chaque intervention, de jour comme de nuit. Vous pouvez nous les rappeler à tout moment.",
+                kicker="Transparence")
+    body += f'''<section class="sec"><div class="wrap layout"><article class="prose">
+  <p class="intro">Le dépannage en serrurerie souffre d'une mauvaise réputation : prix d'appel trompeurs, factures gonflées, serrures changées sans raison. Nous avons bâti {E(NOM)} sur le principe inverse. Voici, noir sur blanc, ce à quoi nous nous engageons envers chaque client.</p>
+  <div class="charte">{items}</div>
+  <h2>Ce que vous ne verrez jamais chez nous</h2>
+  {comparatif_block()}
+  <h2>Vos droits face à un dépanneur</h2>
+  <p>Pour un dépannage à domicile, le professionnel doit vous informer de ses tarifs et vous remettre un devis détaillé avant l'intervention (arrêté du 24 janvier 2017). Vous pouvez refuser ce devis. À la fin, une note ou facture détaillée doit vous être remise. En cas de litige, vous pouvez saisir gratuitement le médiateur de la consommation indiqué dans nos <a href="/mentions-legales/">mentions légales</a>, ou signaler une pratique sur le site public SignalConso.</p>
+  <h2>Vérifiez par vous-même</h2>
+  <p>Avant de nous appeler, consultez <a href="{E(MAPS)}" target="_blank" rel="noopener">nos {CONFIG["avis_nombre"]} avis Google</a>, notre <a href="/tarifs/">grille tarifaire</a> et nos <a href="/mentions-legales/">informations légales</a>. Et si un point de cette charte n'était pas respecté, dites-le-nous : c'est la seule façon de rester à la hauteur.</p>
+</article>{side_box("Un prix clair, dès l'appel", "Décrivez votre situation : le tarif vous est annoncé avant tout déplacement.")}</div></section>'''
+    body += reviews_block() + contact_band(source="/nos-engagements/")
+    page("/nos-engagements/", f"Nos engagements : charte de confiance | {NOM}",
+         "Prix annoncé avant le déplacement, devis signé avant travaux, pas de casse inutile, facture détaillée : la charte de confiance de notre serrurerie à Paris.",
+         body, [ld_business(), ld_crumbs([("Nos engagements", "/nos-engagements/")])], active="/nos-engagements/")
+
+
 def build_conseils():
     body = hero([("Conseils", None)], "Conseils de serrurier <em>pour les Parisiens</em>",
                 "Guides pratiques pour réagir en cas d'urgence, sécuriser votre logement et éviter les mauvaises surprises.")
@@ -1293,7 +1362,7 @@ def build_misc():
     page("/404.html", f"Page introuvable | {NOM}", "Cette page n'existe pas.", body, robots="noindex, follow")
 
     groups = [("Pages principales", [("Accueil", "/"), ("Services", "/services/"), ("Arrondissements", "/serrurier-paris/"), ("Tarifs", "/tarifs/"),
-                                     ("Assurance", "/assurance/"), ("Avis clients", "/avis/"), ("Questions fréquentes", "/questions-frequentes/"),
+                                     ("Nos engagements", "/nos-engagements/"), ("Assurance", "/assurance/"), ("Avis clients", "/avis/"), ("Questions fréquentes", "/questions-frequentes/"),
                                      ("Conseils", "/conseils/"), ("Contact", "/contact/")]),
               ("Services", [(s["nom"], svc_url(s)) for s in SERVICES]),
               ("Arrondissements", [(f"Serrurier {z['court']}", z["url"]) for z in ARR]),
@@ -1370,6 +1439,7 @@ def main():
     build_arr_pages()
     build_combo_pages()
     build_static()
+    build_charte()
     build_conseils()
     build_misc()
     build_seo()
