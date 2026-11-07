@@ -523,3 +523,17 @@ INCLUS = [
     "A detailed invoice for your insurer",
     "VAT: our prices are always shown including VAT",
 ]
+
+# ---------------------------------------------------------------------------
+# Réalisations avant / après (pages services) : déposez les photos dans assets/img/realisations/
+# Format : "slug-du-service": [{"before": "fichier-avant.jpg", "after": "fichier-apres.jpg",
+#                              "caption": "Paris 11th · 3-point to 7-point armored door, fitted in one day"}]
+# Uniquement de vraies photos de chantiers du client.
+# ---------------------------------------------------------------------------
+REALISATIONS = {}
+
+# ---------------------------------------------------------------------------
+# Interventions récentes par arrondissement (pages arrondissement), sans nom de client.
+# Format : 11: [("Nov 2026", "Rue de la Roquette", "Slammed door opened without damage in 8 min")]
+# ---------------------------------------------------------------------------
+INTERVENTIONS = {}

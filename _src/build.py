@@ -17,7 +17,8 @@ import json
 import os
 import re
 
-from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF, INCLUS, MARQUES, SERVICES, TARIFS, URGENCES
+from data import (ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF, INCLUS, INTERVENTIONS, MARQUES, REALISATIONS,
+                  SERVICES, TARIFS, URGENCES)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -906,6 +907,8 @@ def engagements():
 
 def build_home():
     visual = photo("home", f"{NOM}, locksmith in Paris", "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
+    if not visual and os.path.exists(os.path.join(ROOT, "assets", "img", "photos", "hero-round.webp")):
+        visual = '<picture class="emblem photo-round"><img src="/assets/img/photos/hero-round.webp" width="440" height="440" alt="Locksmith opening a front door in Paris" fetchpriority="high"></picture>'
     if not visual:
         visual = '<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="Secure Locksmith Paris logo" fetchpriority="high"></picture>'
     equipe = photo("team", "Locksmith advising customers at their front door", "about-photo")
@@ -1039,6 +1042,28 @@ def build_home():
 # ---------------------------------------------------------------------------
 # Services
 # ---------------------------------------------------------------------------
+def before_after(s):
+    """Curseur avant / après pour chaque réalisation fournie (assets/img/realisations/)."""
+    items = []
+    for r in REALISATIONS.get(s["slug"], []):
+        b, a = (f"/assets/img/realisations/{r[k]}" for k in ("before", "after"))
+        if not all(os.path.exists(os.path.join(ROOT, x.lstrip("/"))) for x in (b, a)):
+            continue
+        items.append(f'''<figure class="ba">
+  <div class="ba-frame" style="--pos:50%">
+    <img src="{a}" alt="After: {E(r.get("caption", s["nom"]))}" loading="lazy" decoding="async">
+    <div class="ba-before"><img src="{b}" alt="Before" loading="lazy" decoding="async"></div>
+    <span class="ba-tag l">Before</span><span class="ba-tag r">After</span>
+    <span class="ba-handle" aria-hidden="true"></span>
+    <input class="ba-range" type="range" min="0" max="100" value="50" aria-label="Compare before and after">
+  </div>
+  <figcaption>{E(r.get("caption", ""))}</figcaption>
+</figure>''')
+    if not items:
+        return ""
+    return f'<h2>Before &amp; after: our recent work</h2><p>Slide to compare. These are real jobs carried out by our team in Paris.</p><div class="ba-grid">{"".join(items)}</div>'
+
+
 def build_services():
     items = (f'<h2 class="group-title">{ico("i-clock")}Emergency call-outs <small>24/7</small></h2>' + svc_rows(SVC_URG, "h3")
              + f'<h2 class="group-title">{ico("i-shield")}Works, armored doors &amp; installation <small>by appointment</small></h2>' + svc_rows(SVC_TRAV, "h3"))
@@ -1059,10 +1084,11 @@ def build_services():
         content = f'''<article class="prose">
   <p class="intro">{s["intro"]}</p>
   {ph}
+  {before_after(s)}
   <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}. The exact price is given on the phone and confirmed in a written quote before any work. <a href="/prices/">Day, evening and night prices</a></p></div>
   {secs}
   <h2>{E(s["court"])}: choose your arrondissement</h2>
-  {arr_grid(link=lambda z: combo_url(s, z), cls="arr-grid compact")}
+  {arr_grid(link=lambda z: f"{z['url']}#{s['slug']}", cls="arr-grid compact")}
   <h2>A clear, all-inclusive price</h2>
   <p>The price you are given on the phone includes VAT and labor. It is confirmed in a written quote before any work: if the situation on site turns out to be different from what you described, the locksmith explains why and offers a new quote, which you are free to refuse.</p>
   <div class="trust-duo">{inclus_block()}{engagements_short()}</div>
@@ -1104,6 +1130,30 @@ def arr_faq(z):
     ]
 
 
+def local_services(z, i, lst):
+    cards = []
+    for s in lst:
+        k = i + SERVICES.index(s)
+        loc = SVC_LOCAL[s["slug"]]
+        intro = loc["intros"][k % 3].format(a=z["a"], nom=E(NOM))
+        prix = f'from <b>{eur(s["prix_num"])}</b>' if s["prix_num"] else "<b>free quote</b>"
+        cards.append(f'''<article class="svc-local" id="{s["slug"]}">
+  <div class="sl-head"><span class="svc-ic">{ico(s["icon"])}</span><div><h3>{E(s["nom"])}</h3><span class="sl-price">{prix}</span></div></div>
+  <p>{intro}</p>
+  <p class="sl-tip"><strong>Tip:</strong> {E(loc["conseil"])}</p>
+  <div class="sl-acts">{btn_quote(s["court"], "Get a quote", "btn-q")}<a class="text-link" href="{svc_url(s)}">How we work {ico("i-arrow", "ic sm")}</a></div>
+</article>''')
+    return '<div class="sl-grid">' + "".join(cards) + "</div>"
+
+
+def recent_jobs(z):
+    jobs = INTERVENTIONS.get(z["n"], [])
+    if not jobs:
+        return ""
+    lis = "".join(f'<li><small>{E(d)} · {E(rue)}</small><b>{E(txt)}</b></li>' for d, rue, txt in jobs)
+    return f'<h2>Recent jobs {E(z["a"])}</h2><ul class="jobs">{lis}</ul>'
+
+
 def build_arr_pages():
     body = hero([("Arrondissements", None)], "Locksmith in all <em>20 Paris arrondissements</em>",
                 "Choose your arrondissement: prices, neighborhoods covered and services available near you.", kicker="Paris 75")
@@ -1129,8 +1179,6 @@ def build_arr_pages():
   <div><small>Availability</small><b>24/7</b></div>
   <div><small>Average arrival</small><b>≈ 30 min</b></div>
 </div>'''
-        svc = "".join(f'''<div class="svc-row"><span class="svc-ic">{ico(s["icon"])}</span>
-  <div><h3><a class="svc-link" href="{combo_url(s, z)}">{E(s["nom"])} {E(z["a_court"])}</a></h3><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}</span>{btn_quote(s["court"], "Quote", "btn-q")}</div>''' for s in SERVICES)
         nav_arr = ""
         if z["prev"]:
             nav_arr += f'<a href="{z["prev"]["url"]}">← Locksmith {E(z["prev"]["court"])}</a>'
@@ -1141,7 +1189,11 @@ def build_arr_pages():
   <p class="intro">{intro}</p>
   {facts}
   <h2>Our services {E(z["a"])}</h2>
-  {'<div class="svc-rows">' + svc + '</div>'}
+  <h3 class="group-title">{ico("i-clock")}Emergency call-outs <small>24/7</small></h3>
+  {local_services(z, i, SVC_URG)}
+  <h3 class="group-title">{ico("i-shield")}Works, armored doors &amp; installation <small>by appointment</small></h3>
+  {local_services(z, i, SVC_TRAV)}
+  {recent_jobs(z)}
   <h2>Neighborhoods covered in the {z["num"]}</h2>
   <p>We cover the arrondissement's four administrative quarters: <strong>{E(et(z["quartiers"]))}</strong>. Whether you live near {E(et(z["reperes"]))}, a locksmith can be with you quickly.</p>
   <div class="local">
@@ -1263,80 +1315,6 @@ SVC_LOCAL = {
         "conseil": "If your whole key ring is gone, have your front-door cylinder and cellar lock checked during the same visit.",
     },
 }
-
-ETAPES = [
-    ("Call", "you describe the situation and get the price"),
-    ("Travel", "the locksmith heads to your address {a} and lets you know when he is close"),
-    ("Quote", "he confirms the price in writing and you sign before he starts"),
-    ("Work", "careful work, then a detailed invoice for your insurer"),
-]
-
-
-def combo_faq(s, z, k):
-    return [
-        (f"How much does {s['phrase']} cost {z['a_court']}?", f"This service is available {prix_txt(s)} {z['a']}. The exact price depends on your door and lock: it is given on the phone, then confirmed by a signed quote."),
-        (f"Can you come quickly {z['a']}?", "Yes, in about 30 minutes on average, 24/7, nights, weekends and public holidays included."),
-        s["faq"][k % len(s["faq"])],
-    ]
-
-
-def build_combo_pages():
-    for si, s in enumerate(SERVICES):
-        loc = SVC_LOCAL[s["slug"]]
-        for i, z in enumerate(ARR):
-            k = i + si
-            path = combo_url(s, z)
-            intro = loc["intros"][k % 3].format(a=z["a"], nom=E(NOM))
-            t1, c1 = s["sections"][k % 3]
-            t2, c2 = s["sections"][(k + 1) % 3]
-            etapes = "".join(f"<li><b>{E(t)}</b><span>{E(d.format(a=z['a']))}</span></li>" for t, d in ETAPES)
-            faq = combo_faq(s, z, k)
-            others = "".join(f'<a class="chip" href="{combo_url(o, z)}">{ico(o["icon"])}{E(o["court"])}</a>' for o in SERVICES if o is not s)
-            voisins = [v for v in (z["prev"], z["next"]) if v]
-            vlinks = "".join(f'<a class="chip" href="{combo_url(s, v)}">{ico(s["icon"])}{E(s["court"])} {E(v["court"])}</a>' for v in voisins)
-            content = f'''<article class="prose">
-  <p class="intro">{intro}</p>
-  <div class="facts">
-    <div><small>Price</small><b>{E(s["prix"])}</b></div>
-    <div><small>Postcode</small><b>{E(" / ".join(z["cp"]))}</b></div>
-    <div><small>Availability</small><b>24/7</b></div>
-    <div><small>Average arrival</small><b>≈ 30 min</b></div>
-  </div>
-  <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}, given on the phone and confirmed by a signed quote. No hidden fees. <a href="/prices/">See all our prices →</a></p></div>
-  <h2>{E(s["court"])} in the {z["num"]}: where do we work?</h2>
-  <p>Everywhere in the arrondissement ({E(z["surnom"])}): the <strong>{E(et(z["quartiers"]))}</strong> quarters, around {E(et(z["reperes"]))} and the metro stations {E(et(z["metros"]))}. The area mostly has {E(z["habitat"])}: our locksmiths are equipped for these, from old doors to multi-point armored doors.</p>
-  <h2>{E(t1)}</h2><p>{c1}</p>
-  <h2>How the call-out works</h2>
-  <ol class="steps-list">{etapes}</ol>
-  <h2>{E(t2)}</h2><p>{c2}</p>
-  <div class="note-box tip">{ico("i-award")}<p><strong>Locksmith's tip:</strong> {E(loc["conseil"])}</p></div>
-  <div class="trust-duo">{inclus_block()}{engagements_short()}</div>
-  <h2>Frequently asked questions</h2>
-  {faq_html(faq)}
-  <h2>Other services {E(z["a_court"])}</h2>
-  <div class="chips">{others}<a class="chip" href="{z["url"]}">{ico("i-pin")}Locksmith {E(z["court"])}</a></div>
-  <h2>Neighboring arrondissements</h2>
-  <div class="chips">{vlinks}<a class="chip" href="{svc_url(s)}">{ico(s["icon"])}{E(s["court"])} across Paris</a></div>
-</article>'''
-            h1 = f'{E(s["nom"])} <em>{E(z["a_court"])}</em>'
-            lead = f'{E(s["resume"])} Available 24/7 {E(z["a"])}, {prix_txt(s)}.'
-            crumb_items = [("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], None)]
-            body = hero(crumb_items, h1, lead, ticks(["Price given before we travel", "Signed quote", "Nights & weekends"], "ticks light inline"),
-                        kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z), card=hero_card(prix_txt(s), s["court"]), quote=s["court"])
-            body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"{s["court"]} {z["court"]}", quote=s["court"])}</div></section>'
-            body += contact_band(f"{s['court']} {z['a_court']}?", "Call us: price given on the phone, locksmith on the way straight away.",
-                                 source=path, service=s["court"], arr=z["court"])
-            prix_court = f"from {eur(s['prix_num'])}" if s["prix_num"] else "free quote"
-            title = f'{s["court"]} {z["court"]} ({z["cp"][0]}) – {prix_court}, 24/7'
-            desc = (f'{s["nom"]} {z["a_court"]} ({z["cp"][0]}), 24/7, {prix_txt(s)}. '
-                    f'Price given before we travel, signed quote, invoice for your insurer. ☎ {TEL}')
-            ld = [ld_business(), ld_crumbs([("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], path)]), ld_faq(faq),
-                  {"@context": "https://schema.org", "@type": "Service", "name": f"{s['nom']} {z['a_court']}", "serviceType": s["nom"],
-                   "url": URL + path, "provider": {"@id": BID},
-                   "areaServed": {"@type": "AdministrativeArea", "name": z["nom"], "postalCode": z["cp"][0]},
-                   **({"offers": {"@type": "Offer", "priceSpecification": {"@type": "PriceSpecification", "minPrice": s["prix_num"], "priceCurrency": "EUR"}}} if s["prix_num"] else {})}]
-            page(path, title, desc, body, ld, active="/locksmith-paris/")
-
 
 # ---------------------------------------------------------------------------
 # Simple pages
@@ -1475,6 +1453,55 @@ URG_FAQ = [
 ]
 
 
+# Guide d'urgence : situation -> prix par tranche horaire (None = sur devis), service lié, conseil
+GUIDE = [
+    ("slammed", "Door slammed shut, keys inside", "door-opening", (110, 150, 220), False,
+     "Don't try a credit card or screwdriver on the latch: you would damage the strike plate. Most slammed doors open in minutes with no damage."),
+    ("locked", "Door locked with a key, keys lost", "door-opening", (180, 240, 280), True,
+     "Ask the caretaker (gardien) or a neighbor whether they keep a spare. Opening without damage is still possible in many cases."),
+    ("jammed", "Lock jammed, key won't turn", "jammed-lock", (180, 240, 280), False,
+     "Stop forcing the key: you could snap it inside the cylinder. Don't spray oil into the lock."),
+    ("broken", "Key broken in the lock", "broken-key", None, False,
+     "Don't push the piece further in and never use glue. If it sticks out, pull it straight out with fine pliers."),
+    ("burglary", "Burglary, door forced open", "break-in-repair", None, False,
+     "Don't go in if someone may still be inside: call the police (17). Don't touch anything before they come."),
+    ("stolen", "Keys stolen, change the cylinder", "lock-replacement", (160, 200, 230), True,
+     "If your ID or address was stolen with the keys, have the cylinder changed today."),
+    ("smart", "Smart lock not responding", "smart-lock", None, False,
+     "Look for your mechanical backup key and check whether the app shows a low battery."),
+    ("cellar", "Cellar broken into", "cellar-door", None, False,
+     "Tell the building manager (syndic): other cellars may have been hit too."),
+]
+
+
+def guide_block():
+    data = {k: {"label": l, "url": svc_url(SVC_BY_SLUG[slug]), "service": SVC_BY_SLUG[slug]["court"], "prices": p, "from": f, "tip": t}
+            for k, l, slug, p, f, t in GUIDE}
+    opts = "".join(f'<button type="button" class="gd-opt" data-sit="{k}" aria-pressed="false">{ico(SVC_BY_SLUG[slug]["icon"])}<span>{E(l)}</span></button>'
+                   for k, l, slug, *_ in GUIDE)
+    slots = "".join(f'<button type="button" class="gd-slot" data-slot="{k}" aria-pressed="{"true" if k == "jour" else "false"}">{ico(i)}<span><b>{l}</b><small>{h}</small></span></button>'
+                    for k, i, l, h in SLOTS)
+    return f'''<div class="guide" data-guide>
+  <div class="gd-step">
+    <p class="gd-q"><b>1</b>What happened?</p>
+    <div class="gd-opts">{opts}</div>
+  </div>
+  <div class="gd-step">
+    <p class="gd-q"><b>2</b>When do you need us? <small class="gd-auto" hidden></small></p>
+    <div class="gd-slots">{slots}</div>
+  </div>
+  <div class="gd-result" aria-live="polite">
+    <div class="gd-empty">{ico("i-arrow")}<span>Choose your situation above to see your price and what to do now.</span></div>
+    <div class="gd-out" hidden>
+      <div class="gd-price"><small data-g="slotlabel"></small><b data-g="price"></b><span data-g="note"></span></div>
+      <div class="gd-tip">{ico("i-award")}<p><strong>What to do now:</strong> <span data-g="tip"></span></p></div>
+      <div class="gd-acts">{btn_call("Call now · " + TEL, cls="btn btn-gold btn-lg", track="call_guide")}<button type="button" class="btn btn-navy btn-lg" data-quote="" data-g="quote">{ico("i-mail")}<span>Call me back</span></button><a class="btn btn-outline btn-lg" data-g="more" href="/services/">{ico("i-file")}<span>How we handle it</span></a></div>
+    </div>
+  </div>
+  <script type="application/json" id="guide-data">{json.dumps(data, ensure_ascii=False)}</script>
+</div>'''
+
+
 def build_urgence():
     steps = "".join(f"<li><b>{i}</b><div><h3>{E(t)}</h3><p>{E(d)}</p></div></li>" for i, (t, d) in enumerate([
         ("Stay calm and safe", "If someone may still be inside after a break-in, don't go in and call the police (17)."),
@@ -1486,9 +1513,9 @@ def build_urgence():
                 "Lockout, broken key, jammed lock, burglary: a locksmith comes right away anywhere in the 20 arrondissements, at night, at weekends and on public holidays. Price given before we travel.",
                 ticks(["Arrival ≈ 30 min", "Price given on the phone", "Signed quote before work"], "ticks light inline"), kicker="Immediate call-out", bg="tour-eiffel")
     body += f'''<section class="sec"><div class="wrap">
-  <div class="sec-head split"><div><span class="eyebrow">Your situation</span><h2>What is your emergency?</h2></div>
-  <p>Choose your situation to see how we handle it and what to do meanwhile. Either way, call us: we will guide you on the phone.</p></div>
-  {urgences_block(light=True)}
+  <div class="sec-head split"><div><span class="eyebrow">Your price in 2 clicks</span><h2>What is your emergency?</h2></div>
+  <p>Answer two questions: you get the price that applies right now and what to do while you wait. Then call us, or leave your number and we call you back.</p></div>
+  {guide_block()}
 </div></section>
 <section class="sec soft"><div class="wrap layout"><article class="prose">
   <h2>What to do in an emergency</h2>
@@ -1580,8 +1607,6 @@ def build_misc():
               ("Services", [(s["nom"], svc_url(s)) for s in SERVICES]),
               ("Arrondissements", [(f"Locksmith {z['court']}", z["url"]) for z in ARR]),
               ("Advice", [(a["court"], f"/advice/{a['slug']}/") for a in ARTICLES])]
-    for s in SERVICES:
-        groups.append((s["nom"], [(f"{s['court']} {z['court']}", combo_url(s, z)) for z in ARR]))
     prose = "".join(f'<h2>{E(t)}</h2><div class="chips">' + "".join(f'<a class="chip" href="{u}">{E(l)}</a>' for l, u in lst) + "</div>" for t, lst in groups)
     simple("/site-map/", "Site map", "Site map", f"Every page of the {NOM} website.", prose,
            f"Site map | {NOM}", f"Site map of {NOM}: services, arrondissements, advice.", aside=False)
@@ -1615,7 +1640,9 @@ def build_redirects():
     rules += [(f"/services/{fr}/", f"/services/{en}/") for fr, en in FR_SVC.items()]
     for z in ARR:
         rules.append((f"/{z['fr_slug']}/", z["url"]))
-        rules += [(f"/{z['fr_slug']}/{fr}/", f"/{z['slug']}/{en}/") for fr, en in FR_SVC.items()]
+        rules += [(f"/{z['fr_slug']}/{fr}/", f"{z['url']}#{en}") for fr, en in FR_SVC.items()]
+        # anciennes pages « service × arrondissement », fusionnées dans la page de l'arrondissement
+        rules += [(combo_url(s, z), f"{z['url']}#{s['slug']}") for s in SERVICES]
     lines = []
     for old, new in rules:
         lines.append(f"{old}  {new}  301")
@@ -1668,7 +1695,7 @@ def build_seo():
 ## Arrondissements
 {arr}
 
-Each service has a page per arrondissement: {URL}/<arrondissement>/<service>/ (e.g. {URL}{combo_url(SERVICES[0], ARR[14])}).
+Each arrondissement page lists every service with its price and local details (e.g. {URL}{ARR[14]["url"]}#door-opening).
 """)
     write("site.webmanifest", json.dumps({
         "name": f"{NOM} – 24/7 locksmith", "short_name": "Secure Locksmith", "lang": "en", "start_url": "/",
@@ -1681,7 +1708,6 @@ def main():
     build_home()
     build_services()
     build_arr_pages()
-    build_combo_pages()
     build_static()
     build_urgence()
     build_charte()
