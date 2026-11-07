@@ -11,17 +11,32 @@
     });
   }
 
-  // Tranche horaire actuelle (heure de Paris) : mise en avant du bon tarif
+  // Grille tarifaire : onglet de l'heure actuelle à Paris, changement manuel possible
   var h;
   try { h = parseInt(new Intl.DateTimeFormat("fr-FR", {hour:"numeric", hour12:false, timeZone:"Europe/Paris"}).format(new Date()), 10); }
   catch(e) { h = new Date().getHours(); }
   if (isNaN(h)) h = new Date().getHours();
-  var slot = h >= 8 && h < 18 ? "jour" : (h >= 18 && h < 22 ? "soir" : "nuit");
-  var labels = {jour:"journée", soir:"soirée", nuit:"nuit"};
-  document.querySelectorAll('[data-slots] [data-slot="' + slot + '"], [data-tarifs] [data-slot="' + slot + '"]').forEach(function(el){ el.classList.add("now"); });
-  document.querySelectorAll(".tarif-now").forEach(function(p){
-    p.textContent = "Il est " + h + "h à Paris : la colonne « " + labels[slot] + " » est mise en avant.";
-    p.hidden = false;
+  h = h % 24;
+  var current = h >= 8 && h < 18 ? "jour" : (h >= 18 && h < 22 ? "soir" : "nuit");
+  var labels = {jour:"journée (8h – 18h)", soir:"soirée (18h – 22h)", nuit:"nuit (22h – 8h)"};
+  document.querySelectorAll("[data-tarifs]").forEach(function(card){
+    var tabs = card.querySelectorAll(".slot-tabs button"), now = card.querySelector(".slot-now");
+    function show(slot){
+      tabs.forEach(function(t){
+        var on = t.getAttribute("data-slot") === slot;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.classList.toggle("is-now", t.getAttribute("data-slot") === current);
+      });
+      card.querySelectorAll(".pv[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== slot; });
+      if (now) {
+        now.innerHTML = slot === current
+          ? "<i></i>Il est " + h + "h à Paris : voici nos tarifs de " + labels[slot] + "."
+          : "Tarifs de " + labels[slot] + ". Il est actuellement " + h + "h à Paris.";
+        now.hidden = false;
+      }
+    }
+    tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.getAttribute("data-slot")); }); });
+    show(current);
   });
 
   // Mesure : Google Ads + événements GTM

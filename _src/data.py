@@ -352,3 +352,52 @@ ARTICLES = [
         ],
     },
 ]
+
+# ---------------------------------------------------------------------------
+# Textes de confiance
+# ---------------------------------------------------------------------------
+# Comparatif : pratiques abusives du secteur / notre façon de travailler
+COMPARATIF = [
+    ("Un prix « à partir de 19 € » au téléphone, puis une facture de plusieurs centaines d'euros.",
+     "Un prix réel annoncé au téléphone, d'après votre description, et nos tarifs publiés sur ce site."),
+    ("Le travail commence avant que vous ayez signé quoi que ce soit.",
+     "Un devis écrit et signé avant toute intervention. Sans votre signature, rien ne commence."),
+    ("La serrure est percée ou changée alors que la porte était simplement claquée.",
+     "Ouverture sans casse en priorité. Un perçage n'est proposé qu'en dernier recours, expliqué et chiffré."),
+    ("Un paiement exigé en espèces, sans facture ou avec une facture illisible.",
+     "Carte bancaire, espèces ou virement, au choix, avec une facture détaillée à chaque fois."),
+    ("Un numéro trouvé sur un autocollant qui imite la mairie ou le syndic.",
+     "Une entreprise identifiée : nom, adresse, fiche Google et avis publics vérifiables."),
+    ("Une plateforme qui revend votre appel au serrurier le plus offrant.",
+     "Un serrurier qui décroche lui-même et se déplace en personne, de jour comme de nuit."),
+]
+
+# Charte de confiance (page /nos-engagements/)
+CHARTE = [
+    ("i-euro", "1. Le prix vous est annoncé avant le déplacement",
+     "Au téléphone, nous vous posons quelques questions simples : la porte est-elle claquée ou fermée à clé ? Blindée ou non ? Quel type de serrure ? À partir de vos réponses, nous vous annonçons un prix TTC, selon l'heure d'intervention. Ce prix correspond à notre grille tarifaire, publiée sur ce site. Si vous préférez, envoyez une photo de votre porte sur WhatsApp : l'estimation sera encore plus précise."),
+    ("i-file", "2. Un devis écrit et signé avant toute intervention",
+     "Sur place, le serrurier constate la situation et vous remet un devis détaillé : nature de l'intervention, matériel éventuel, prix TTC. Vous le lisez, vous posez vos questions, vous signez. Pas avant. C'est une obligation réglementaire (arrêté du 24 janvier 2017) que nous appliquons à chaque intervention, sans exception, y compris la nuit."),
+    ("i-door", "3. Pas de casse inutile, pas de remplacement inutile",
+     "Une porte claquée s'ouvre presque toujours sans dégât. Nous utilisons d'abord les techniques d'ouverture fine (radio, crochetage, contournement du cylindre). Si un perçage ou un remplacement devient nécessaire, le serrurier vous explique pourquoi, vous montre la pièce en cause et vous indique le prix avant de le faire. Vous restez libre de refuser."),
+    ("i-shield", "4. Du matériel de qualité, adapté à votre porte",
+     "Quand une pièce doit être remplacée, nous vous proposons plusieurs gammes, du cylindre standard au cylindre de haute sécurité certifié A2P, avec leur prix posé. Nous travaillons avec des marques reconnues (Fichet, Picard, Vachette, Bricard, Mul-T-Lock…) et nous vous remettons les clés neuves et, le cas échéant, la carte de propriété."),
+    ("i-card", "5. Un paiement clair et une facture détaillée",
+     "Vous payez ce qui figure sur le devis signé, ni plus ni moins. Carte bancaire, espèces ou virement : le choix vous appartient. La facture détaille l'intervention et le matériel ; elle est conforme pour votre assurance habitation."),
+    ("i-building", "6. Une entreprise identifiable",
+     "Notre nom, notre adresse, notre téléphone et notre fiche Google figurent sur chaque page de ce site. Nos avis sont publiés par nos clients sur Google : ils sont publics et nous ne pouvons ni les modifier ni les supprimer. Vous pouvez les consulter avant même de nous appeler."),
+    ("i-phone", "7. Un interlocuteur direct, 24h/24",
+     "Quand vous appelez, c'est un serrurier qui vous répond, pas un centre d'appels qui transmet votre demande. Le même interlocuteur vous suit de l'appel à la facture, et reste joignable après l'intervention si vous avez une question."),
+    ("i-home", "8. Le respect de votre logement",
+     "Nous protégeons le sol si nécessaire, nous laissons les lieux propres et nous vous expliquons ce qui a été fait. Après une effraction, nous vous conseillons sur les démarches (plainte, assurance) et sur les renforts utiles, sans vous pousser à des travaux dont vous n'avez pas besoin."),
+]
+
+# Ce que comprend le prix d'une intervention (pages services)
+INCLUS = [
+    "Le déplacement dans Paris, offert si des travaux sont réalisés",
+    "La main d'œuvre du serrurier",
+    "Le diagnostic et les explications sur place",
+    "Le devis écrit, gratuit et sans engagement",
+    "La facture détaillée pour votre assurance",
+    "La TVA : nos prix sont toujours affichés TTC",
+]
