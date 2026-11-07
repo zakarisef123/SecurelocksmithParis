@@ -176,8 +176,7 @@ sup{font-size:.62em;vertical-align:super;line-height:0}
 .strip-head a{color:var(--navy-3);font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .logos{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
 .logo{display:grid;place-items:center;height:68px;padding:12px;border-radius:10px;border:1px solid var(--line);background:#fff}
-.logo img{max-height:40px;width:auto;max-width:100%;object-fit:contain;filter:grayscale(1);opacity:.78;transition:.2s}
-.logo:hover img{filter:none;opacity:1}
+.logo img{max-height:40px;width:auto;max-width:100%;object-fit:contain}
 .strip .fine{margin-top:18px}
 .brands .fine{margin-top:20px}
 
@@ -793,13 +792,14 @@ sup{font-size:.62em;vertical-align:super;line-height:0}
 .ins-marquee:hover .ins-track{animation-play-state:paused}
 @keyframes ins-scroll{to{transform:translateX(calc(-50% - 6px))}}
 .ins{flex:none;display:grid;place-items:center;height:68px;min-width:132px;padding:12px 20px;border-radius:12px;border:1px solid var(--line);background:#fff}
-.ins img{max-height:40px;width:auto;max-width:150px;object-fit:contain;filter:grayscale(1);opacity:.8;transition:.2s}
-.ins:hover img{filter:none;opacity:1}
-.ins-name span{font:800 15px/1.2 var(--head);color:#55607c;letter-spacing:-.01em;white-space:nowrap}
-.ins-name:hover span{color:var(--plum)}
+.ins img{max-height:40px;width:auto;max-width:150px;object-fit:contain;transition:transform .2s}
+.ins:hover img{transform:scale(1.06)}
+.ins-name span{font:800 15px/1.2 var(--head);letter-spacing:-.01em;white-space:nowrap}
 .strip .strip-head p{margin-bottom:22px}
 .strip .fine{margin-top:18px}
 @media (max-width:760px){.ins{height:54px;min-width:104px;padding:8px 14px}.ins img{max-height:28px;max-width:110px}.ins-name span{font-size:13px}}
+/* Les bandes de marques débordent du conteneur pour aller d'un bord à l'autre */
+.brands .ins-marquee{margin-inline:calc(50% - 50vw)}
 @media (prefers-reduced-motion:reduce){.ins-track{animation:none}.ins-row{overflow-x:auto}}
 @media (prefers-reduced-motion:reduce){.rv-track{animation:none}.rv-row{overflow-x:auto}}
 

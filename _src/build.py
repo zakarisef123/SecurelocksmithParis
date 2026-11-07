@@ -396,11 +396,19 @@ def logo_tile(nom, slug, folder):
     return ""
 
 
+# Couleur de marque des assureurs affichés sans logo
+INS_COLORS = {"GMF": "#00529b", "MMA": "#e30613", "Crédit Agricole Assurances": "#007d8f", "BNP Paribas Cardif": "#00915a",
+              "Société Générale Assurances": "#e60028", "LCL": "#002f6c", "Crédit Mutuel": "#0060a9", "CIC": "#00a0e1",
+              "La Banque Postale": "#003da5", "Banque Populaire": "#0065b1", "Allianz Direct": "#003781", "Leocare": "#1e1e50",
+              "Mutuelle de Poitiers Assurances": "#003f7d"}
+
+
 def insurer_item(nom, slug, hidden=False):
     ah = ' aria-hidden="true"' if hidden else ""
     if slug and os.path.exists(os.path.join(ROOT, "assets", "img", "assureurs", f"{slug}.webp")):
         return f'<li class="ins"{ah}><img src="/assets/img/assureurs/{slug}.webp" alt="{"" if hidden else E(nom)}" title="{E(nom)}" loading="lazy" decoding="async" height="40"></li>'
-    return f'<li class="ins ins-name"{ah}><span>{E(nom)}</span></li>'
+    col = INS_COLORS.get(nom, "#1c3168")
+    return f'<li class="ins ins-name"{ah}><span style="color:{col}">{E(nom)}</span></li>'
 
 
 def assureurs_strip(titre=True):
@@ -419,13 +427,22 @@ def assureurs_strip(titre=True):
 
 
 def marques_block():
-    tiles = "".join(logo_tile(n, s, "marques") for n, s, _ in MARQUES)
+    def item(nom, slug, hidden=False):
+        ah = ' aria-hidden="true"' if hidden else ""
+        if slug and os.path.exists(os.path.join(ROOT, "assets", "img", "marques", f"{slug}.webp")):
+            return f'<li class="ins"{ah}><img src="/assets/img/marques/{slug}.webp" alt="{"" if hidden else E(nom)}" title="{E(nom)}" loading="lazy" decoding="async" height="40"></li>'
+        return f'<li class="ins ins-name"{ah}><span>{E(nom)}</span></li>'
+    half = (len(MARQUES) + 1) // 2
+    rows = ""
+    for i, part in enumerate((MARQUES[:half], MARQUES[half:])):
+        items = "".join(item(n, s) for n, s, _ in part) + "".join(item(n, s, True) for n, s, _ in part)
+        rows += f'<div class="ins-row{" rev" if i else ""}" style="--n:{len(part)}"><ul class="ins-track">{items}</ul></div>'
     cats = {}
     for n, _, c in MARQUES:
         cats.setdefault(c, []).append(n)
     txt = " · ".join(f"<b>{E(c)}</b>: {E(', '.join(l))}" for c, l in cats.items())
     return f'''<div class="brands">
-  <ul class="logos brands-logos">{tiles}</ul>
+  <div class="ins-marquee brands-marquee" aria-label="Lock and door brands">{rows}</div>
   <p class="fine">{txt}.</p>
 </div>'''
 
