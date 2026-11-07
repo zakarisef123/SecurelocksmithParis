@@ -983,3 +983,17 @@ body{background:radial-gradient(70% 40% at 100% 30%,rgba(125,52,112,.35),transpa
 .pv-from{color:var(--muted)}
 .menu .nav-urg,.drawer .nav-urg{color:#ff8a9c!important}
 .menu .nav-urg i,.drawer .nav-urg i{background:#ff6b81}
+
+/* ===== Ciel qui change au fil du défilement : nuit en haut, couchant au milieu, horizon doré en bas ===== */
+body{background:#0d1233!important}
+.sky-scroll{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.sky-scroll i{position:absolute;inset:-10% -10%;will-change:opacity,transform;transition:opacity .25s linear}
+.ss-night{opacity:var(--o1,1);transform:translateY(calc(var(--p,0) * -6%));
+  background:radial-gradient(55% 45% at 82% 18%,rgba(74,42,110,.6),transparent 70%),radial-gradient(50% 45% at 8% 72%,rgba(34,32,96,.65),transparent 70%),linear-gradient(180deg,#0b1030,#11163d)}
+.ss-dusk{opacity:var(--o2,0);transform:translateY(calc(var(--p,0) * -4%));
+  background:radial-gradient(55% 48% at 78% 35%,rgba(125,52,112,.6),transparent 70%),radial-gradient(50% 45% at 12% 78%,rgba(208,88,122,.38),transparent 70%),linear-gradient(180deg,#15123a,#2a1846)}
+.ss-horizon{opacity:var(--o3,0);transform:translateY(calc(var(--p,0) * -2%));
+  background:radial-gradient(75% 50% at 50% 108%,rgba(238,122,82,.6),transparent 72%),radial-gradient(55% 40% at 92% 88%,rgba(246,179,86,.4),transparent 70%),radial-gradient(50% 40% at 5% 30%,rgba(125,52,112,.45),transparent 70%),linear-gradient(180deg,#1d1440,#3a1d45)}
+@media (prefers-reduced-motion:reduce){.sky-scroll i{transition:none}}
+.foot{background:linear-gradient(180deg,rgba(13,18,51,.15) 0%,rgba(13,18,51,.45) 55%,rgba(11,16,48,.8) 100%)!important}
+.ss-horizon{background:radial-gradient(85% 55% at 50% 105%,rgba(246,150,80,.75),transparent 72%),radial-gradient(60% 45% at 88% 85%,rgba(246,179,86,.5),transparent 70%),radial-gradient(55% 45% at 8% 70%,rgba(208,88,122,.5),transparent 70%),radial-gradient(50% 40% at 30% 15%,rgba(125,52,112,.5),transparent 70%),linear-gradient(180deg,#1f1442 0%,#3b1c48 60%,#5a2747 100%)!important}
