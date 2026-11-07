@@ -304,7 +304,7 @@ def ld_business(full=False):
 FORM_N = [0]
 
 
-def lead_form(source, service=None, titre="Request a free quote", sous="We call you back quickly, 7 days a week.", arr=""):
+def lead_form(source, service=None, titre="Request a free quote", sous="We call you back quickly, 7 days a week.", arr="", hid=""):
     FORM_N[0] += 1
     n = FORM_N[0]
     opts = "".join(f'<option{" selected" if service == s["court"] else ""}>{E(s["court"])}</option>' for s in SERVICES)
@@ -312,7 +312,7 @@ def lead_form(source, service=None, titre="Request a free quote", sous="We call 
     return f'''<form class="lead-form" name="quote" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field">
   <input type="hidden" name="form-name" value="quote"><input type="hidden" name="page" value="{E(source)}">
   <p hidden><label>Leave empty <input name="bot-field"></label></p>
-  <div class="form-head"><h3>{E(titre)}</h3><p>{E(sous)}</p></div>
+  <div class="form-head"><h3{f' id="{hid}"' if hid else ""}>{E(titre)}</h3><p>{E(sous)}</p></div>
   <div class="grid2">
     <label for="n{n}">Name<input id="n{n}" name="name" autocomplete="name" required placeholder="Your name"></label>
     <label for="t{n}">Phone<input id="t{n}" name="phone" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9+ .()-]{{8,}}" placeholder="+33 6 00 00 00 00"></label>
@@ -326,6 +326,21 @@ def lead_form(source, service=None, titre="Request a free quote", sous="We call 
   <p class="form-legal">{ico("i-lock", "ic xs")}Your details are only used to reply to you. <a href="/privacy/">Privacy</a></p>
   <div class="form-ok" role="status" hidden>{ico("i-check")}<div><strong>Request received.</strong> We will call you back very soon. Emergency: <a href="{TEL_HREF}">{TEL}</a></div></div>
 </form>'''
+
+
+def btn_quote(service, label="Get a free quote", cls="btn btn-quote"):
+    return f'<button type="button" class="{cls}" data-quote="{E(service)}">{ico("i-mail")}<span>{E(label)}</span></button>'
+
+
+def quote_modal():
+    """Fenêtre de devis, présente une fois par page ; ouverte par n'importe quel bouton [data-quote]."""
+    return f'''<dialog class="qm" id="quote-modal" aria-labelledby="qm-title">
+  <button type="button" class="qm-close" data-qm-close aria-label="Close">×</button>
+  <div class="qm-side"><span class="live"><i></i>Available 24/7</span><p class="qm-svc" data-qm-service></p>
+    <ul class="ticks small light"><li>{ico("i-check")}<span>Free quote, no obligation</span></li><li>{ico("i-check")}<span>Price confirmed before any work</span></li><li>{ico("i-check")}<span>English spoken</span></li></ul>
+    <a class="qm-call" href="{TEL_HREF}" data-track="call_modal">{ico("i-phone")}<span><small>In a hurry? Call</small><b>{TEL}</b></span></a></div>
+  {lead_form("popup", titre="Get your free quote", sous="Leave your number: we call you back within minutes, 24/7.", hid="qm-title")}
+</dialog>'''
 
 
 def contact_band(titre="Need a locksmith in Paris?", texte="Call us: a locksmith answers directly and gives you the price before travelling.",
@@ -344,12 +359,13 @@ def contact_band(titre="Need a locksmith in Paris?", texte="Call us: a locksmith
 </section>'''
 
 
-def side_box(titre="A locksmith available now", texte="Describe your situation on the phone: you get the price before anyone travels."):
+def side_box(titre="A locksmith available now", texte="Describe your situation on the phone: you get the price before anyone travels.", quote=None):
     return f'''<aside class="side-box">
   <div class="side-head"><span class="live"><i></i>Available 24/7</span><h3>{E(titre)}</h3></div>
   <div class="side-body">
     <p>{E(texte)}</p>
     {btn_call(cls="btn btn-gold btn-block btn-lg", track="call_side")}
+    {btn_quote(quote, "Free quote: " + quote, "btn btn-navy btn-block") if quote else ""}
     {btn_wa(label="Send a photo", cls="btn btn-outline btn-block", track="wa_side")}
     {ticks(["Free quote, no obligation", "Damage-free opening in most cases", "Invoice accepted by insurers"], "ticks small")}
     {google_badge("g-badge compact")}
@@ -715,6 +731,7 @@ window.SLP_CONV={conv};
 {body}
 </main>
 {footer()}
+{quote_modal()}
 <div class="cookies" id="cookies" role="dialog" aria-label="Cookies" hidden>
   <p><strong>Your privacy</strong> With your consent, we measure website traffic (Google Analytics, Google Tag Manager) to improve it. Nothing is loaded without your consent. <a href="/privacy/#cookies">Learn more</a></p>
   <div><button type="button" class="btn btn-outline btn-sm" data-cookies="denied">Decline</button><button type="button" class="btn btn-navy btn-sm" data-cookies="granted">Accept</button></div>
@@ -758,7 +775,7 @@ def bg_img(name, eager=True):
             f'<img src="/assets/img/paris/{name}.webp" alt="{E(PARIS_BG.get(name, "Paris"))}" {"fetchpriority=\"high\"" if eager else "loading=\"lazy\""} decoding="async"></picture>')
 
 
-def hero(crumb_items, h1, lead, extra="", kicker=None, card=None, bg=None):
+def hero(crumb_items, h1, lead, extra="", kicker=None, card=None, bg=None, quote=None):
     k = f'<span class="eyebrow light">{E(kicker)}</span>' if kicker else ""
     card = card if card is not None else hero_card()
     if bg is None:
@@ -772,7 +789,7 @@ def hero(crumb_items, h1, lead, extra="", kicker=None, card=None, bg=None):
       {k}
       <h1>{h1}</h1>
       <p class="lead">{lead}</p>
-      <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_hero")}{btn_wa(cls="btn btn-outline-light btn-lg", track="wa_hero")}</div>
+      <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_hero")}{btn_quote(quote, cls="btn btn-quote btn-lg") if quote else btn_wa(cls="btn btn-outline-light btn-lg", track="wa_hero")}</div>
       {extra}
     </div>
     {card}
@@ -812,9 +829,9 @@ def fr_date(iso):
     return f"{int(d)} {MOIS[int(m) - 1]} {y}"
 
 
-def svc_rows(lst, tag="h3"):
-    return '<div class="svc-rows">' + "".join(f'''<a class="svc-row" href="{svc_url(s)}"><span class="svc-ic">{ico(s["icon"])}</span>
-  <div><{tag}>{E(s["nom"])}</{tag}><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span></a>''' for s in lst) + "</div>"
+def svc_rows(lst, tag="h3", link=svc_url):
+    return '<div class="svc-rows">' + "".join(f'''<div class="svc-row"><span class="svc-ic">{ico(s["icon"])}</span>
+  <div><{tag}><a class="svc-link" href="{link(s)}">{E(s["nom"])}</a></{tag}><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span>{btn_quote(s["court"], "Quote", "btn-q")}</div>''' for s in lst) + "</div>"
 
 
 def urgences_block(light=False):
@@ -848,15 +865,15 @@ def svc_cards(lst=None):
     for s in (lst if lst is not None else SVC_URG):
         prix = f'<small>from (incl. VAT)</small><b>{eur(s["prix_num"])}</b>' if s["prix_num"] else "<small>price</small><b>Free quote</b>"
         ph = photo(s["slug"], s["nom"], "svc-photo", "(max-width: 760px) 100vw, 380px")
-        out.append(f'''<a class="svc{" has-photo" if ph else ""}" href="{svc_url(s)}">
+        out.append(f'''<article class="svc{" has-photo" if ph else ""}">
   {ph}
   <div class="svc-body">
     <span class="svc-ic">{ico(s["icon"])}</span>
-    <h3>{E(s["nom"])}</h3>
+    <h3><a class="svc-link" href="{svc_url(s)}">{E(s["nom"])}</a></h3>
     <p>{E(s["resume"])}</p>
-    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-go">Details {ico("i-arrow", "ic sm")}</span></div>
+    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-acts">{btn_quote(s["court"], "Quote", "btn-q")}<a class="svc-go" href="{svc_url(s)}">Details {ico("i-arrow", "ic sm")}</a></span></div>
   </div>
-</a>''')
+</article>''')
     if len(out) % 3:
         out.append(f'''<a class="svc svc-cta" href="{TEL_HREF}" data-track="call_svc_grid">
   <div class="svc-body"><span class="svc-ic">{ico("i-phone")}</span><h3>Another emergency?</h3>
@@ -1056,8 +1073,8 @@ def build_services():
         card = hero_card(prix_txt(s), s["court"])
         body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} in Paris',
                     f'{E(s["resume"])} Anywhere in Paris, 24/7.',
-                    ticks(["Price given before we travel", "Signed quote before any work", "Invoice for your insurer"], "ticks light inline"), kicker="Service", card=card)
-        body += f'<section class="sec"><div class="wrap layout">{content}{side_box()}</div></section>'
+                    ticks(["Price given before we travel", "Signed quote before any work", "Invoice for your insurer"], "ticks light inline"), kicker="Service", card=card, quote=s["court"])
+        body += f'<section class="sec"><div class="wrap layout">{content}{side_box(quote=s["court"])}</div></section>'
         body += assureurs_strip() + reviews_block() + contact_band(f"{s['court']}? We'll be there fast.", "Call us or leave your details: we call you back with a clear price.", source=path, service=s["court"])
         ld = [ld_business(), ld_crumbs([("Services", "/services/"), (s["court"], path)]), ld_faq(s["faq"]),
               {"@context": "https://schema.org", "@type": "Service", "name": s["nom"], "serviceType": s["nom"], "url": URL + path,
@@ -1112,8 +1129,8 @@ def build_arr_pages():
   <div><small>Availability</small><b>24/7</b></div>
   <div><small>Average arrival</small><b>≈ 30 min</b></div>
 </div>'''
-        svc = "".join(f'''<a class="svc-row" href="{combo_url(s, z)}"><span class="svc-ic">{ico(s["icon"])}</span>
-  <div><h3>{E(s["nom"])} {E(z["a_court"])}</h3><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}</span></a>''' for s in SERVICES)
+        svc = "".join(f'''<div class="svc-row"><span class="svc-ic">{ico(s["icon"])}</span>
+  <div><h3><a class="svc-link" href="{combo_url(s, z)}">{E(s["nom"])} {E(z["a_court"])}</a></h3><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}</span>{btn_quote(s["court"], "Quote", "btn-q")}</div>''' for s in SERVICES)
         nav_arr = ""
         if z["prev"]:
             nav_arr += f'<a href="{z["prev"]["url"]}">← Locksmith {E(z["prev"]["court"])}</a>'
@@ -1124,7 +1141,7 @@ def build_arr_pages():
   <p class="intro">{intro}</p>
   {facts}
   <h2>Our services {E(z["a"])}</h2>
-  <div class="svc-rows">{svc}</div>
+  {'<div class="svc-rows">' + svc + '</div>'}
   <h2>Neighborhoods covered in the {z["num"]}</h2>
   <p>We cover the arrondissement's four administrative quarters: <strong>{E(et(z["quartiers"]))}</strong>. Whether you live near {E(et(z["reperes"]))}, a locksmith can be with you quickly.</p>
   <div class="local">
@@ -1305,8 +1322,8 @@ def build_combo_pages():
             lead = f'{E(s["resume"])} Available 24/7 {E(z["a"])}, {prix_txt(s)}.'
             crumb_items = [("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], None)]
             body = hero(crumb_items, h1, lead, ticks(["Price given before we travel", "Signed quote", "Nights & weekends"], "ticks light inline"),
-                        kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z), card=hero_card(prix_txt(s), s["court"]))
-            body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"{s["court"]} {z["court"]}")}</div></section>'
+                        kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z), card=hero_card(prix_txt(s), s["court"]), quote=s["court"])
+            body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"{s["court"]} {z["court"]}", quote=s["court"])}</div></section>'
             body += contact_band(f"{s['court']} {z['a_court']}?", "Call us: price given on the phone, locksmith on the way straight away.",
                                  source=path, service=s["court"], arr=z["court"])
             prix_court = f"from {eur(s['prix_num'])}" if s["prix_num"] else "free quote"

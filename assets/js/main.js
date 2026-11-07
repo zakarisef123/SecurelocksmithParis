@@ -82,6 +82,33 @@
     });
   });
 
+  // Fenêtre de devis : chaque bouton [data-quote] l'ouvre avec le service déjà choisi
+  var qm = document.getElementById("quote-modal");
+  if (qm && qm.showModal) {
+    var qmForm = qm.querySelector("form.lead-form"), qmSvc = qm.querySelector("[data-qm-service]");
+    document.addEventListener("click", function(e){
+      var b = e.target.closest("[data-quote]");
+      if (!b) return;
+      e.preventDefault();
+      var svc = b.getAttribute("data-quote");
+      var sel = qmForm.querySelector("select[name=service]");
+      var found = false;
+      for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].text === svc) { sel.selectedIndex = i; found = true; } }
+      if (!found) sel.selectedIndex = sel.options.length - 1;
+      qmSvc.innerHTML = "<small>Free quote</small>" + svc.replace(/[<>&]/g, "");
+      qmForm.querySelector("input[name=page]").value = location.pathname + " (popup)";
+      qmForm.querySelector(".form-ok").hidden = true;
+      qm.showModal();
+      document.body.classList.add("qm-lock");
+      var first = qmForm.querySelector("input[name=name]"); if (first) setTimeout(function(){ first.focus(); }, 60);
+      if (window.gtag) gtag("event", "quote_open", {service: svc});
+      push("ouverture_devis", {service: svc});
+    });
+    qm.addEventListener("close", function(){ document.body.classList.remove("qm-lock"); });
+    qm.querySelector("[data-qm-close]").addEventListener("click", function(){ qm.close(); });
+    qm.addEventListener("click", function(e){ if (e.target === qm) qm.close(); });
+  }
+
   // Bandeau cookies (choix conservé 6 mois)
   var box = document.getElementById("cookies");
   if (box) {

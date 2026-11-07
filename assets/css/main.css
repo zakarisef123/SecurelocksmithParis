@@ -800,6 +800,48 @@ sup{font-size:.62em;vertical-align:super;line-height:0}
 @media (max-width:760px){.ins{height:54px;min-width:104px;padding:8px 14px}.ins img{max-height:28px;max-width:110px}.ins-name span{font-size:13px}}
 /* Les bandes de marques débordent du conteneur pour aller d'un bord à l'autre */
 .brands .ins-marquee{margin-inline:calc(50% - 50vw)}
+/* Fenêtre de devis par service */
+.btn-quote{background:#fff;color:var(--ink);border-color:#fff}
+.btn-quote:hover{background:#f3eefa}
+.btn-q{position:relative;z-index:2;display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1.5px solid #e2d5ea;background:#fff;color:var(--plum);font:700 13.5px/1 var(--body);cursor:pointer;transition:.15s;white-space:nowrap}
+.btn-q .ic{width:15px;height:15px}
+.btn-q:hover{background:var(--dusk-h);color:#fff;border-color:transparent}
+.svc{position:relative}
+.svc-link{color:inherit}
+.svc-link::after{content:"";position:absolute;inset:0;z-index:1}
+.svc-acts{display:flex;align-items:center;gap:12px}
+.svc-go{position:relative;z-index:2}
+.svc-row{position:relative;grid-template-columns:auto 1fr auto auto}
+.svc-row .btn-q{margin-left:4px}
+.qm{margin:auto;width:min(820px,calc(100% - 24px));max-height:calc(100% - 24px);padding:0;border:0;border-radius:18px;overflow:auto;box-shadow:0 40px 90px -30px rgba(10,14,40,.7);background:#fff}
+.qm[open]{display:grid;grid-template-columns:260px 1fr;animation:qm-in .22s ease-out}
+.qm::backdrop{background:rgba(11,16,48,.62);backdrop-filter:blur(3px)}
+@keyframes qm-in{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.qm-side{display:flex;flex-direction:column;gap:18px;padding:28px 22px;background:var(--dusk-h);color:#fff;position:relative}
+.qm-side::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--sunset-soft)}
+.qm-side .live{color:#7ff0b4}
+.qm-svc{font:800 22px/1.2 var(--head)}
+.qm-svc small{display:block;font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+.qm-side .ticks li{color:#fff;font-size:14px}
+.qm-call{margin-top:auto;display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff}
+.qm-call .ic{width:34px;height:34px;padding:8px;border-radius:9px;background:var(--goldgrad);color:#1c1405}
+.qm-call small{display:block;font-size:12px;color:#d8d2ee}
+.qm-call b{font:800 17px var(--head)}
+.qm .lead-form{box-shadow:none;border-radius:0;padding:28px}
+.qm-close{position:absolute;top:10px;right:12px;z-index:3;width:38px;height:38px;border-radius:50%;border:0;background:var(--soft);color:var(--ink);font:400 24px/1 var(--body);cursor:pointer}
+.qm-close:hover{background:#e9e4f2}
+body.qm-lock{overflow:hidden}
+@media (max-width:760px){
+  .qm{width:100%;max-width:100%;max-height:100%;height:100%;border-radius:0;margin:0}
+  .qm[open]{grid-template-columns:1fr;align-content:start}
+  .qm-side{padding:20px 18px 18px;gap:10px}
+  .qm-side .ticks,.qm-side .qm-call{display:none}
+  .qm .lead-form{padding:20px 18px 28px}
+  .svc-row{grid-template-columns:auto 1fr}
+  .svc-row .btn-q{grid-column:2;justify-self:start;margin:0}
+  .svc-acts{gap:8px}
+}
+@media (prefers-reduced-motion:reduce){.qm[open]{animation:none}}
 @media (prefers-reduced-motion:reduce){.ins-track{animation:none}.ins-row{overflow-x:auto}}
 @media (prefers-reduced-motion:reduce){.rv-track{animation:none}.rv-row{overflow-x:auto}}
 
