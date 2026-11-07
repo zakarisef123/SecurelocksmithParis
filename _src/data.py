@@ -237,21 +237,42 @@ TARIFS = [
     ("Serrure de boîte aux lettres (modèle basique)", "110 €", None, None),
 ]
 
-# Assureurs dont les clients nous font appel (noms seulement, aucun partenariat)
-ASSUREURS = ["AXA", "Allianz", "MAIF", "MACIF", "MAAF", "Groupama", "Generali", "Matmut", "GMF", "MMA",
-             "Crédit Agricole Assurances", "BNP Paribas Cardif", "Société Générale Assurances", "LCL", "Crédit Mutuel",
-             "CIC", "La Banque Postale", "Caisse d'Épargne", "Banque Populaire", "Covéa", "Abeille Assurances",
-             "Swiss Life", "AG2R La Mondiale", "Thélem", "GAN", "MAE", "MACSF", "Direct Assurance", "Leocare",
-             "Luko", "L'olivier Assurance", "Hiscox", "April", "Sogessur", "Allianz Direct", "MGEN"]
+# Assureurs (nom, fichier logo dans assets/img/assureurs/ ou None) – cités à titre informatif, aucun partenariat
+ASSUREURS = [
+    ("AXA", "axa"), ("Allianz", "allianz"), ("MAIF", "maif"), ("MACIF", "macif"), ("MAAF", "maaf"),
+    ("Groupama", "groupama"), ("Generali", "generali"), ("Matmut", "matmut"), ("Caisse d'Épargne", "caisse-epargne"),
+    ("Covéa", "covea"), ("Abeille Assurances", "abeille"), ("Swiss Life", "swiss-life"), ("AG2R La Mondiale", "ag2r"),
+    ("Thélem", "thelem"), ("GAN", "gan"), ("MAE", "mae"), ("MACSF", "macsf"), ("Direct Assurance", "direct-assurance"),
+    ("L'olivier Assurance", "lolivier"), ("Hiscox", "hiscox"), ("April", "april"), ("Assu 2000", "assu2000"),
+    ("Sogessur", "sogessur"), ("MGEN", "mgen"), ("Euro-Assurance", "euro-assurance"),
+    ("GMF", None), ("MMA", None), ("Crédit Agricole Assurances", None), ("BNP Paribas Cardif", None),
+    ("Société Générale Assurances", None), ("LCL", None), ("Crédit Mutuel", None), ("CIC", None),
+    ("La Banque Postale", None), ("Banque Populaire", None), ("Allianz Direct", None), ("Leocare", None),
+]
 
-# Marques sur lesquelles nous intervenons
-MARQUES = {
-    "Serrures et cylindres": ["Fichet", "Point Fort Fichet", "Picard", "Vachette", "Bricard", "Héraclès", "Pollux", "JPM",
-                              "Thirard", "Metalux", "Laperche", "Stremler", "Mul-T-Lock", "Abus", "DOM", "EVVA", "Kaba",
-                              "Keso", "Iseo", "Cisa", "Mottura", "Tesa", "Yale", "Assa Abloy"],
-    "Portes blindées": ["Tordjman Métal", "Bel'M", "K•Line", "Zilten", "Dierre", "Gardesa", "Hörmann"],
-    "Serrures connectées": ["Somfy", "Netatmo", "Nuki", "Linus", "Ultion", "Danalock", "Bold", "Igloohome"],
-}
+# Marques sur lesquelles nous intervenons (nom, fichier logo dans assets/img/marques/, catégorie)
+MARQUES = [
+    ("Point Fort Fichet", "point-fort-fichet", "Serrures"), ("Picard", "picard", "Serrures"), ("Vachette", "vachette", "Serrures"),
+    ("Bricard", "bricard", "Serrures"), ("Héraclès", "heracles", "Serrures"), ("Pollux", "pollux", "Serrures"),
+    ("JPM", "jpm", "Serrures"), ("Thirard", "thirard", "Serrures"), ("Metalux", "metalux", "Serrures"),
+    ("Laperche", "laperche", "Serrures"), ("Stremler", "stremler", "Serrures"), ("Mul-T-Lock", "mul-t-lock", "Serrures"),
+    ("Abus", "abus", "Serrures"), ("DOM", "dom", "Serrures"), ("EVVA", "evva", "Serrures"), ("dormakaba", "kaba", "Serrures"),
+    ("Keso", "keso", "Serrures"), ("Iseo", "iseo", "Serrures"), ("Cisa", "cisa", "Serrures"), ("Mottura", "mottura", "Serrures"),
+    ("Tesa", "tesa", "Serrures"), ("Yale", "yale", "Serrures"),
+    ("Tordjman Métal", "tordjman", "Portes blindées"), ("Bel'M", "belm", "Portes blindées"), ("K•Line", "kline", "Portes blindées"),
+    ("Zilten", "zilten", "Portes blindées"), ("Lapeyre", "lapeyre", "Portes blindées"), ("Tryba", "tryba", "Portes blindées"),
+    ("Dierre", "dierre", "Portes blindées"), ("Gardesa", "gardesa", "Portes blindées"), ("Hörmann", "hormann", "Portes blindées"),
+    ("Somfy", "somfy", "Serrures connectées"), ("Netatmo", "netatmo", "Serrures connectées"), ("Nuki", "nuki", "Serrures connectées"),
+    ("Ultion", "ultion", "Serrures connectées"), ("Danalock", "danalock", "Serrures connectées"), ("Bold", "bold", "Serrures connectées"),
+    ("Igloohome", "igloohome", "Serrures connectées"),
+]
+
+# ---------------------------------------------------------------------------
+# Avis Google : copiez ici de VRAIS avis publiés sur votre fiche Google (jamais d'avis inventés).
+# Format : {"auteur": "Marie L.", "note": 5, "date": "octobre 2026", "texte": "…", "arr": "Paris 15e"}
+# Tant que la liste est vide, le site affiche la note Google et un lien vers la fiche.
+# ---------------------------------------------------------------------------
+AVIS = []
 
 # ---------------------------------------------------------------------------
 # Conseils (blog)
