@@ -3,16 +3,22 @@
 
 Usage : python3 _src/build.py
 Écrit toutes les pages HTML, le sitemap, robots.txt et llms.txt à la racine du dépôt.
-Aucune dépendance : Python 3.8+ suffit.
+Aucune dépendance : Python 3.12+.
+
+Photos : déposez vos vraies photos (JPG ou WebP, ~1600 px de large) dans assets/img/photos/
+avec ces noms ; elles apparaissent automatiquement au prochain build :
+  accueil.jpg                     grande photo de l'accueil (vous, votre véhicule, une intervention)
+  equipe.jpg                      bloc « Qui sommes-nous »
+  ouverture-de-porte.jpg, serrure-bloquee.jpg, cle-cassee.jpg,
+  changement-de-serrure.jpg, serrure-connectee.jpg, apres-effraction.jpg   photos des services
 """
 import datetime
 import html
 import json
 import os
-import random
 import re
 
-from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, MARQUES, SERVICES, TARIFS
+from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, MARQUES, SERVICES, TARIFS
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -41,7 +47,7 @@ CONFIG = {
     "ads_id": "AW-17925645444",
     "ads_conv": {"call": "pIa-CPq274YcEITJzuNC", "wa": "", "form": ""},
     "google_verification": "26oalrhYl1sf4O17TalfT0E-_m-pbH7o4PDT2PE984Q",
-    # Mentions légales
+    # Entreprise (affichée sur le site et dans les mentions légales)
     "raison_sociale": "Secure Lock Serrurerie",
     "adresse": {"rue": "5 rue Camille du Gast", "cp": "92390", "ville": "Villeneuve-la-Garenne"},
     "siren": "",   # 9 chiffres, ex. "123456789"
@@ -69,6 +75,16 @@ def wa_link(text):
 
 def fmt_int(n):
     return f"{n:,}".replace(",", " ")
+
+
+def siret_fmt():
+    s = CONFIG["siret"]
+    return f"{s[:3]} {s[3:6]} {s[6:9]} {s[9:]}" if len(s) == 14 else s
+
+
+def adresse_txt():
+    a = CONFIG["adresse"]
+    return ", ".join(v for v in (a["rue"], f'{a["cp"]} {a["ville"]}'.strip()) if v)
 
 
 # ---------------------------------------------------------------------------
@@ -103,63 +119,26 @@ ICONS = {
 }
 SPRITE = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + "".join(ICONS.values()) + "</defs></svg>"
 
+ICONS.update({
+    "i-building": f'<symbol id="i-building" viewBox="0 0 24 24" {_S}><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M10 21v-3h4v3"/></symbol>',
+    "i-card": f'<symbol id="i-card" viewBox="0 0 24 24" {_S}><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></symbol>',
+    "i-badge": f'<symbol id="i-badge" viewBox="0 0 24 24" {_S}><path d="m12 2.5 2.4 1.8 3 .1.9 2.9 2.4 1.8-.9 2.9.9 2.9-2.4 1.8-.9 2.9-3 .1L12 21.5l-2.4-1.8-3-.1-.9-2.9L3.3 15l.9-2.9-.9-2.9 2.4-1.8.9-2.9 3-.1z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>',
+    "i-chev": f'<symbol id="i-chev" viewBox="0 0 24 24" {_S} stroke-width="2.2"><path d="m9 6 6 6-6 6"/></symbol>',
+})
+SPRITE = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + "".join(ICONS.values()) + "</defs></svg>"
+
 
 def ico(name, cls="ic"):
     return f'<svg class="{cls}" aria-hidden="true"><use href="#{name}"/></svg>'
 
 
-# ---------------------------------------------------------------------------
-# Silhouette de Paris (fichier SVG partagé par toutes les pages)
-# ---------------------------------------------------------------------------
-def build_skyline():
-    rnd = random.Random(75)
-    W, H = 1600, 260
-    tower_x = 1150
-    parts = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice">',
-             '<defs><linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe1a0"/>'
-             '<stop offset=".55" stop-color="#f7b24f"/><stop offset="1" stop-color="#d9733a"/></linearGradient>'
-             '<radialGradient id="g" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffcf7a" stop-opacity=".45"/>'
-             '<stop offset="1" stop-color="#ffcf7a" stop-opacity="0"/></radialGradient></defs>']
-    # halo et tour Eiffel illuminée
-    parts.append(f'<ellipse cx="{tower_x}" cy="120" rx="150" ry="150" fill="url(#g)"/>')
-    tx = tower_x
-    tower = (f"M{tx-1.5} 8h3v26h-3z"
-             f"M{tx-6} 34h12l4 56h-20z"
-             f"M{tx-17} 88h34v6h-34z"
-             f"M{tx-13} 94h26l9 58h-44z"
-             f"M{tx-30} 150h60v7h-60z"
-             f"M{tx-27} 157h54l34 103h-24q-30-66-74 0h-24z")
-    parts.append(f'<path fill="url(#t)" d="{tower}"/>')
-    # treillis suggéré
-    parts.append(f'<path stroke="#8a4a2a" stroke-opacity=".35" stroke-width="1" fill="none" d="M{tx-8} 40l16 22M{tx+8} 40l-16 22M{tx-11} 100l22 24M{tx+11} 100l-22 24M{tx-22} 165l44 30M{tx+22} 165l-44 30"/>')
-    # dôme (Sacré-Cœur stylisé) sur la gauche
-    dx = 330
-    parts.append(f'<path fill="#1c1436" d="M{dx-40} 150h80v110h-80zM{dx-30} 150a30 34 0 0 1 60 0zM{dx-2} 108h4v8h-4zM{dx-6} 116a6 8 0 0 1 12 0zM{dx-60} 170a14 16 0 0 1 28 0v90h-28zM{dx+32} 170a14 16 0 0 1 28 0v90h-28z"/>')
-    # toits parisiens (deux plans)
-    for layer, (col, hmin, hmax, win) in enumerate((("#211741", 70, 120, .16), ("#0e0b22", 45, 95, .28))):
-        x = -20
-        while x < W:
-            w = rnd.randint(58, 120)
-            if layer == 1 and tower_x - 70 < x + w and x < tower_x + 70:
-                h = rnd.randint(30, 48)  # laisser voir le pied de la tour
-            else:
-                h = rnd.randint(hmin, hmax)
-            y = H - h
-            roof = rnd.randint(12, 20)
-            parts.append(f'<path fill="{col}" d="M{x} {H}V{y}h{w}V{H}zM{x+6} {y}l{6} -{roof}h{w-24}l{6} {roof}z"/>')
-            for _ in range(rnd.randint(1, 3)):
-                cx = x + rnd.randint(10, max(11, w - 16))
-                parts.append(f'<rect fill="{col}" x="{cx}" y="{y-roof-rnd.randint(4, 12)}" width="6" height="{roof+12}"/>')
-            # fenêtres éclairées
-            for wy in range(y + 12, H - 10, 18):
-                for wx in range(x + 9, x + w - 10, 15):
-                    if rnd.random() < win:
-                        parts.append(f'<rect fill="#ffc46b" fill-opacity="{rnd.choice([".55", ".75", ".9"])}" x="{wx}" y="{wy}" width="5" height="8" rx="1"/>')
-            x += w + rnd.randint(-4, 4)
-    parts.append("</svg>")
-    os.makedirs(os.path.join(ROOT, "assets", "img"), exist_ok=True)
-    with open(os.path.join(ROOT, "assets", "img", "skyline.svg"), "w", encoding="utf-8") as f:
-        f.write("".join(parts))
+def photo(name, alt, cls="", sizes="(max-width: 760px) 100vw, 600px", eager=False):
+    """Photo fournie dans assets/img/photos/<name>.(webp|jpg|jpeg|png), sinon chaîne vide."""
+    for ext in ("webp", "jpg", "jpeg", "png"):
+        if os.path.exists(os.path.join(ROOT, "assets", "img", "photos", f"{name}.{ext}")):
+            load = 'fetchpriority="high"' if eager else 'loading="lazy"'
+            return f'<img class="{cls}" src="/assets/img/photos/{name}.{ext}" alt="{E(alt)}" sizes="{sizes}" {load} decoding="async">'
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -217,32 +196,41 @@ def btn_call(label=None, cls="btn btn-gold", track="call"):
     return f'<a class="{cls}" href="{TEL_HREF}" data-track="{track}">{ico("i-phone")}<span>{E(label or TEL)}</span></a>'
 
 
-def btn_wa(text="Bonjour, j'ai besoin d'un serrurier à Paris.", label="WhatsApp", cls="btn btn-glass", track="wa"):
+def btn_wa(text="Bonjour, j'ai besoin d'un serrurier à Paris.", label="WhatsApp", cls="btn btn-outline-light", track="wa"):
     return f'<a class="{cls}" href="{E(wa_link(text))}" target="_blank" rel="noopener" data-track="{track}">{ico("i-wa")}<span>{E(label)}</span></a>'
 
 
 def ticks(items, cls="ticks"):
-    return f'<ul class="{cls}">' + "".join(f"<li>{ico('i-check')}{E(i)}</li>" for i in items) + "</ul>"
+    return f'<ul class="{cls}">' + "".join(f"<li>{ico('i-check')}<span>{E(i)}</span></li>" for i in items) + "</ul>"
 
 
 def crumbs(items):
     parts = ['<a href="/">Accueil</a>']
     for label, url in items:
         parts.append(f'<a href="{url}">{E(label)}</a>' if url else f'<span aria-current="page">{E(label)}</span>')
-    return '<nav class="crumbs" aria-label="Fil d\'Ariane">' + '<i aria-hidden="true">/</i>'.join(parts) + "</nav>"
+    return '<nav class="crumbs" aria-label="Fil d\'Ariane">' + ico("i-chev", "sep").join(parts) + "</nav>"
 
 
-def rating_badge(cls="rating"):
+def stars(n=5, cls="st"):
+    return '<span class="stars">' + "".join(ico("i-star", cls) for _ in range(n)) + "</span>"
+
+
+G_LOGO = ('<svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>'
+          '<path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>'
+          '<path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>'
+          '<path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>')
+
+
+def google_badge(cls="g-badge"):
     if not CONFIG["avis_note"]:
         return ""
-    stars = "".join(ico("i-star", "st") for _ in range(5))
-    return (f'<a class="{cls}" href="{E(MAPS)}" target="_blank" rel="noopener"><span class="stars">{stars}</span>'
-            f'<b>{CONFIG["avis_note"]}/5</b><span>· {CONFIG["avis_nombre"]} avis Google</span></a>')
+    return (f'<a class="{cls}" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}'
+            f'<span><b>{CONFIG["avis_note"]}</b>{stars()}<small>{CONFIG["avis_nombre"]} avis Google</small></span></a>')
 
 
 def faq_html(faq):
     return '<div class="faq">' + "".join(
-        f'<details{" open" if i == 0 else ""}><summary>{E(q)}<span aria-hidden="true"></span></summary><div><p>{a}</p></div></details>'
+        f'<details{" open" if i == 0 else ""}><summary>{E(q)}<i aria-hidden="true"></i></summary><div><p>{a}</p></div></details>'
         for i, (q, a) in enumerate(faq)) + "</div>"
 
 
@@ -275,6 +263,8 @@ def ld_business(full=False):
                                       "opens": "00:00", "closes": "23:59"},
         "areaServed": [{"@type": "City", "name": "Paris"}],
     }
+    if CONFIG["siret"]:
+        d["identifier"] = {"@type": "PropertyValue", "propertyID": "SIRET", "value": CONFIG["siret"]}
     if full:
         d["areaServed"] += [{"@type": "AdministrativeArea", "name": z["nom"]} for z in ARR]
         d["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": "Serrurerie à Paris", "itemListElement": [
@@ -287,7 +277,7 @@ def ld_business(full=False):
 FORM_N = [0]
 
 
-def lead_form(source, service=None, titre="Demande de devis gratuit", sous="Réponse rapide, 7j/7.", arr=""):
+def lead_form(source, service=None, titre="Demande de devis gratuit", sous="Nous vous rappelons rapidement, 7j/7.", arr=""):
     FORM_N[0] += 1
     n = FORM_N[0]
     opts = "".join(f'<option{" selected" if service == s["court"] else ""}>{E(s["court"])}</option>' for s in SERVICES)
@@ -295,47 +285,47 @@ def lead_form(source, service=None, titre="Demande de devis gratuit", sous="Rép
     return f'''<form class="lead-form" name="devis" method="POST" action="/merci/" data-netlify="true" netlify-honeypot="champ-robot">
   <input type="hidden" name="form-name" value="devis"><input type="hidden" name="page" value="{E(source)}">
   <p hidden><label>Laisser vide <input name="champ-robot"></label></p>
-  <h3>{E(titre)}</h3><p class="form-sub">{E(sous)}</p>
+  <div class="form-head"><h3>{E(titre)}</h3><p>{E(sous)}</p></div>
   <div class="grid2">
-    <label>Nom<input id="n{n}" name="nom" autocomplete="name" required placeholder="Votre nom"></label>
-    <label>Téléphone<input id="t{n}" name="telephone" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9+ .()-]{{10,}}" placeholder="06 00 00 00 00"></label>
+    <label for="n{n}">Nom<input id="n{n}" name="nom" autocomplete="name" required placeholder="Votre nom"></label>
+    <label for="t{n}">Téléphone<input id="t{n}" name="telephone" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9+ .()-]{{10,}}" placeholder="06 00 00 00 00"></label>
   </div>
   <div class="grid2">
-    <label>Besoin<select name="service">{opts}<option{" selected" if not service else ""}>Autre demande</option></select></label>
-    <label>Arrondissement<select name="arrondissement"><option value="">Choisir…</option>{arr_opts}</select></label>
+    <label for="s{n}">Votre besoin<select id="s{n}" name="service">{opts}<option{" selected" if not service else ""}>Autre demande</option></select></label>
+    <label for="a{n}">Arrondissement<select id="a{n}" name="arrondissement"><option value="">Choisir…</option>{arr_opts}</select></label>
   </div>
-  <label>Message<textarea name="message" rows="3" placeholder="Type de porte, situation, horaire souhaité…"></textarea></label>
-  <button class="btn btn-sunset btn-block" type="submit">{ico("i-mail")}<span>Envoyer ma demande</span></button>
-  <p class="form-legal">Urgence ? Appelez le <a href="{TEL_HREF}">{TEL}</a>. Vos données servent uniquement à vous répondre (<a href="/confidentialite/">confidentialité</a>).</p>
-  <div class="form-ok" role="status" hidden>{ico("i-check")}<div><strong>Message bien reçu.</strong> Nous vous rappelons très vite.</div></div>
+  <label for="m{n}">Message<textarea id="m{n}" name="message" rows="3" placeholder="Type de porte, situation, horaire souhaité…"></textarea></label>
+  <button class="btn btn-navy btn-block btn-lg" type="submit">{ico("i-mail")}<span>Envoyer ma demande</span></button>
+  <p class="form-legal">{ico("i-lock", "ic xs")}Vos données servent uniquement à vous répondre. <a href="/confidentialite/">Confidentialité</a></p>
+  <div class="form-ok" role="status" hidden>{ico("i-check")}<div><strong>Demande bien reçue.</strong> Nous vous rappelons très vite. Urgence : <a href="{TEL_HREF}">{TEL}</a></div></div>
 </form>'''
 
 
-def contact_band(titre="Un problème de serrure ? Parlons-en.", texte="Un serrurier vous répond tout de suite, le prix est annoncé avant le déplacement.",
+def contact_band(titre="Besoin d'un serrurier à Paris ?", texte="Appelez-nous : un serrurier vous répond directement et vous annonce le prix avant de se déplacer.",
                  source="/", service=None, arr=""):
-    return f'''<section class="band-contact" id="devis">
+    return f'''<section class="band" id="devis">
   <div class="wrap band-grid">
     <div class="band-text">
-      <span class="kicker">Disponible maintenant</span>
-      <h2>{E(titre)}</h2>
+      <span class="eyebrow light">Réponse immédiate · 24h/24</span>
+      <h2>{E(titre).replace(" ?", "&nbsp;?")}</h2>
       <p>{E(texte)}</p>
-      <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_band")}{btn_wa(cls="btn btn-glass btn-lg", track="wa_band")}</div>
-      {ticks(["Prix annoncé au téléphone", "Devis écrit signé avant travaux", "Facture acceptée par les assurances"], "ticks light")}
+      <a class="band-phone" href="{TEL_HREF}" data-track="call_band"><span class="ring">{ico("i-phone")}</span><span><small>Appel direct, sans plateforme</small><b>{TEL}</b></span></a>
+      {ticks(["Prix annoncé avant le déplacement", "Devis écrit signé avant toute intervention", "Facture détaillée pour votre assurance", "Paiement CB, espèces ou virement"], "ticks light")}
     </div>
     {lead_form(source, service, arr=arr)}
   </div>
 </section>'''
 
 
-def side_box(titre="Un serrurier vous rappelle", texte="Décrivez votre situation : le tarif vous est donné avant tout déplacement."):
+def side_box(titre="Un serrurier disponible maintenant", texte="Décrivez votre situation au téléphone : le prix vous est annoncé avant tout déplacement."):
     return f'''<aside class="side-box">
-  <div class="side-in">
-    <span class="live"><i></i>Serruriers disponibles</span>
-    <h3>{E(titre)}</h3>
+  <div class="side-head"><span class="live"><i></i>Disponible 24h/24</span><h3>{E(titre)}</h3></div>
+  <div class="side-body">
     <p>{E(texte)}</p>
-    {btn_call(cls="btn btn-gold btn-block", track="call_side")}
-    {btn_wa(label="Envoyer une photo", cls="btn btn-line btn-block", track="wa_side")}
-    {ticks(["Devis gratuit et sans engagement", "Ouverture sans casse dans la plupart des cas", "Paiement CB, espèces, virement"], "ticks small")}
+    {btn_call(cls="btn btn-gold btn-block btn-lg", track="call_side")}
+    {btn_wa(label="Envoyer une photo", cls="btn btn-outline btn-block", track="wa_side")}
+    {ticks(["Devis gratuit et sans engagement", "Ouverture sans casse dans la plupart des cas", "Facture acceptée par les assurances"], "ticks small")}
+    {google_badge("g-badge compact")}
   </div>
 </aside>'''
 
@@ -356,69 +346,116 @@ def tarif_table():
                    for p, *prix in urg)
     trv = "".join(f'<li><span>{E(p)}</span><b>{cell(j)}</b></li>' for p, j, *_ in trav)
     return f'''<div class="tarifs">
-  <div class="tarif-card urgent">
-    <div class="tc-head"><span class="kicker">Urgences 24h/24</span><h3>Dépannage selon l'heure</h3></div>
-    <table class="tarif-table" data-tarifs><thead><tr><th scope="col">Prestation</th>{head}</tr></thead><tbody>{rows}</tbody></table>
+  <div class="tarif-card main">
+    <div class="tc-head"><div><span class="eyebrow light">Dépannage 24h/24</span><h3>Tarifs selon l'heure d'intervention</h3></div><span class="tc-ttc">Prix TTC</span></div>
+    <div class="table-wrap"><table class="tarif-table" data-tarifs><thead><tr><th scope="col">Prestation</th>{head}</tr></thead><tbody>{rows}</tbody></table></div>
     <p class="tarif-now" hidden></p>
   </div>
   <div class="tarif-card">
-    <div class="tc-head"><span class="kicker">Sur rendez-vous</span><h3>Travaux et pose</h3></div>
+    <div class="tc-head light"><div><span class="eyebrow">Sur rendez-vous</span><h3>Travaux et pose</h3></div></div>
     <ul class="tarif-list">{trv}</ul>
-    <p class="tarif-foot">Prix de départ en journée. Devis détaillé offert après visite.</p>
+    <p class="tarif-foot">Prix de départ en journée. Devis détaillé gratuit après visite.</p>
   </div>
 </div>
-<p class="tarif-note">{ico("i-file")}Tarifs TTC, main d'œuvre comprise. Le prix exact dépend de votre porte et de votre serrure : il vous est annoncé au téléphone puis confirmé par un devis écrit et signé avant l'intervention.</p>'''
+<p class="tarif-note">{ico("i-file")}<span>Tarifs TTC, main d'œuvre comprise. Le prix exact dépend de votre porte et de votre serrure : il vous est annoncé au téléphone, puis confirmé par un devis écrit et signé avant l'intervention, conformément à l'arrêté du 24 janvier 2017.</span></p>'''
 
 
-def assureurs_block():
-    chips = "".join(f"<li>{E(a)}</li>" for a in ASSUREURS)
-    return f'''<section class="assur">
+def logo_tile(nom, slug, folder):
+    if slug and os.path.exists(os.path.join(ROOT, "assets", "img", folder, f"{slug}.webp")):
+        return f'<li class="logo"><img src="/assets/img/{folder}/{slug}.webp" alt="{E(nom)}" title="{E(nom)}" loading="lazy" decoding="async" height="48"></li>'
+    return ""
+
+
+def assureurs_strip(titre=True):
+    tiles = "".join(logo_tile(n, s, "assureurs") for n, s in ASSUREURS)
+    autres = ", ".join(n for n, s in ASSUREURS if not s)
+    head = f'''<div class="strip-head"><p><b>Factures reconnues par les assureurs habitation</b><span>Remboursement selon les garanties de votre contrat · <a href="/assurance/">en savoir plus</a></span></p></div>''' if titre else ""
+    return f'''<section class="strip">
   <div class="wrap">
-    <div class="assur-head">
-      <div><span class="kicker">Assurance habitation</span><h2>Une facture que votre assureur reconnaît</h2></div>
-      <p>Nos factures détaillées sont acceptées par les compagnies d'assurance habitation. La prise en charge dépend des garanties de votre contrat (effraction, vol ou perte de clés…). <a href="/assurance/">Comment être remboursé →</a></p>
-    </div>
-    <ul class="assur-list">{chips}</ul>
-    <p class="fine">{E(NOM)} est une entreprise indépendante, sans partenariat avec ces compagnies. Les noms cités appartiennent à leurs propriétaires respectifs.</p>
+    {head}
+    <ul class="logos">{tiles}</ul>
+    <p class="fine">Et aussi : {E(autres)}. {E(NOM)} est une entreprise indépendante, sans partenariat avec ces compagnies ; les logos appartiennent à leurs propriétaires.</p>
   </div>
 </section>'''
 
 
 def marques_block():
-    cols = "".join(f'<div><h4>{E(cat)}</h4><p>{E(" · ".join(lst))}</p></div>' for cat, lst in MARQUES.items())
-    return f'<div class="marques"><h3>Toutes les grandes marques</h3><div class="marques-grid">{cols}</div></div>'
+    tiles = "".join(logo_tile(n, s, "marques") for n, s, _ in MARQUES)
+    cats = {}
+    for n, _, c in MARQUES:
+        cats.setdefault(c, []).append(n)
+    txt = " · ".join(f"<b>{E(c)}</b> : {E(', '.join(l))}" for c, l in cats.items())
+    return f'''<div class="brands">
+  <ul class="logos brands-logos">{tiles}</ul>
+  <p class="fine">{txt}.</p>
+</div>'''
 
 
-def arr_grid(link=lambda z: z["url"], label=lambda z: f"Serrurier {z['court']}", cls="arr-grid"):
+def arr_grid(link=lambda z: z["url"], label=lambda z: z["surnom"], cls="arr-grid"):
     return f'<div class="{cls}">' + "".join(
-        f'<a href="{link(z)}"><b>{z["n"]}<sup>{z["suf"]}</sup></b><span>{E(label(z))}</span></a>' for z in ARR) + "</div>"
+        f'<a href="{link(z)}"><b>{z["n"]}<span>{z["suf"]}</span></b><span class="t"><strong>Paris {z["num"]}</strong><small>{E(label(z))}</small></span>{ico("i-chev", "ic go")}</a>'
+        for z in ARR) + "</div>"
 
 
-def reviews_block(titre="Nos clients en parlent sur Google"):
+def review_cards():
+    if not AVIS:
+        return ""
+    cards = "".join(f'''<article class="review">
+  <header><span class="av">{E(r["auteur"][:1].upper())}</span><div><b>{E(r["auteur"])}</b><small>{E(r.get("date", ""))}{(" · " + E(r["arr"])) if r.get("arr") else ""}</small></div>{G_LOGO}</header>
+  {stars(int(r.get("note", 5)))}
+  <p>{E(r["texte"])}</p>
+</article>''' for r in AVIS)
+    return f'<div class="review-grid">{cards}</div>'
+
+
+def reviews_block(titre="Ce que nos clients disent de nous"):
     note = ""
     if CONFIG["avis_note"]:
-        stars = "".join(ico("i-star", "st") for _ in range(5))
-        note = f'<div class="big-note"><b>{CONFIG["avis_note"]}</b><div><span class="stars">{stars}</span><span>{CONFIG["avis_nombre"]} avis vérifiés</span></div></div>'
-    return f'''<section class="reviews" id="avis">
-  <div class="wrap reviews-grid">
-    <div>
-      <span class="kicker">Avis clients</span>
-      <h2>{E(titre)}</h2>
-      <p class="lead-dark">Nos avis sont déposés par nos clients sur notre fiche Google : publics, vérifiables, et nous ne pouvons pas les modifier.</p>
-      {note}
-      <div class="cta-row"><a class="btn btn-sunset" href="{E(MAPS)}" target="_blank" rel="noopener">{ico("i-star")}<span>Lire les avis</span></a>
-      <a class="btn btn-line" href="{E(AVIS_URL)}" target="_blank" rel="noopener">{ico("i-award")}<span>Laisser un avis</span></a></div>
-    </div>
-    <div class="map-card"><iframe title="Zone d'intervention : Paris" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=Paris%2C%20France&amp;z=12&amp;hl=fr&amp;output=embed"></iframe>
-      <div class="map-tag">{ico("i-pin")}<span>Paris 1er → 20e</span></div></div>
+        note = f'''<div class="score-card">
+  <div class="score-top">{G_LOGO}<span>Avis Google</span></div>
+  <div class="score"><b>{CONFIG["avis_note"]}</b><span>/5</span></div>
+  {stars(5, "st lg")}
+  <p>Note moyenne sur <b>{CONFIG["avis_nombre"]} avis</b> publiés par nos clients</p>
+  <a class="btn btn-navy btn-block" href="{E(MAPS)}" target="_blank" rel="noopener">Lire les avis sur Google</a>
+  <a class="btn btn-outline btn-block" href="{E(AVIS_URL)}" target="_blank" rel="noopener">Laisser un avis</a>
+</div>'''
+    cards = review_cards()
+    side = cards or f'''<div class="review-promise">
+  <h3>Des avis publics et vérifiables</h3>
+  <p>Nous ne publions pas de témoignages anonymes sur notre site : nos avis sont déposés par nos clients directement sur notre fiche Google. Ils sont publics, datés, et nous ne pouvons ni les modifier ni les supprimer.</p>
+  <ul class="ticks">
+    <li>{ico("i-check")}<span>Déposés directement par nos clients sur Google</span></li>
+    <li>{ico("i-check")}<span>Consultables avant même de nous appeler</span></li>
+    <li>{ico("i-check")}<span>Prix, délai, propreté : jugez sur pièces avant d'appeler</span></li>
+  </ul>
+</div>'''
+    return f'''<section class="sec soft" id="avis">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Avis clients</span><h2>{E(titre)}</h2></div>
+    <div class="reviews">{note}{side}</div>
   </div>
 </section>'''
+
+
+def company_card():
+    rows = [("i-building", "Entreprise", f"{E(CONFIG['raison_sociale'])}")]
+    if CONFIG["siret"]:
+        rows.append(("i-file", "SIRET", siret_fmt()))
+    rows += [("i-pin", "Siège", E(adresse_txt())), ("i-phone", "Téléphone", f'<a href="{TEL_HREF}">{TEL}</a>'),
+             ("i-mail", "E-mail", f'<a href="mailto:{CONFIG["email"]}">{CONFIG["email"]}</a>'),
+             ("i-card", "Paiement", "Carte bancaire, espèces, virement")]
+    lis = "".join(f'<li>{ico(i)}<span><small>{l}</small>{v}</span></li>' for i, l, v in rows)
+    return f'''<div class="company">
+  <div class="company-head"><img src="/assets/img/logo-112.webp" width="56" height="56" alt=""><div><b>{E(NOM)}</b><small>Fiche d'identité</small></div></div>
+  <ul>{lis}</ul>
+  <a class="company-link" href="/mentions-legales/">Mentions légales complètes {ico("i-arrow", "ic sm")}</a>
+</div>'''
 
 
 # ---------------------------------------------------------------------------
 # Gabarit de page
 # ---------------------------------------------------------------------------
-NAV = [("Services", "/services/"), ("Arrondissements", "/serrurier-paris/"), ("Tarifs", "/tarifs/"),
+NAV = [("Services", "/services/"), ("Tarifs", "/tarifs/"), ("Arrondissements", "/serrurier-paris/"),
        ("Avis", "/avis/"), ("Conseils", "/conseils/"), ("Contact", "/contact/")]
 SITEMAP = []
 
@@ -434,28 +471,33 @@ def asset_v(rel):
 
 def logo_html(cls="brand"):
     return (f'<a href="/" class="{cls}" aria-label="{E(NOM)} – accueil"><picture><source type="image/webp" srcset="/assets/img/logo-112.webp">'
-            f'<img src="/assets/img/logo-112.png" width="56" height="56" alt=""></picture>'
-            f'<span class="wordmark"><b>Secure</b> Locksmith<small>Paris</small></span></a>')
+            f'<img src="/assets/img/logo-112.png" width="52" height="52" alt=""></picture>'
+            f'<span class="wordmark"><b>Secure Locksmith</b><small>Serrurier · Paris</small></span></a>')
 
 
 def footer():
-    svc = "".join(f'<li><a href="{svc_url(s)}">{E(s["court"])}</a></li>' for s in SERVICES)
+    svc = "".join(f'<li><a href="{svc_url(s)}">{E(s["nom"])}</a></li>' for s in SERVICES)
     arr = "".join(f'<a href="{z["url"]}">{z["n"]}<sup>{z["suf"]}</sup></a>' for z in ARR)
+    siret = f"<br>SIRET {siret_fmt()}" if CONFIG["siret"] else ""
     return f'''<footer class="foot">
   <div class="wrap">
+    <div class="foot-cta">
+      <div><b>Une urgence ? Un serrurier vous répond tout de suite.</b><span>24h/24 · 7j/7 · dimanches et jours fériés</span></div>
+      {btn_call(cls="btn btn-gold btn-lg", track="call_footer_cta")}
+    </div>
     <div class="foot-grid">
       <div class="foot-brand">
         {logo_html("brand brand-foot")}
-        <p>{E(CONFIG["slogan"])} à Paris. Dépannage 24h/24 et 7j/7 dans les 20 arrondissements, prix annoncé avant le déplacement, facture remboursable par votre assurance.</p>
-        <a class="foot-tel" href="{TEL_HREF}" data-track="call_footer">{ico("i-phone")}{TEL}</a>
-        <p class="foot-links"><a href="mailto:{CONFIG["email"]}">{CONFIG["email"]}</a><br><a href="{CONFIG["instagram"]}" target="_blank" rel="noopener me">{ico("i-insta", "ic sm")} Instagram</a></p>
+        <p>Serrurier à Paris, dans les 20 arrondissements. Dépannage 24h/24, prix annoncé avant le déplacement, devis signé avant travaux, facture pour votre assurance.</p>
+        <p class="foot-id">{E(CONFIG["raison_sociale"])}<br>{E(adresse_txt())}{siret}</p>
       </div>
       <div><h4>Services</h4><ul>{svc}</ul></div>
-      <div><h4>Le site</h4><ul><li><a href="/tarifs/">Tarifs</a></li><li><a href="/assurance/">Assurance</a></li><li><a href="/avis/">Avis clients</a></li><li><a href="/questions-frequentes/">Questions fréquentes</a></li><li><a href="/conseils/">Conseils</a></li><li><a href="/contact/">Contact</a></li></ul></div>
-      <div class="foot-arr"><h4>Serrurier par arrondissement</h4><div class="arr-mini">{arr}</div><a class="more" href="/serrurier-paris/">Tout Paris →</a></div>
+      <div><h4>Informations</h4><ul><li><a href="/tarifs/">Tarifs</a></li><li><a href="/assurance/">Assurance et remboursement</a></li><li><a href="/avis/">Avis clients</a></li><li><a href="/questions-frequentes/">Questions fréquentes</a></li><li><a href="/conseils/">Conseils</a></li><li><a href="/contact/">Contact</a></li></ul></div>
+      <div><h4>Contact</h4><ul class="foot-contact"><li><a href="{TEL_HREF}" data-track="call_footer">{ico("i-phone", "ic sm")}{TEL}</a></li><li><a href="mailto:{CONFIG["email"]}">{ico("i-mail", "ic sm")}{CONFIG["email"]}</a></li><li><a href="{CONFIG["instagram"]}" target="_blank" rel="noopener me">{ico("i-insta", "ic sm")}Instagram</a></li></ul>
+        <h4 class="mt">Arrondissements</h4><div class="arr-mini">{arr}</div></div>
     </div>
     <div class="foot-bottom">
-      <span>© {TODAY[:4]} {E(NOM)}</span>
+      <span>© {TODAY[:4]} {E(NOM)} – {E(CONFIG["raison_sociale"])}</span>
       <nav><a href="/mentions-legales/">Mentions légales</a><a href="/confidentialite/">Confidentialité</a><a href="/plan-du-site/">Plan du site</a><button type="button" class="linklike" data-open-consent>Cookies</button></nav>
     </div>
   </div>
@@ -469,6 +511,8 @@ def page(path, title, desc, body, ld=(), active=None, robots="index, follow", og
     ads = CONFIG["ads_id"]
     conv = json.dumps({k: f"{ads}/{v}" for k, v in CONFIG["ads_conv"].items() if v}) if ads else "{}"
     ads_js = f"gtag('config','{ads}');" if ads else ""
+    note = (f'<a class="tb-rating" href="{E(MAPS)}" target="_blank" rel="noopener">{stars(5, "st xs")}<b>{CONFIG["avis_note"]}/5</b> sur Google ({CONFIG["avis_nombre"]} avis)</a>'
+            if CONFIG["avis_note"] else "")
     doc = f'''<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -496,7 +540,7 @@ window.SLP_CONV={conv};
 <meta name="robots" content="{robots}, max-image-preview:large">
 <link rel="canonical" href="{canonical}">
 <meta name="google-site-verification" content="{CONFIG["google_verification"]}">
-<meta name="theme-color" content="#151335">
+<meta name="theme-color" content="#0d1a3a">
 <meta name="geo.region" content="FR-75">
 <meta name="geo.placename" content="Paris">
 <meta name="geo.position" content="48.8566;2.3522">
@@ -514,33 +558,39 @@ window.SLP_CONV={conv};
 <link rel="manifest" href="/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/main.css?v={asset_v("assets/css/main.css")}">
 {ld_html}</head>
 <body>
 {SPRITE}
+<div class="topbar">
+  <div class="wrap tb-in">
+    <span class="tb-live"><i></i>Serruriers disponibles maintenant à Paris</span>
+    <span class="tb-items"><span>{ico("i-file", "ic xs")}Devis signé avant intervention</span><span>{ico("i-shield", "ic xs")}Facture acceptée par les assurances</span></span>
+    {note}
+  </div>
+</div>
 <header class="top" id="top">
   <div class="wrap top-in">
     {logo_html()}
     <nav class="menu" aria-label="Navigation principale">{nav}</nav>
     <div class="top-cta">
-      <a class="top-tel" href="{TEL_HREF}" data-track="call_header"><small>24h/24 · 7j/7</small><b>{TEL}</b></a>
-      <a class="btn btn-gold btn-sm call-ic" href="{TEL_HREF}" data-track="call_header_btn" aria-label="Appeler">{ico("i-phone")}<span>Appeler</span></a>
+      <a class="top-tel" href="{TEL_HREF}" data-track="call_header"><span class="ring">{ico("i-phone")}</span><span><small>Urgence 24h/24</small><b>{TEL}</b></span></a>
       <button class="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="drawer"><i></i><i></i><i></i></button>
     </div>
   </div>
-  <nav class="drawer" id="drawer" aria-label="Navigation mobile"><a href="/">Accueil</a>{nav}<a class="btn btn-gold" href="{TEL_HREF}" data-track="call_drawer">{ico("i-phone")}<span>{TEL}</span></a></nav>
+  <nav class="drawer" id="drawer" aria-label="Navigation mobile"><a href="/">Accueil</a>{nav}<a class="btn btn-gold" href="{TEL_HREF}" data-track="call_drawer">{ico("i-phone")}<span>Appeler le {TEL}</span></a></nav>
 </header>
 <main>
 {body}
 </main>
 {footer()}
 <div class="cookies" id="cookies" role="dialog" aria-label="Cookies" hidden>
-  <p><strong>Mesure d'audience</strong> Avec votre accord, nous utilisons Google Analytics et Google Tag Manager pour comprendre comment le site est utilisé (pages vues, clics sur les boutons d'appel). <a href="/confidentialite/#cookies">En savoir plus</a></p>
-  <div><button type="button" class="btn btn-line btn-sm" data-cookies="denied">Refuser</button><button type="button" class="btn btn-sunset btn-sm" data-cookies="granted">Accepter</button></div>
+  <p><strong>Votre vie privée</strong> Avec votre accord, nous mesurons l'audience du site (Google Analytics, Google Tag Manager) pour l'améliorer. Aucun outil n'est chargé sans votre accord. <a href="/confidentialite/#cookies">En savoir plus</a></p>
+  <div><button type="button" class="btn btn-outline btn-sm" data-cookies="denied">Refuser</button><button type="button" class="btn btn-navy btn-sm" data-cookies="granted">Accepter</button></div>
 </div>
 <div class="dock">
-  <a class="btn btn-gold" href="{TEL_HREF}" data-track="call_dock">{ico("i-phone")}<span>Appeler un serrurier</span></a>
+  <a class="btn btn-gold" href="{TEL_HREF}" data-track="call_dock">{ico("i-phone")}<span>Appeler · 24h/24</span></a>
   <a class="btn btn-wa" href="{WA}" target="_blank" rel="noopener" data-track="wa_dock" aria-label="WhatsApp">{ico("i-wa")}</a>
 </div>
 <script src="/assets/js/main.js?v={asset_v("assets/js/main.js")}" defer></script>
@@ -555,20 +605,33 @@ window.SLP_CONV={conv};
         SITEMAP.append(path)
 
 
-def hero(crumb_items, h1, lead, extra="", kicker=None):
-    k = f'<span class="kicker light">{E(kicker)}</span>' if kicker else ""
-    return f'''<section class="sky sky-page">
-  <div class="starfield" aria-hidden="true"></div>
-  <div class="wrap sky-in">
-    {crumbs(crumb_items)}
-    {k}
-    <h1>{h1}</h1>
-    <p class="lead">{lead}</p>
-    <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_hero")}{btn_wa(cls="btn btn-glass btn-lg", track="wa_hero")}</div>
-    {extra}
+def hero(crumb_items, h1, lead, extra="", kicker=None, card=None):
+    k = f'<span class="eyebrow light">{E(kicker)}</span>' if kicker else ""
+    card = card if card is not None else hero_card()
+    return f'''<section class="phero">
+  <div class="wrap phero-grid">
+    <div class="phero-text">
+      {crumbs(crumb_items)}
+      {k}
+      <h1>{h1}</h1>
+      <p class="lead">{lead}</p>
+      <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_hero")}{btn_wa(cls="btn btn-outline-light btn-lg", track="wa_hero")}</div>
+      {extra}
+    </div>
+    {card}
   </div>
-  <img class="skyline" src="/assets/img/skyline.svg" alt="" aria-hidden="true">
 </section>'''
+
+
+def hero_card(prix="dès 110 € TTC", label="Ouverture de porte"):
+    return f'''<aside class="hcard">
+  <ul>
+    <li>{ico("i-euro")}<span><small>{E(label)}</small><b>{E(prix)}</b></span></li>
+    <li>{ico("i-clock")}<span><small>Délai moyen dans Paris</small><b>≈ 30 minutes</b></span></li>
+    <li>{ico("i-file")}<span><small>Devis</small><b>Gratuit, signé avant travaux</b></span></li>
+  </ul>
+  {google_badge("g-badge compact")}
+</aside>'''
 
 
 # ---------------------------------------------------------------------------
@@ -583,29 +646,6 @@ HOME_FAQ = [
     ("Comment puis-je payer ?", "Par carte bancaire, en espèces ou par virement. Une facture vous est toujours remise."),
 ]
 
-
-def svc_cards():
-    out = []
-    for i, s in enumerate(SERVICES):
-        prix = f'dès <b>{s["prix_num"]} €</b>' if s["prix_num"] else "<b>devis gratuit</b>"
-        out.append(f'''<a class="svc" href="{svc_url(s)}">
-  <span class="svc-ic">{ico(s["icon"])}</span>
-  <h3>{E(s["court"])}</h3>
-  <p>{E(s["resume"])}</p>
-  <span class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-go">{ico("i-arrow")}</span></span>
-</a>''')
-    return '<div class="svc-grid">' + "".join(out) + "</div>"
-
-
-def articles_cards(lst):
-    return '<div class="posts">' + "".join(f'''<article class="post">
-  <div class="post-ic">{ico(a["icon"])}</div>
-  <div class="post-meta"><b>{E(a["cat"])}</b><time datetime="{a["date"]}">{fr_date(a["date"])}</time></div>
-  <h3><a href="/conseils/{a["slug"]}/">{E(a["court"])}</a></h3>
-  <p>{E(a["desc"])}</p>
-</article>''' for a in lst) + "</div>"
-
-
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
 
 
@@ -614,118 +654,146 @@ def fr_date(iso):
     return f"{int(d)} {MOIS[int(m) - 1]} {y}"
 
 
+def svc_cards():
+    out = []
+    for s in SERVICES:
+        prix = f'<small>à partir de</small><b>{s["prix_num"]} € TTC</b>' if s["prix_num"] else "<small>tarif</small><b>Devis gratuit</b>"
+        ph = photo(s["slug"], s["nom"], "svc-photo", "(max-width: 760px) 100vw, 380px")
+        out.append(f'''<a class="svc{" has-photo" if ph else ""}" href="{svc_url(s)}">
+  {ph}
+  <div class="svc-body">
+    <span class="svc-ic">{ico(s["icon"])}</span>
+    <h3>{E(s["nom"])}</h3>
+    <p>{E(s["resume"])}</p>
+    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-go">Détails {ico("i-arrow", "ic sm")}</span></div>
+  </div>
+</a>''')
+    return '<div class="svc-grid">' + "".join(out) + "</div>"
+
+
+def articles_cards(lst):
+    return '<div class="posts">' + "".join(f'''<article class="post">
+  <div class="post-top"><span class="post-ic">{ico(a["icon"])}</span><span class="post-cat">{E(a["cat"])}</span></div>
+  <h3><a href="/conseils/{a["slug"]}/">{E(a["court"])}</a></h3>
+  <p>{E(a["desc"])}</p>
+  <span class="post-more"><time datetime="{a["date"]}">{fr_date(a["date"])}</time><span>Lire {ico("i-arrow", "ic sm")}</span></span>
+</article>''' for a in lst) + "</div>"
+
+
+def engagements():
+    items = [
+        ("i-euro", "Prix annoncé avant le déplacement", "Vous décrivez la situation, nous vous donnons le tarif TTC. Il ne change pas en route."),
+        ("i-file", "Devis signé avant toute intervention", "Conformément à l'arrêté du 24 janvier 2017 : rien ne commence sans votre accord écrit."),
+        ("i-door", "Ouverture sans casse en priorité", "Radio, crochetage, contournement : on préserve votre serrure chaque fois que c'est possible."),
+        ("i-shield", "Matériel de grandes marques", "Cylindres et serrures de fabricants reconnus, modèles certifiés A2P sur demande."),
+        ("i-card", "Paiement en toute transparence", "Carte bancaire, espèces ou virement, avec une facture détaillée à chaque fois."),
+        ("i-phone", "Un serrurier au bout du fil", "Pas de centre d'appels : c'est un professionnel qui décroche, de jour comme de nuit."),
+    ]
+    return '<div class="engage">' + "".join(f'<div>{ico(i)}<h3>{E(t)}</h3><p>{E(d)}</p></div>' for i, t, d in items) + "</div>"
+
+
 def build_home():
-    slots = "".join(f'<li data-slot="{k}">{ico(i)}<span>{l}<small>{h}</small></span><b>{p}</b></li>'
-                    for (k, i, l, h), p in zip(SLOTS, TARIFS[0][1:]))
-    body = f'''<section class="sky sky-home">
-  <div class="starfield" aria-hidden="true"></div>
+    visual = photo("accueil", f"{NOM}, serrurier à Paris", "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
+    if not visual:
+        visual = '<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="Logo Secure Locksmith Paris" fetchpriority="high"></picture>'
+    equipe = photo("equipe", f"L'équipe {NOM}", "about-photo")
+    about_visual = equipe or company_card()
+    body = f'''<section class="hero">
   <div class="wrap hero-grid">
     <div class="hero-text">
-      <span class="kicker light">Serrurier Paris 75 · du 1er au 20e</span>
-      <h1>Votre serrurier de confiance à Paris, <em>du lever au coucher du soleil… et toute la nuit</em></h1>
-      <p class="lead">Porte claquée, serrure bloquée, clé cassée, cambriolage : un serrurier qualifié se déplace dans tout Paris, 24h/24. Le prix vous est annoncé au téléphone, le devis est signé avant de commencer.</p>
-      <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_hero")}{btn_wa(cls="btn btn-glass btn-lg", track="wa_hero")}</div>
-      {rating_badge("rating light")}
+      <span class="eyebrow light">Serrurier Paris 75 · 20 arrondissements</span>
+      <h1>Serrurier à Paris,<br><span class="gold">24h/24 et 7j/7</span></h1>
+      <p class="lead">Porte claquée, serrure bloquée, clé cassée, effraction : un serrurier qualifié intervient chez vous en 30 minutes en moyenne. Le prix vous est annoncé au téléphone et le devis est signé avant de commencer.</p>
+      <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}<a class="btn btn-outline-light btn-xl" href="#devis">{ico("i-mail")}<span>Devis gratuit</span></a></div>
+      <div class="hero-proof">
+        {google_badge("g-badge dark")}
+        <ul class="proof-list"><li>{ico("i-check")}Ouverture dès 110 € TTC</li><li>{ico("i-check")}Sans frais cachés</li><li>{ico("i-check")}Facture pour l'assurance</li></ul>
+      </div>
     </div>
-    <aside class="quote-card" aria-label="Tarif ouverture de porte">
-      <span class="live"><i></i>Serruriers en service dans Paris</span>
-      <h2>Porte claquée</h2>
-      <p>Ouverture sans casse, tarif selon l'heure :</p>
-      <ul class="slots" data-slots>{slots}</ul>
-      {btn_call("Appeler maintenant", cls="btn btn-gold btn-block", track="call_card")}
-      <a class="btn btn-line btn-block" href="{E(wa_link("Bonjour, ma porte est claquée à Paris."))}" target="_blank" rel="noopener" data-track="wa_card">{ico("i-wa")}<span>Photo de la porte sur WhatsApp</span></a>
-    </aside>
-  </div>
-  <img class="skyline" src="/assets/img/skyline.svg" alt="" aria-hidden="true">
-</section>
-<section class="promise">
-  <div class="wrap promise-grid">
-    <div>{ico("i-clock")}<b>≈ 30 min</b><span>pour arriver chez vous</span></div>
-    <div>{ico("i-euro")}<b>Prix annoncé</b><span>avant le déplacement</span></div>
-    <div>{ico("i-file")}<b>Devis signé</b><span>avant toute intervention</span></div>
-    <div>{ico("i-shield")}<b>Facture</b><span>reconnue par les assureurs</span></div>
-  </div>
-</section>
-<section class="sec" id="arrondissements">
-  <div class="wrap">
-    <div class="sec-head center">
-      <span class="kicker">100 % Paris intra-muros</span>
-      <h2>Un serrurier dans votre arrondissement</h2>
-      <p>Nous travaillons uniquement à Paris : nos serruriers connaissent les immeubles, les portes blindées et les codes d'accès de chaque quartier.</p>
+    <div class="hero-visual">
+      {visual}
+      <div class="float f1"><span class="live"><i></i>Disponible maintenant</span><b>Intervention ≈ 30 min</b></div>
+      <div class="float f2">{ico("i-shield")}<span><b>Devis signé</b><small>avant chaque intervention</small></span></div>
     </div>
-    {arr_grid(label=lambda z: z["surnom"])}
   </div>
 </section>
-<section class="sec cream" id="services">
+{assureurs_strip()}
+<section class="sec" id="services">
   <div class="wrap">
-    <div class="sec-head">
-      <span class="kicker">Nos interventions</span>
-      <h2>Six services, une même exigence</h2>
-      <p>Appartement, maison de ville, commerce ou cave : nous intervenons sur tous les types de portes et de serrures.</p>
+    <div class="sec-head split">
+      <div><span class="eyebrow">Nos services</span><h2>Toutes les interventions de serrurerie, partout dans Paris</h2></div>
+      <p>Appartement, maison de ville, commerce, cave ou local : nous intervenons sur tous les types de portes et de serrures, de la porte palière ancienne à la porte blindée multipoints.</p>
     </div>
     {svc_cards()}
-    {marques_block()}
   </div>
 </section>
-<section class="sec night">
-  <div class="wrap">
-    <div class="sec-head center">
-      <span class="kicker">Comment ça se passe</span>
-      <h2>Quatre étapes, zéro surprise</h2>
+<section class="sec soft">
+  <div class="wrap about">
+    <div class="about-text">
+      <span class="eyebrow">Pourquoi nous faire confiance</span>
+      <h2>Un serrurier parisien identifié, qui s'engage par écrit</h2>
+      <p class="lead-dark">Le dépannage en serrurerie a mauvaise réputation, souvent à juste titre. Chez {E(NOM)}, nous avons fait le choix inverse : une entreprise identifiée, des tarifs publics, et des engagements que vous pouvez vérifier.</p>
+      {engagements()}
     </div>
-    <ol class="timeline">
-      <li><b>1</b><h3>Un appel</h3><p>Vous décrivez la porte et la situation, ou envoyez une photo sur WhatsApp.</p></li>
-      <li><b>2</b><h3>Un prix</h3><p>Le tarif TTC vous est annoncé tout de suite, avant que le serrurier ne parte.</p></li>
-      <li><b>3</b><h3>Une signature</h3><p>Sur place, le prix est confirmé par un devis écrit. Rien ne commence sans votre accord.</p></li>
-      <li><b>4</b><h3>Une facture</h3><p>Travail soigné, facture détaillée à transmettre à votre assureur.</p></li>
-    </ol>
+    <div class="about-side">{about_visual}{company_card() if equipe else ""}</div>
   </div>
 </section>
 <section class="sec" id="tarifs">
   <div class="wrap">
-    <div class="sec-head">
-      <span class="kicker">Tarifs publics</span>
-      <h2>Le prix, avant tout le reste</h2>
-      <p>Une urgence ne justifie jamais une facture surprise. Voici nos tarifs, par heure d'intervention.</p>
+    <div class="sec-head split">
+      <div><span class="eyebrow">Tarifs</span><h2>Des prix clairs, publiés avant toute intervention</h2></div>
+      <p>Nos tarifs dépendent de l'heure d'intervention. Ils sont affichés ici, annoncés au téléphone et confirmés par écrit : vous savez ce que vous allez payer avant que le serrurier ne parte.</p>
     </div>
     {tarif_table()}
   </div>
 </section>
-{assureurs_block()}
+<section class="sec navy">
+  <div class="wrap">
+    <div class="sec-head center"><span class="eyebrow light">Déroulement</span><h2>Comment se passe une intervention</h2></div>
+    <ol class="steps">
+      <li><b>1</b><h3>Vous appelez</h3><p>Vous décrivez la porte et la situation, ou envoyez une photo sur WhatsApp.</p></li>
+      <li><b>2</b><h3>Prix annoncé</h3><p>Le tarif TTC vous est donné immédiatement, avant le départ du serrurier.</p></li>
+      <li><b>3</b><h3>Devis signé</h3><p>Sur place, le prix est confirmé par écrit. Rien ne commence sans votre signature.</p></li>
+      <li><b>4</b><h3>Intervention et facture</h3><p>Travail soigné, facture détaillée à transmettre à votre assureur.</p></li>
+    </ol>
+    <div class="steps-cta">{btn_call("Appeler un serrurier", cls="btn btn-gold btn-lg", track="call_steps")}<span>ou envoyez une photo sur <a href="{E(wa_link("Bonjour, j'ai besoin d'un serrurier à Paris."))}" target="_blank" rel="noopener" data-track="wa_steps">WhatsApp</a></span></div>
+  </div>
+</section>
 {reviews_block()}
-<section class="sec cream">
-  <div class="wrap why">
-    <div class="sec-head">
-      <span class="kicker">Pourquoi nous</span>
-      <h2>Ce qui fait la différence</h2>
-      <p>Un artisan parisien joignable en direct, sans plateforme ni centre d'appels.</p>
-      <a class="btn btn-sunset" href="/contact/">{ico("i-mail")}<span>Nous écrire</span></a>
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-head split">
+      <div><span class="eyebrow">Marques</span><h2>Nous intervenons sur toutes les grandes marques</h2></div>
+      <p>Serrures, cylindres, portes blindées et serrures connectées : nos serruriers connaissent les principaux fabricants et ont les pièces courantes dans leur véhicule.</p>
     </div>
-    <div class="why-list">
-      <div>{ico("i-door")}<h3>Ouverture en douceur</h3><p>Radio, crochetage, contournement : on préserve votre serrure chaque fois que c'est possible.</p></div>
-      <div>{ico("i-shield")}<h3>Matériel certifié</h3><p>Cylindres et serrures A2P de grandes marques, pièces garanties.</p></div>
-      <div>{ico("i-phone")}<h3>Un vrai interlocuteur</h3><p>De jour comme de nuit, c'est un serrurier qui décroche.</p></div>
-      <div>{ico("i-home")}<h3>Respect de votre domicile</h3><p>Protection du sol, chantier propre, explications claires.</p></div>
+    {marques_block()}
+  </div>
+</section>
+<section class="sec soft" id="arrondissements">
+  <div class="wrap">
+    <div class="sec-head split">
+      <div><span class="eyebrow">Zone d'intervention</span><h2>Un serrurier dans chaque arrondissement de Paris</h2></div>
+      <p>Nous intervenons exclusivement dans Paris intra-muros. Choisissez votre arrondissement pour voir les quartiers desservis et nos services près de chez vous.</p>
     </div>
+    {arr_grid()}
   </div>
 </section>
 <section class="sec" id="faq">
   <div class="wrap faq-wrap">
     <div class="sec-head">
-      <span class="kicker">Questions fréquentes</span>
+      <span class="eyebrow">Questions fréquentes</span>
       <h2>Vos questions, nos réponses</h2>
-      <p>Une question qui n'est pas ici ? Appelez-nous, on vous répond 24h/24.</p>
-      <a class="btn btn-line" href="/questions-frequentes/">Toutes les questions</a>
+      <p>Une autre question ? Appelez-nous, nous répondons 24h/24.</p>
+      <a class="btn btn-outline" href="/questions-frequentes/">Toutes les questions</a>
     </div>
     {faq_html(HOME_FAQ)}
   </div>
 </section>
-<section class="sec cream">
+<section class="sec soft">
   <div class="wrap">
-    <div class="sec-head">
-      <span class="kicker">Conseils de serrurier</span>
-      <h2>Guides pratiques pour les Parisiens</h2>
-      <p><a class="text-link" href="/conseils/">Tous les conseils →</a></p>
+    <div class="sec-head split">
+      <div><span class="eyebrow">Conseils</span><h2>Guides pratiques de nos serruriers</h2></div>
+      <p><a class="text-link" href="/conseils/">Voir tous les conseils {ico("i-arrow", "ic sm")}</a></p>
     </div>
     {articles_cards(ARTICLES[:4])}
   </div>
@@ -743,12 +811,12 @@ def build_home():
 # ---------------------------------------------------------------------------
 def build_services():
     items = "".join(f'''<a class="svc-row" href="{svc_url(s)}"><span class="svc-ic">{ico(s["icon"])}</span>
-  <div><h2>{E(s["nom"])}</h2><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}</span></a>''' for s in SERVICES)
-    body = hero([("Services", None)], "Nos services de serrurerie <em>à Paris</em>",
-                "Ouverture de porte, serrure bloquée, clé cassée, changement de serrure, serrure connectée, sécurisation après effraction : tout ce que nous faisons, avec les prix de départ.",
+  <div><h2>{E(s["nom"])}</h2><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span></a>''' for s in SERVICES)
+    body = hero([("Services", None)], "Nos services de serrurerie à Paris",
+                "Ouverture de porte, serrure bloquée, clé cassée, changement de serrure, serrure connectée, sécurisation après effraction : toutes nos interventions, avec leurs prix de départ.",
                 kicker="24h/24 · 7j/7")
-    body += f'<section class="sec"><div class="wrap layout"><div class="svc-rows">{items}{marques_block()}</div>{side_box()}</div></section>'
-    body += assureurs_block() + contact_band(source="/services/")
+    body += f'<section class="sec"><div class="wrap layout"><div class="svc-rows">{items}</div>{side_box()}</div></section>'
+    body += assureurs_strip() + f'<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Marques</span><h2>Toutes les grandes marques</h2></div>{marques_block()}</div></section>' + contact_band(source="/services/")
     page("/services/", f"Services de serrurerie à Paris 24h/24 | {NOM}",
          "Tous nos dépannages de serrurerie à Paris : ouverture de porte dès 110 €, serrure bloquée, clé cassée, changement de serrure, serrure connectée, après effraction.",
          body, [ld_business(), ld_crumbs([("Services", "/services/")])], active="/services/")
@@ -758,21 +826,24 @@ def build_services():
         secs = "".join(f"<h2>{E(t)}</h2><p>{c}</p>" for t, c in s["sections"])
         prix = f"dès <strong>{s['prix_num']} € TTC</strong>" if s["prix_num"] else "<strong>sur devis gratuit</strong>"
         others = "".join(f'<a class="chip" href="{svc_url(o)}">{ico(o["icon"])}{E(o["court"])}</a>' for o in SERVICES if o is not s)
+        ph = photo(s["slug"], s["nom"], "prose-photo", "(max-width: 1100px) 100vw, 760px")
         content = f'''<article class="prose">
   <p class="intro">{s["intro"]}</p>
-  <div class="note-box">{ico("i-euro")}<p>Tarif : {prix}. Le prix exact vous est annoncé au téléphone et confirmé par un devis écrit avant l'intervention. <a href="/tarifs/">Grille jour, soirée, nuit →</a></p></div>
+  {ph}
+  <div class="note-box">{ico("i-euro")}<p>Tarif : {prix}. Le prix exact vous est annoncé au téléphone et confirmé par un devis écrit avant l'intervention. <a href="/tarifs/">Grille jour, soirée, nuit</a></p></div>
   {secs}
   <h2>{E(s["court"])} : choisissez votre arrondissement</h2>
-  {arr_grid(link=lambda z: combo_url(s, z), label=lambda z: z["surnom"], cls="arr-grid compact")}
+  {arr_grid(link=lambda z: combo_url(s, z), cls="arr-grid compact")}
   <h2>Questions fréquentes</h2>
   {faq_html(s["faq"])}
   <h2>Nos autres services</h2><div class="chips">{others}</div>
 </article>'''
-        body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} <em>à Paris</em>',
-                    f'{E(s["resume"])} Partout dans Paris, 24h/24, {"dès %d € TTC" % s["prix_num"] if s["prix_num"] else "sur devis gratuit"}.',
-                    ticks(["Prix annoncé avant déplacement", "Devis signé avant travaux", "Facture pour l'assurance"], "ticks light inline"), kicker="Service")
+        card = hero_card("dès %d € TTC" % s["prix_num"] if s["prix_num"] else "Devis gratuit", s["court"])
+        body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} à Paris',
+                    f'{E(s["resume"])} Partout dans Paris, 24h/24.',
+                    ticks(["Prix annoncé avant déplacement", "Devis signé avant travaux", "Facture pour l'assurance"], "ticks light inline"), kicker="Service", card=card)
         body += f'<section class="sec"><div class="wrap layout">{content}{side_box()}</div></section>'
-        body += reviews_block() + contact_band(f"{s['court']} ? On arrive.", "Appelez ou laissez vos coordonnées : nous vous rappelons avec un prix clair.", source=path, service=s["court"])
+        body += assureurs_strip() + reviews_block() + contact_band(f"{s['court']} ? Nous intervenons rapidement.", "Appelez ou laissez vos coordonnées : nous vous rappelons avec un prix clair.", source=path, service=s["court"])
         ld = [ld_business(), ld_crumbs([("Services", "/services/"), (s["court"], path)]), ld_faq(s["faq"]),
               {"@context": "https://schema.org", "@type": "Service", "name": s["nom"], "serviceType": s["nom"], "url": URL + path,
                "provider": {"@id": BID}, "areaServed": {"@type": "City", "name": "Paris"},
@@ -863,7 +934,7 @@ def build_arr_pages():
         body = hero(crumb_items, h1, lead, ticks(["Devis gratuit", "Sans frais cachés", "Nuit, week-end, jours fériés"], "ticks light inline"),
                     kicker=f"{z['cp'][0]} · {z['surnom']}")
         body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"Serrurier {z["court"]}")}</div></section>'
-        body += assureurs_block() + contact_band(f"Bloqué dehors {z['a_court']} ?", "Appelez-nous : prix annoncé au téléphone, serrurier en route aussitôt.", source=path, arr=z["court"])
+        body += assureurs_strip() + contact_band(f"Bloqué dehors {z['a_court']} ?", "Appelez-nous : prix annoncé au téléphone, serrurier en route aussitôt.", source=path, arr=z["court"])
         ld = [ld_business(), ld_crumbs([("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", path)]), ld_faq(faq),
               {"@context": "https://schema.org", "@type": "Service", "name": f"Serrurier {z['nom']}", "serviceType": "Serrurerie, dépannage 24h/24",
                "url": URL + path, "provider": {"@id": BID},
@@ -1044,7 +1115,7 @@ def build_static():
     </article>
     {side_box("Votre prix au téléphone", "Décrivez la situation : vous connaissez le tarif exact avant que nous partions.")}
   </div>
-</div></section>''' + assureurs_block() + contact_band(source="/tarifs/")
+</div></section>''' + assureurs_strip() + contact_band(source="/tarifs/")
     page("/tarifs/", f"Tarifs serrurier Paris – jour, soirée, nuit | {NOM}",
          "Tarifs serrurier à Paris : ouverture de porte claquée 110 € TTC en journée, porte fermée à clé dès 180 €, changement de cylindre dès 160 €. Prix de soirée et de nuit affichés.",
          body, [ld_business(), ld_crumbs([("Tarifs", "/tarifs/")]), ld_tarifs()], active="/tarifs/")
@@ -1063,7 +1134,7 @@ def build_static():
 <p class="note-box">{ico("i-shield")}{E(NOM)} est une entreprise indépendante, sans partenariat avec les compagnies d'assurance. Le remboursement dépend des garanties de votre contrat.</p>''',
            f"Serrurier et assurance habitation : facture remboursable | {NOM}",
            "Faire rembourser un serrurier par son assurance habitation : garanties, documents, délais. Nos factures sont acceptées par les assureurs.",
-           after=assureurs_block() + contact_band(source="/assurance/"))
+           after=assureurs_strip() + contact_band(source="/assurance/"))
 
     # FAQ
     allfaq = HOME_FAQ + [q for s in SERVICES for q in s["faq"]]
@@ -1076,7 +1147,7 @@ def build_static():
 
     # Avis
     body = hero([("Avis clients", None)], "Avis clients <em>sur Google</em>",
-                "Nos clients publient leurs avis sur notre fiche Google : ils sont publics et vérifiables.", rating_badge("rating light"))
+                "Nos clients publient leurs avis sur notre fiche Google : ils sont publics et vérifiables.", google_badge("g-badge dark"))
     body += reviews_block("Notre réputation, en toute transparence") + contact_band(source="/avis/")
     page("/avis/", f"Avis clients – serrurier Paris | {NOM}", "Consultez les avis Google de nos clients et laissez le vôtre. Serrurier à Paris 24h/24.",
          body, [ld_business(), ld_crumbs([("Avis clients", "/avis/")])], active="/avis/")
@@ -1163,22 +1234,22 @@ def build_conseils():
 
 def build_misc():
     conv = CONFIG["ads_conv"].get("form")
-    body = f'''<section class="sky sky-page center-page"><div class="starfield" aria-hidden="true"></div><div class="wrap sky-in">
+    body = f'''<section class="phero center-page"><div class="wrap">
   <span class="big-ic">{ico("i-check")}</span>
-  <h1>Merci, votre demande est partie</h1>
+  <h1>Merci, votre demande est bien partie</h1>
   <p class="lead">Nous vous rappelons très vite. Pour une urgence (porte claquée, effraction), appelez directement : c'est le plus rapide.</p>
-  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_merci")}<a class="btn btn-glass btn-lg" href="/">Retour à l'accueil</a></div>
-</div><img class="skyline" src="/assets/img/skyline.svg" alt="" aria-hidden="true"></section>'''
+  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_merci")}<a class="btn btn-outline-light btn-lg" href="/">Retour à l'accueil</a></div>
+</div></section>'''
     if CONFIG["ads_id"] and conv:
         body += f"<script>gtag('event','conversion',{{'send_to':'{CONFIG['ads_id']}/{conv}','value':1.0,'currency':'EUR'}});</script>"
     page("/merci/", f"Demande envoyée | {NOM}", "Votre demande a bien été envoyée.", body, robots="noindex, nofollow")
 
-    body = f'''<section class="sky sky-page center-page"><div class="starfield" aria-hidden="true"></div><div class="wrap sky-in">
+    body = f'''<section class="phero center-page"><div class="wrap">
   <p class="err">404</p>
-  <h1>Cette page s'est perdue dans Paris</h1>
-  <p class="lead">Elle a peut-être déménagé. Besoin d'un serrurier ? Nous sommes joignables 24h/24.</p>
-  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_404")}<a class="btn btn-glass btn-lg" href="/">Retour à l'accueil</a></div>
-</div><img class="skyline" src="/assets/img/skyline.svg" alt="" aria-hidden="true"></section>'''
+  <h1>Cette page est introuvable</h1>
+  <p class="lead">Elle a peut-être été déplacée. Besoin d'un serrurier ? Nous sommes joignables 24h/24.</p>
+  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_404")}<a class="btn btn-outline-light btn-lg" href="/">Retour à l'accueil</a></div>
+</div></section>'''
     page("/404.html", f"Page introuvable | {NOM}", "Cette page n'existe pas.", body, robots="noindex, follow")
 
     groups = [("Pages principales", [("Accueil", "/"), ("Services", "/services/"), ("Arrondissements", "/serrurier-paris/"), ("Tarifs", "/tarifs/"),
@@ -1254,7 +1325,6 @@ Chaque service a une page par arrondissement : {URL}/<arrondissement>/<service>/
 
 
 def main():
-    build_skyline()
     build_home()
     build_services()
     build_arr_pages()
