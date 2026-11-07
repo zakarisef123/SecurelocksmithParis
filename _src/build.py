@@ -402,7 +402,8 @@ def marques_block():
 
 def arr_grid(link=lambda z: z["url"], label=lambda z: z["surnom"], cls="arr-grid"):
     return f'<div class="{cls}">' + "".join(
-        f'<a href="{link(z)}"><b>{z["n"]}<span>{z["suf"]}</span></b><span class="t"><strong>Paris {z["num"]}</strong><small>{E(label(z))}</small></span>{ico("i-chev", "ic go")}</a>'
+        f'<a href="{link(z)}"><span class="thumb"><img src="/assets/img/arr/{z["n"]}.webp" alt="" width="64" height="64" loading="lazy" decoding="async">'
+        f'<b>{z["n"]}<span>{z["suf"]}</span></b></span><span class="t"><strong>Paris {z["num"]}</strong><small>{E(label(z))}</small></span>{ico("i-chev", "ic go")}</a>'
         for z in ARR) + "</div>"
 
 
