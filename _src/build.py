@@ -687,7 +687,7 @@ window.SLP_CONV={conv};
 <meta name="robots" content="{robots}, max-image-preview:large">
 <link rel="canonical" href="{canonical}">
 <meta name="google-site-verification" content="{CONFIG["google_verification"]}">
-<meta name="theme-color" content="#0d1a3a">
+<meta name="theme-color" content="#0d1233">
 <meta name="geo.region" content="FR-75">
 <meta name="geo.placename" content="Paris">
 <meta name="geo.position" content="48.8566;2.3522">
@@ -884,6 +884,17 @@ def svc_cards(lst=None):
     return '<div class="svc-grid">' + "".join(out) + "</div>"
 
 
+def svc_tiles():
+    """Accueil : grille compacte des 10 services (icône, nom, prix), un clic mène à la page du service."""
+    tiles = "".join(f'''<a class="stile" href="{svc_url(s)}">
+  <span class="svc-ic">{ico(s["icon"])}</span>
+  <b>{E(s["court"])}</b>
+  <span class="stile-p">{("from " + eur(s["prix_num"])) if s["prix_num"] else "Free quote"}</span>
+  {'<span class="stile-tag">24/7</span>' if s["cat"] == "urgence" else ""}
+</a>''' for s in SERVICES)
+    return f'<div class="stiles">{tiles}</div><p class="stiles-more"><a class="text-link" href="/services/">All services, prices and details {ico("i-arrow", "ic sm")}</a></p>'
+
+
 def articles_cards(lst):
     return '<div class="posts">' + "".join(f'''<article class="post">
   <div class="post-top"><span class="post-ic">{ico(a["icon"])}</span><span class="post-cat">{E(a["cat"])}</span></div>
@@ -941,10 +952,7 @@ def build_home():
       <div><span class="eyebrow">Our services</span><h2>Every locksmith service, everywhere in Paris</h2></div>
       <p>Apartment, townhouse, shop, cellar or storage room: we work on every type of door and lock, from old Parisian landing doors to multi-point armored doors.</p>
     </div>
-    <h3 class="group-title">{ico("i-clock")}Emergency call-outs <small>24/7</small></h3>
-    {svc_cards(SVC_URG)}
-    <h3 class="group-title">{ico("i-shield")}Works, armored doors &amp; installation <small>by appointment · free quote</small></h3>
-    {svc_rows(SVC_TRAV)}
+    {svc_tiles()}
   </div>
 </section>
 <section class="sec soft">

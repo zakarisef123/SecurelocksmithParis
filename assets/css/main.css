@@ -908,7 +908,78 @@ body.qm-lock{overflow:hidden}
   .gd-out,.ba-grid,.sl-grid{grid-template-columns:minmax(0,1fr)}
   .gd-acts .btn{flex:1 1 100%}
 }
+/* Accueil : grille compacte des services */
+.stiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.stile{position:relative;display:flex;flex-direction:column;gap:8px;padding:20px 18px;border-radius:14px;background:#fff;border:1px solid var(--line);transition:.2s}
+.stile:hover{border-color:transparent;box-shadow:var(--shadow-lg);transform:translateY(-3px)}
+.stile .svc-ic{width:46px;height:46px;margin-bottom:4px}
+.stile b{font:700 16.5px/1.25 var(--head);color:var(--ink)}
+.stile-p{font:700 14.5px var(--body);color:var(--plum)}
+.stile-tag{position:absolute;top:14px;right:14px;padding:3px 8px;border-radius:999px;background:#fdeee7;color:#b4472b;font:800 11px/1.2 var(--body)}
+.stiles-more{margin-top:22px}
+@media (max-width:1080px){.stiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.stiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stile{padding:16px 14px}.stile b{font-size:15px}}
 @media (prefers-reduced-motion:reduce){.ins-track{animation:none}.ins-row{overflow-x:auto}}
 @media (prefers-reduced-motion:reduce){.rv-track{animation:none}.rv-row{overflow-x:auto}}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ===== Thème Nuit de Paris : tout le site sur le bleu nuit du logo, accents couchant et or ===== */
+:root{--ink:#ffffff;--text:#d9d5ec;--muted:#a9a4c6;--line:rgba(255,255,255,.12);--soft:rgba(255,255,255,.05);--sand:rgba(255,255,255,.06)}
+body{background:radial-gradient(70% 40% at 100% 30%,rgba(125,52,112,.35),transparent 70%),radial-gradient(60% 40% at 0% 70%,rgba(238,122,82,.18),transparent 70%),#0d1233!important;color:var(--text)}
+.sec,.sec.soft,.strip,.assur{background:transparent!important}
+.top{background:rgba(13,18,51,.9)!important;border-bottom-color:rgba(255,255,255,.08)!important}
+.wordmark b,.menu a{color:#fff!important}
+.burger{background:transparent!important}.burger i{background:#fff!important}
+.stile,.svc,.tarif-card,.why-list div,.faq details,.post,.arr-grid a,.ins,.company,.score-card,.cmp,.svc-row,.review,.c-line,.contact-card,.local div,.facts div,.svc-local,.marques,.hcard,.inclus,.eng-short,.charte-item,.urg-steps li,.steps-list li,.chip,.guide{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.1)!important;color:var(--text)}
+.ins{background:#fff!important}
+.tarif-table thead th,.tc-head.light{background:rgba(255,255,255,.06)!important}
+.price-list li,.tarif-list li{border-color:rgba(255,255,255,.1)!important}
+.slot-tabs button{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.12)!important;color:#fff!important}
+.slot-tabs button[aria-selected=true]{background:linear-gradient(115deg,#d0587a,#ee7a52)!important}
+.btn-outline,.btn-q{background:transparent!important;color:#fff!important;border-color:rgba(255,255,255,.3)!important}
+.btn-navy{background:linear-gradient(110deg,#d0587a,#ee7a52 70%,#f6b356)!important;color:#fff}
+.svc-go,.text-link,.post-more span,.company-link,.strip-head a,.prev-next a{color:#f6b356!important}
+.engage .ic,.post-ic,.svc-go{background:rgba(255,255,255,.08)!important;color:#f6b356!important}
+.svc-ic{background:linear-gradient(140deg,#d0587a,#ee7a52 60%,#f6b356)!important;color:#fff!important}
+.company-link{background:rgba(255,255,255,.04)!important}
+.cmp-bad{background:rgba(255,255,255,.03)!important}.cmp-good{background:rgba(255,255,255,.06)!important}.cmp-head span:first-child{background:rgba(255,255,255,.08)!important;color:#f3b7c5!important}
+.lead-form{background:#fff!important}.lead-form *{--ink:#0b1430;--text:#2b3452;--muted:#5d6682;--line:#e3e7f0}
+.score b,.big-note b{color:#fff}
+.rv-summary .score-card,.review-promise{background:rgba(255,255,255,.05)!important}
+.fine{color:var(--muted)}
+.stile-p{color:#f6b356!important}.stile-tag{background:rgba(255,255,255,.12)!important;color:#ffc2b0!important}
+.side-box,.gd-opt,.gd-slot,.sl-head,.stiles .stile{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.12)!important;color:#fff!important}
+.side-body>p,.prose p,.prose li{color:var(--text)}
+.note-box,.gd-tip,.note-box.tip{background:rgba(255,255,255,.06)!important;border-left-color:#ee7a52!important}
+.gd-opt .ic{background:rgba(255,255,255,.08)!important;color:#f6b356!important}
+.gd-result{border-top-color:rgba(255,255,255,.15)!important}
+.facts{background:rgba(255,255,255,.12)!important}
+.sl-price b,.facts b,.svc-local h3,.local h3{color:#fff!important}
+.sec-head>p,.lead-dark{color:var(--muted)!important}
+
+/* Compléments : éléments sur fond blanc qui gardent un texte foncé */
+.lead-form,.qm,.float,.g-badge:not(.dark):not(.compact),.map-link,.cookies .btn-outline{--ink:#0b1430;--text:#2b3452;--muted:#5d6682;--line:#e3e7f0;--soft:#f4f6fa}
+.g-badge.compact{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.14)!important}
+.btn-quote{color:#0b1430!important}
+.eyebrow{background:linear-gradient(90deg,#f6b356,#ee9a6a 55%,#f0a0b4)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important}
+.prose a:not([class]),.company li a,.form-legal a{color:#f6b356!important;text-decoration-color:rgba(246,179,86,.4)!important}
+.lead-form .form-legal a{color:#7d3470!important}
+.drawer{background:#0d1233!important;border-bottom-color:rgba(255,255,255,.1)!important}
+.drawer a{color:#fff!important}.drawer a[aria-current]{background:rgba(255,255,255,.08)!important}
+.drawer .btn-gold{color:#1c1405!important}
+.dock{background:rgba(13,18,51,.96)!important;border-top-color:rgba(255,255,255,.1)!important}
+.cookies{background:#151a3f!important;color:#d9d5ec!important;border-color:rgba(255,255,255,.14)!important}
+.cookies strong{color:#fff!important}.cookies a{color:#f6b356!important}
+.cookies .btn-outline{background:#fff!important;color:#0b1430!important}
+.qm-close{color:#0b1430}
+.tc-head.light h3,.tc-head.light .eyebrow{color:#fff}
+.faq summary{color:#fff}
+.faq details>div{color:var(--muted)}
+.stile:hover,.svc-local:hover,.arr-grid a:hover{border-color:rgba(246,179,86,.5)!important}
+.map{border-color:rgba(255,255,255,.12)!important}
+.jobs li{background:rgba(255,255,255,.05)!important}
+.sec-head h2,.prose h2,.prose h3{color:#fff}
+.pv-from{color:var(--muted)}
+.menu .nav-urg,.drawer .nav-urg{color:#ff8a9c!important}
+.menu .nav-urg i,.drawer .nav-urg i{background:#ff6b81}
