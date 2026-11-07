@@ -10,6 +10,7 @@ Tout le texte du site se modifie ici. Relancez ensuite : python3 _src/build.py
 SERVICES = [
     {
         "slug": "ouverture-de-porte",
+        "cat": "urgence",
         "nom": "Ouverture de porte claquée",
         "court": "Ouverture de porte",
         "icon": "i-door",
@@ -34,6 +35,7 @@ SERVICES = [
     },
     {
         "slug": "serrure-bloquee",
+        "cat": "urgence",
         "nom": "Déblocage de serrure",
         "court": "Serrure bloquée",
         "icon": "i-lock",
@@ -58,6 +60,7 @@ SERVICES = [
     },
     {
         "slug": "cle-cassee",
+        "cat": "urgence",
         "nom": "Extraction de clé cassée",
         "court": "Clé cassée",
         "icon": "i-key",
@@ -82,6 +85,7 @@ SERVICES = [
     },
     {
         "slug": "changement-de-serrure",
+        "cat": "urgence",
         "nom": "Changement de serrure et de cylindre",
         "court": "Changement de serrure",
         "icon": "i-cyl",
@@ -106,6 +110,7 @@ SERVICES = [
     },
     {
         "slug": "serrure-connectee",
+        "cat": "travaux",
         "nom": "Serrure connectée (Smart Lock)",
         "court": "Serrure connectée",
         "icon": "i-smart",
@@ -130,6 +135,7 @@ SERVICES = [
     },
     {
         "slug": "apres-effraction",
+        "cat": "urgence",
         "nom": "Sécurisation après effraction",
         "court": "Après effraction",
         "icon": "i-tool",
@@ -152,6 +158,120 @@ SERVICES = [
             ("Posez-vous des portes blindées ?", "Nous blindons les portes existantes et posons des renforts. Pour un bloc-porte blindé complet, demandez-nous un devis."),
         ],
     },
+    {
+        "slug": "blindage-de-porte",
+        "cat": "travaux",
+        "nom": "Blindage de porte",
+        "court": "Blindage de porte",
+        "icon": "i-shield",
+        "prix": "dès 2 300 € TTC",
+        "prix_num": 2300,
+        "phrase": "le blindage d'une porte",
+        "resume": "Renforcement de votre porte existante : tôle d'acier, serrure multipoints, cornières anti-pinces, sans changer l'aspect côté palier.",
+        "intro": "Le blindage transforme votre porte actuelle en porte de sécurité, sans remplacer le bâti ni modifier son aspect extérieur. C'est la solution la plus courante dans les immeubles parisiens, où la copropriété demande souvent de conserver l'apparence des portes palières.",
+        "sections": [
+            ("Ce que comprend un blindage",
+             "Une tôle d'acier fixée sur la face intérieure du vantail, une serrure multipoints avec cylindre de sécurité, des cornières anti-pinces sur le bâti, des paumelles renforcées et des pions anti-dégondage. Selon la porte, nous ajoutons un seuil, un judas ou un entrebâilleur."),
+            ("Blinder plutôt que remplacer ?",
+             "Le blindage coûte en général moins cher qu'un bloc-porte, se pose en une journée et conserve votre porte d'origine, souvent en bois massif dans l'ancien. Il convient à la plupart des portes en bon état. Si le bâti est trop fragile, nous vous le disons et vous proposons un bloc-porte."),
+            ("Un devis détaillé après visite",
+             "Nous venons mesurer votre porte, contrôler le bâti et vous présenter plusieurs niveaux de protection. Le devis est gratuit et précise les références du matériel, le prix posé et le délai."),
+        ],
+        "faq": [
+            ("Combien coûte un blindage de porte à Paris ?", "À partir de 2 300 € TTC posé, selon les dimensions, le nombre de points de fermeture et la serrure choisie. Le prix exact figure sur un devis gratuit établi après visite."),
+            ("Faut-il l'accord de la copropriété ?", "La face extérieure de la porte donne sur les parties communes. Un blindage qui conserve l'aspect côté palier pose rarement problème, mais vérifiez votre règlement de copropriété."),
+            ("Combien de temps dure la pose ?", "En général une journée : votre porte est fermée et sécurisée le soir même."),
+        ],
+    },
+    {
+        "slug": "porte-blindee",
+        "cat": "travaux",
+        "nom": "Pose de porte blindée (bloc-porte)",
+        "court": "Porte blindée",
+        "icon": "i-door",
+        "prix": "dès 3 350 € TTC",
+        "prix_num": 3350,
+        "phrase": "la pose d'une porte blindée",
+        "resume": "Bloc-porte blindé certifié A2P BP1, BP2 ou BP3 : porte, huisserie et serrure multipoints conçues ensemble, posées sur mesure.",
+        "intro": "Le bloc-porte blindé est la protection la plus complète : la porte et son huisserie sont conçues ensemble, en acier, avec une serrure multipoints intégrée. C'est la solution recommandée quand le bâti existant est abîmé, après une effraction violente, ou pour les logements les plus exposés.",
+        "sections": [
+            ("Les niveaux de certification",
+             "La certification A2P BP, délivrée par le CNPP, mesure la résistance d'un bloc-porte à l'effraction : BP1 (5 minutes), BP2 (10 minutes), BP3 (15 minutes). Certaines assurances exigent un niveau minimum : vérifiez votre contrat, nous vous conseillerons le modèle adapté."),
+            ("Une finition adaptée à votre immeuble",
+             "Les blocs-portes existent dans de nombreuses finitions (bois, moulures, teintes) pour respecter l'harmonie des paliers parisiens et les exigences de la copropriété. Ils améliorent aussi l'isolation phonique et thermique."),
+            ("De la prise de mesures à la pose",
+             "Visite et prise de cotes, devis détaillé, commande sur mesure, puis pose en général en une journée, avec évacuation de l'ancienne porte. Le délai de fabrication vous est indiqué sur le devis ; si besoin, nous sécurisons votre porte actuelle en attendant."),
+        ],
+        "faq": [
+            ("Quel budget pour une porte blindée ?", "À partir de 3 350 € TTC posée. Le prix dépend du niveau de certification, des dimensions et de la finition : un devis gratuit vous est remis après visite."),
+            ("Blindage ou bloc-porte : que choisir ?", "Si votre porte et son bâti sont en bon état, le blindage suffit souvent. Si le bâti est fragile ou abîmé, le bloc-porte est plus sûr. Nous vous conseillons après avoir vu votre porte."),
+            ("La pose fait-elle beaucoup de dégâts ?", "Non : l'ancienne huisserie est déposée proprement, le bloc-porte est ajusté, puis les finitions sont reprises. Nous protégeons le palier et l'appartement pendant les travaux."),
+        ],
+    },
+    {
+        "slug": "porte-de-cave",
+        "cat": "travaux",
+        "nom": "Porte de cave blindée",
+        "court": "Porte de cave",
+        "icon": "i-lock",
+        "prix": "dès 1 550 € TTC",
+        "prix_num": 1550,
+        "phrase": "une porte de cave blindée",
+        "resume": "Cave forcée ou mal protégée : bloc-porte de cave métallique avec serrure de sûreté, fabriqué aux dimensions de votre ouverture.",
+        "intro": "Les caves des immeubles parisiens sont des cibles fréquentes : portes en bois léger, cadenas fragiles, couloirs peu éclairés. Un bloc-porte de cave métallique, équipé d'une serrure de sûreté, protège durablement ce que vous y rangez.",
+        "sections": [
+            ("Une porte pensée pour les sous-sols",
+             "Bâti et vantail métalliques, serrure de sûreté ou multipoints, paumelles renforcées, finition résistante à l'humidité. La porte est fabriquée aux dimensions de votre ouverture, souvent irrégulière dans l'ancien."),
+            ("Après une effraction de cave",
+             "Nous sécurisons d'abord l'accès (serrure provisoire, renfort), puis nous vous proposons une porte définitive. Pensez à déposer plainte et à prévenir votre syndic : d'autres caves ont peut-être été visitées."),
+            ("En accord avec la copropriété",
+             "Les caves se trouvant dans les parties communes, il est conseillé d'informer le syndic avant de remplacer la porte. Nous pouvons vous fournir un descriptif technique."),
+        ],
+        "faq": [
+            ("Combien coûte une porte de cave blindée ?", "À partir de 1 550 € TTC posée, selon les dimensions et la serrure. Devis gratuit après visite."),
+            ("Peut-on simplement changer la serrure de la cave ?", "Oui. Si la porte est saine, un changement de serrure ou l'ajout d'un verrou de sûreté peut suffire : nous vous le dirons sur place."),
+            ("Ma cave a été forcée cette nuit", "Appelez-nous : nous sécurisons l'accès rapidement, sur devis, et vous remettons une facture pour votre assurance."),
+        ],
+    },
+    {
+        "slug": "boite-aux-lettres",
+        "cat": "travaux",
+        "nom": "Serrure de boîte aux lettres",
+        "court": "Boîte aux lettres",
+        "icon": "i-mail",
+        "prix": "dès 110 € TTC",
+        "prix_num": 110,
+        "phrase": "le changement d'une serrure de boîte aux lettres",
+        "resume": "Clé perdue, serrure cassée ou emménagement : remplacement de la serrure de votre boîte aux lettres, clés neuves fournies.",
+        "intro": "Clé égarée, serrure forcée, nouvel occupant : changer la serrure d'une boîte aux lettres est une intervention rapide, qui évite que votre courrier reste accessible à quelqu'un d'autre.",
+        "sections": [
+            ("Une serrure compatible avec votre boîte",
+             "Les boîtes aux lettres d'immeuble utilisent des serrures standardisées. Nous identifions le modèle et posons une serrure compatible, livrée avec ses clés."),
+            ("Ouverture sans dégât",
+             "Si vous n'avez plus de clé, nous ouvrons la boîte sans abîmer le portillon, puis nous remplaçons la serrure."),
+            ("Et le reste de vos accès ?",
+             "Si vous avez perdu tout votre trousseau, pensez aussi au cylindre de votre porte d'entrée et à votre cave : nous pouvons tout traiter lors du même passage."),
+        ],
+        "faq": [
+            ("Combien coûte le changement de serrure de boîte aux lettres ?", "110 € TTC pour un modèle basique. Les modèles spécifiques font l'objet d'un devis gratuit."),
+            ("Locataire ou propriétaire : qui paie ?", "La perte de clé est généralement à la charge du locataire, la vétusté plutôt à celle du propriétaire. Votre bail fait foi."),
+            ("Intervenez-vous sur les boîtes à badge ou à code ?", "Selon le modèle, oui. Envoyez-nous une photo sur WhatsApp pour vérifier."),
+        ],
+    },
+]
+
+# ---------------------------------------------------------------------------
+# Urgences 24h/24 : (situation, service lié, prix affiché, conseil en attendant)
+# ---------------------------------------------------------------------------
+URGENCES = [
+    ("Porte claquée, clés à l'intérieur", "ouverture-de-porte", "110 €", "N'utilisez ni carte bancaire ni tournevis : vous abîmeriez la gâche."),
+    ("Porte fermée à clé, clés perdues", "ouverture-de-porte", "dès 180 €", "Demandez au gardien ou à un voisin s'il garde un double."),
+    ("Serrure bloquée, la clé ne tourne plus", "serrure-bloquee", "180 €", "Ne forcez pas : vous risquez de casser la clé dans le cylindre."),
+    ("Clé cassée dans la serrure", "cle-cassee", "sur devis", "Ne poussez pas le morceau et n'utilisez pas de colle."),
+    ("Cambriolage, porte forcée", "apres-effraction", "sur devis", "Appelez le 17 et ne touchez à rien avant le constat."),
+    ("Clés volées : changer le cylindre", "changement-de-serrure", "dès 160 €", "Si vos papiers ont été volés avec, faites changer le cylindre aujourd'hui."),
+    ("Serrure connectée en panne", "serrure-connectee", "sur devis", "Cherchez votre clé mécanique de secours avant d'appeler."),
+    ("Cave forcée", "porte-de-cave", "sur devis", "Prévenez le syndic : d'autres caves ont peut-être été visitées."),
 ]
 
 # ---------------------------------------------------------------------------

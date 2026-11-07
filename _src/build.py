@@ -18,9 +18,15 @@ import json
 import os
 import re
 
-from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF, INCLUS, MARQUES, SERVICES, TARIFS
+from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF, INCLUS, MARQUES, SERVICES, TARIFS, URGENCES
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Dépannages d'urgence d'abord, puis travaux et installation
+SERVICES = [s for s in SERVICES if s["cat"] == "urgence"] + [s for s in SERVICES if s["cat"] != "urgence"]
+SVC_URG = [s for s in SERVICES if s["cat"] == "urgence"]
+SVC_TRAV = [s for s in SERVICES if s["cat"] != "urgence"]
+SVC_BY_SLUG = {s["slug"]: s for s in SERVICES}
 
 # ---------------------------------------------------------------------------
 # Configuration : à vérifier avant mise en ligne
@@ -497,8 +503,8 @@ def company_card():
 # ---------------------------------------------------------------------------
 # Gabarit de page
 # ---------------------------------------------------------------------------
-NAV = [("Services", "/services/"), ("Tarifs", "/tarifs/"), ("Nos engagements", "/nos-engagements/"),
-       ("Arrondissements", "/serrurier-paris/"), ("Avis", "/avis/"), ("Contact", "/contact/")]
+NAV = [("Urgence", "/urgence/"), ("Services", "/services/"), ("Tarifs", "/tarifs/"), ("Engagements", "/nos-engagements/"),
+       ("Arrondissements", "/serrurier-paris/"), ("Contact", "/contact/")]
 SITEMAP = []
 
 
@@ -548,7 +554,7 @@ def footer():
 
 def page(path, title, desc, body, ld=(), active=None, robots="index, follow", og_type="website"):
     canonical = URL + path
-    nav = "".join(f'<a href="{u}"{" aria-current=\"page\"" if u == active else ""}>{E(l)}</a>' for l, u in NAV)
+    nav = "".join(f'<a href="{u}"{" class=\"nav-urg\"" if u == "/urgence/" else ""}{" aria-current=\"page\"" if u == active else ""}>{"<i></i>" if u == "/urgence/" else ""}{E(l)}</a>' for l, u in NAV)
     ld_html = "".join(f'<script type="application/ld+json">{json.dumps(d, ensure_ascii=False)}</script>\n' for d in ld)
     ads = CONFIG["ads_id"]
     conv = json.dumps({k: f"{ads}/{v}" for k, v in CONFIG["ads_conv"].items() if v}) if ads else "{}"
@@ -723,9 +729,40 @@ def fr_date(iso):
     return f"{int(d)} {MOIS[int(m) - 1]} {y}"
 
 
-def svc_cards():
+def svc_rows(lst, tag="h3"):
+    return '<div class="svc-rows">' + "".join(f'''<a class="svc-row" href="{svc_url(s)}"><span class="svc-ic">{ico(s["icon"])}</span>
+  <div><{tag}>{E(s["nom"])}</{tag}><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span></a>''' for s in lst) + "</div>"
+
+
+def urgences_block(light=False):
+    cards = "".join(f'''<a class="urg" href="{svc_url(SVC_BY_SLUG[slug])}">
+  <span class="urg-ic">{ico(SVC_BY_SLUG[slug]["icon"])}</span>
+  <span class="urg-t"><b>{E(t)}</b><small>{E(conseil)}</small></span>
+  <span class="urg-p"><small>{"journée" if prix != "sur devis" else "tarif"}</small>{E(prix)}</span>
+</a>''' for t, slug, prix, conseil in URGENCES)
+    return f'''<div class="urg-grid{" light" if light else ""}">{cards}</div>'''
+
+
+def urgence_section():
+    return f'''<section class="urgence" id="urgence">
+  <div class="wrap">
+    <div class="urg-head">
+      <div>
+        <span class="urg-badge"><i></i>Urgence 24h/24 · 7j/7</span>
+        <h2>Une urgence ? Un serrurier chez vous en ≈ 30 minutes</h2>
+        <p>Nuit, week-end, jour férié : un serrurier décroche et part tout de suite. Le prix vous est annoncé au téléphone, avant le déplacement.</p>
+      </div>
+      <a class="urg-call" href="{TEL_HREF}" data-track="call_urgence"><span class="ring">{ico("i-phone")}</span><span><small>Appel direct</small><b>{TEL}</b></span></a>
+    </div>
+    {urgences_block()}
+    <p class="urg-foot">Tarifs de journée (8h–18h) indiqués à titre de repère. Soirée et nuit : voir la <a href="/tarifs/">grille complète</a>. <a href="/urgence/">Que faire en cas d'urgence ?</a></p>
+  </div>
+</section>'''
+
+
+def svc_cards(lst=None):
     out = []
-    for s in SERVICES:
+    for s in (lst if lst is not None else SVC_URG):
         prix = f'<small>à partir de</small><b>{s["prix_num"]} € TTC</b>' if s["prix_num"] else "<small>tarif</small><b>Devis gratuit</b>"
         ph = photo(s["slug"], s["nom"], "svc-photo", "(max-width: 760px) 100vw, 380px")
         out.append(f'''<a class="svc{" has-photo" if ph else ""}" href="{svc_url(s)}">
@@ -736,6 +773,12 @@ def svc_cards():
     <p>{E(s["resume"])}</p>
     <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-go">Détails {ico("i-arrow", "ic sm")}</span></div>
   </div>
+</a>''')
+    if len(out) % 3:
+        out.append(f'''<a class="svc svc-cta" href="{TEL_HREF}" data-track="call_svc_grid">
+  <div class="svc-body"><span class="svc-ic">{ico("i-phone")}</span><h3>Une autre urgence ?</h3>
+  <p>Porte de garage, local commercial, serrure ancienne… Décrivez-nous la situation : nous vous disons tout de suite si nous pouvons intervenir, et à quel prix.</p>
+  <div class="svc-foot"><span class="svc-prix"><small>appel direct 24h/24</small><b>{TEL}</b></span><span class="svc-go">Appeler {ico("i-arrow", "ic sm")}</span></div></div>
 </a>''')
     return '<div class="svc-grid">' + "".join(out) + "</div>"
 
@@ -787,6 +830,7 @@ def build_home():
     </div>
   </div>
 </section>
+{urgence_section()}
 {assureurs_strip()}
 <section class="sec" id="services">
   <div class="wrap">
@@ -794,7 +838,10 @@ def build_home():
       <div><span class="eyebrow">Nos services</span><h2>Toutes les interventions de serrurerie, partout dans Paris</h2></div>
       <p>Appartement, maison de ville, commerce, cave ou local : nous intervenons sur tous les types de portes et de serrures, de la porte palière ancienne à la porte blindée multipoints.</p>
     </div>
-    {svc_cards()}
+    <h3 class="group-title">{ico("i-clock")}Dépannage d'urgence <small>24h/24 · 7j/7</small></h3>
+    {svc_cards(SVC_URG)}
+    <h3 class="group-title">{ico("i-shield")}Travaux, portes blindées et installation <small>sur rendez-vous · devis gratuit</small></h3>
+    {svc_rows(SVC_TRAV)}
   </div>
 </section>
 <section class="sec soft">
@@ -893,12 +940,12 @@ def build_home():
 # Services
 # ---------------------------------------------------------------------------
 def build_services():
-    items = "".join(f'''<a class="svc-row" href="{svc_url(s)}"><span class="svc-ic">{ico(s["icon"])}</span>
-  <div><h2>{E(s["nom"])}</h2><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span></a>''' for s in SERVICES)
+    items = (f'<h2 class="group-title">{ico("i-clock")}Dépannage d\'urgence <small>24h/24 · 7j/7</small></h2>' + svc_rows(SVC_URG, "h3")
+             + f'<h2 class="group-title">{ico("i-shield")}Travaux, portes blindées et installation <small>sur rendez-vous</small></h2>' + svc_rows(SVC_TRAV, "h3"))
     body = hero([("Services", None)], "Nos services de serrurerie à Paris",
-                "Ouverture de porte, serrure bloquée, clé cassée, changement de serrure, serrure connectée, sécurisation après effraction : toutes nos interventions, avec leurs prix de départ.",
+                "Dépannage d'urgence 24h/24 (porte claquée, serrure bloquée, clé cassée, effraction) et travaux sur rendez-vous (blindage, porte blindée, porte de cave, serrure connectée, boîte aux lettres), avec leurs prix de départ.",
                 kicker="24h/24 · 7j/7")
-    body += f'<section class="sec"><div class="wrap layout"><div class="svc-rows">{items}</div>{side_box()}</div></section>'
+    body += f'<section class="sec"><div class="wrap layout"><div>{items}</div>{side_box()}</div></section>'
     body += assureurs_strip() + f'<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Marques</span><h2>Toutes les grandes marques</h2></div>{marques_block()}</div></section>' + contact_band(source="/services/")
     page("/services/", f"Services de serrurerie à Paris 24h/24 | {NOM}",
          "Tous nos dépannages de serrurerie à Paris : ouverture de porte dès 110 €, serrure bloquée, clé cassée, changement de serrure, serrure connectée, après effraction.",
@@ -1036,6 +1083,38 @@ def build_arr_pages():
 # Service × arrondissement
 # ---------------------------------------------------------------------------
 SVC_LOCAL = {
+    "blindage-de-porte": {
+        "intros": [
+            "Vous voulez sécuriser votre porte palière {a} sans la remplacer ? Le blindage renforce votre porte existante avec une tôle d'acier, une serrure multipoints et des cornières anti-pinces, tout en conservant son aspect côté palier.",
+            "Blindage de porte {a} : nous venons mesurer votre porte, vérifier le bâti et vous présenter plusieurs niveaux de protection, avec un devis gratuit et détaillé. La pose se fait en général en une journée.",
+            "Une porte palière ancienne, une serrure simple, un bâti qui fatigue : c'est le cas de nombreux appartements {a}. Le blindage est souvent la solution la plus efficace pour décourager les cambrioleurs, sans gros travaux.",
+        ],
+        "conseil": "Vérifiez votre règlement de copropriété : un blindage qui conserve l'aspect extérieur de la porte est en général accepté sans formalité.",
+    },
+    "porte-blindee": {
+        "intros": [
+            "Pose de porte blindée {a} : nous installons des blocs-portes certifiés A2P BP1, BP2 ou BP3, fabriqués sur mesure et assortis à votre palier. Devis gratuit après visite.",
+            "Bâti abîmé, porte trop légère, logement exposé {a} : le bloc-porte blindé remplace l'ensemble porte et huisserie par une fermeture conçue pour résister à l'effraction.",
+            "Vous cherchez la protection la plus complète pour votre appartement {a} ? Le bloc-porte blindé associe acier, serrure multipoints et isolation, dans une finition adaptée à votre immeuble.",
+        ],
+        "conseil": "Demandez à votre assureur quel niveau de certification il exige (BP1, BP2 ou BP3) avant de choisir votre modèle.",
+    },
+    "porte-de-cave": {
+        "intros": [
+            "Cave forcée ou mal protégée {a} ? Nous posons des blocs-portes de cave métalliques avec serrure de sûreté, fabriqués aux dimensions de votre ouverture.",
+            "Les caves d'immeubles sont souvent visitées {a}. Une porte de cave métallique avec une vraie serrure de sûreté met fin aux cadenas fragiles et aux portes en bois qui cèdent au premier coup.",
+            "Porte de cave {a} : sécurisation en urgence après une effraction, puis pose d'une porte définitive sur devis gratuit.",
+        ],
+        "conseil": "Informez votre syndic avant de changer la porte de votre cave, et signalez toute effraction : d'autres caves ont peut-être été touchées.",
+    },
+    "boite-aux-lettres": {
+        "intros": [
+            "Clé de boîte aux lettres perdue {a} ? Nous remplaçons la serrure par un modèle compatible, avec des clés neuves, pour 110 € TTC sur un modèle basique.",
+            "Vous emménagez {a} et vous ne savez pas qui possède la clé de votre boîte aux lettres ? Changer la serrure prend peu de temps et protège votre courrier.",
+            "Serrure de boîte aux lettres forcée ou bloquée {a} : nous ouvrons sans abîmer le portillon et posons une serrure neuve.",
+        ],
+        "conseil": "Si tout votre trousseau a disparu, faites aussi vérifier le cylindre de votre porte d'entrée et la serrure de votre cave lors du même passage.",
+    },
     "ouverture-de-porte": {
         "intros": [
             "Porte claquée {a} et clés restées à l'intérieur ? Un serrurier {nom} se met en route aussitôt pour l'ouvrir en douceur, souvent en quelques minutes et sans toucher à la serrure. Le prix vous est donné avant son départ.",
@@ -1292,6 +1371,44 @@ def build_static():
            f"Politique de confidentialité | {NOM}", f"Politique de confidentialité du site {NOM}.", aside=False)
 
 
+URG_FAQ = [
+    ("Intervenez-vous vraiment la nuit et le dimanche ?", "Oui, 24h/24 et 7j/7, jours fériés compris. Le tarif de nuit (22h–8h) est annoncé au téléphone avant le départ du serrurier."),
+    ("En combien de temps arrivez-vous ?", "Environ 30 minutes en moyenne dans Paris. Le délai précis dépend de la circulation : il vous est donné au téléphone."),
+    ("Combien coûte une ouverture de porte en urgence ?", "110 € TTC en journée, 150 € en soirée et 220 € la nuit pour une porte claquée. Une porte fermée à clé démarre à 180 € en journée."),
+    ("Que dois-je préparer avant l'arrivée du serrurier ?", "Une pièce d'identité ou un justificatif de domicile si possible : le serrurier doit s'assurer que vous êtes bien l'occupant du logement. Si vos papiers sont à l'intérieur, un voisin ou le gardien peut en témoigner."),
+    ("Puis-je refuser le devis sur place ?", "Oui. Le devis est gratuit et sans engagement : si vous le refusez, rien n'est fait."),
+]
+
+
+def build_urgence():
+    steps = "".join(f"<li><b>{i}</b><div><h3>{E(t)}</h3><p>{E(d)}</p></div></li>" for i, (t, d) in enumerate([
+        ("Restez calme et en sécurité", "Si quelqu'un est peut-être encore chez vous après une effraction, n'entrez pas et appelez le 17."),
+        ("Appelez-nous", f"Au {TEL}, 24h/24. Décrivez la porte et la situation, ou envoyez une photo sur WhatsApp."),
+        ("Le prix vous est annoncé", "Avant le départ du serrurier, selon l'heure d'intervention. Il ne change pas en route."),
+        ("Devis signé, puis intervention", "Sur place, le prix est confirmé par écrit. Le serrurier intervient seulement après votre signature."),
+    ], start=1))
+    body = hero([("Urgence 24h/24", None)], "Serrurier en urgence à Paris, <em>24h/24</em>",
+                "Porte claquée, clé cassée, serrure bloquée, cambriolage : un serrurier se déplace tout de suite dans les 20 arrondissements, la nuit, le week-end et les jours fériés. Prix annoncé avant le déplacement.",
+                ticks(["Arrivée ≈ 30 min", "Prix annoncé au téléphone", "Devis signé avant travaux"], "ticks light inline"), kicker="Intervention immédiate", bg="tour-eiffel")
+    body += f'''<section class="sec"><div class="wrap">
+  <div class="sec-head split"><div><span class="eyebrow">Votre situation</span><h2>Quelle est votre urgence ?</h2></div>
+  <p>Choisissez votre situation pour voir le détail de l'intervention et nos conseils. Dans tous les cas, appelez-nous : nous vous guidons au téléphone.</p></div>
+  {urgences_block(light=True)}
+</div></section>
+<section class="sec soft"><div class="wrap layout"><article class="prose">
+  <h2>Que faire en cas d'urgence ?</h2>
+  <ol class="urg-steps">{steps}</ol>
+  <h2>Nos tarifs d'urgence</h2>
+  <p>Nos tarifs dépendent de l'heure : journée (8h–18h), soirée (18h–22h) et nuit (22h–8h). L'onglet de l'heure actuelle est sélectionné automatiquement.</p>
+</article>{side_box("Urgence : appelez maintenant", "Un serrurier décroche directement et vous donne le prix avant de partir.")}</div>
+<div class="wrap" style="margin-top:28px">{tarif_table()}</div></section>
+<section class="sec"><div class="wrap faq-wrap"><div class="sec-head"><span class="eyebrow">Questions</span><h2>Urgence : vos questions</h2></div>{faq_html(URG_FAQ)}</div></section>'''
+    body += assureurs_strip() + contact_band("Bloqué dehors ? Appelez-nous.", "Un serrurier vous répond tout de suite et vous annonce le prix avant de se déplacer.", source="/urgence/")
+    page("/urgence/", f"Serrurier urgence Paris 24h/24 – {TEL} | {NOM}",
+         f"Serrurier en urgence à Paris, 24h/24 et 7j/7 : porte claquée dès 110 € TTC, clé cassée, serrure bloquée, cambriolage. Arrivée en 30 min environ, prix annoncé avant déplacement. ☎ {TEL}",
+         body, [ld_business(full=True), ld_crumbs([("Urgence 24h/24", "/urgence/")]), ld_faq(URG_FAQ)], active="/urgence/")
+
+
 def build_charte():
     items = "".join(f'<div class="charte-item">{ico(i)}<div><h2>{E(t)}</h2><p>{E(d)}</p></div></div>' for i, t, d in CHARTE)
     body = hero([("Nos engagements", None)], "Notre charte de confiance",
@@ -1362,7 +1479,7 @@ def build_misc():
 </div></section>'''
     page("/404.html", f"Page introuvable | {NOM}", "Cette page n'existe pas.", body, robots="noindex, follow")
 
-    groups = [("Pages principales", [("Accueil", "/"), ("Services", "/services/"), ("Arrondissements", "/serrurier-paris/"), ("Tarifs", "/tarifs/"),
+    groups = [("Pages principales", [("Accueil", "/"), ("Urgence 24h/24", "/urgence/"), ("Services", "/services/"), ("Arrondissements", "/serrurier-paris/"), ("Tarifs", "/tarifs/"),
                                      ("Nos engagements", "/nos-engagements/"), ("Assurance", "/assurance/"), ("Avis clients", "/avis/"), ("Questions fréquentes", "/questions-frequentes/"),
                                      ("Conseils", "/conseils/"), ("Contact", "/contact/")]),
               ("Services", [(s["nom"], svc_url(s)) for s in SERVICES]),
@@ -1387,7 +1504,7 @@ def build_seo():
     def prio(p):
         if p == "/":
             return "1.0"
-        if p in ("/serrurier-paris/", "/services/", "/tarifs/", "/contact/"):
+        if p in ("/serrurier-paris/", "/services/", "/tarifs/", "/contact/", "/urgence/"):
             return "0.9"
         if p.startswith("/services/") or (p.startswith("/serrurier-paris-") and p.count("/") == 2):
             return "0.8"
@@ -1440,6 +1557,7 @@ def main():
     build_arr_pages()
     build_combo_pages()
     build_static()
+    build_urgence()
     build_charte()
     build_conseils()
     build_misc()
