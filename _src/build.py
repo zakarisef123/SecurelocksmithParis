@@ -396,16 +396,25 @@ def logo_tile(nom, slug, folder):
     return ""
 
 
+def insurer_item(nom, slug, hidden=False):
+    ah = ' aria-hidden="true"' if hidden else ""
+    if slug and os.path.exists(os.path.join(ROOT, "assets", "img", "assureurs", f"{slug}.webp")):
+        return f'<li class="ins"{ah}><img src="/assets/img/assureurs/{slug}.webp" alt="{"" if hidden else E(nom)}" title="{E(nom)}" loading="lazy" decoding="async" height="40"></li>'
+    return f'<li class="ins ins-name"{ah}><span>{E(nom)}</span></li>'
+
+
 def assureurs_strip(titre=True):
-    tiles = "".join(logo_tile(n, s, "assureurs") for n, s in ASSUREURS)
-    autres = ", ".join(n for n, s in ASSUREURS if not s)
+    # Deux bandes qui défilent en sens inverse (chaque bande est doublée pour une boucle continue)
+    half = (len(ASSUREURS) + 1) // 2
+    rows = ""
+    for i, part in enumerate((ASSUREURS[:half], ASSUREURS[half:])):
+        items = "".join(insurer_item(n, s) for n, s in part) + "".join(insurer_item(n, s, True) for n, s in part)
+        rows += f'<div class="ins-row{" rev" if i else ""}" style="--n:{len(part)}"><ul class="ins-track">{items}</ul></div>'
     head = f'''<div class="strip-head"><p><b>Invoices recognized by French home insurers</b><span>Reimbursement depends on your policy · <a href="/insurance/">learn more</a></span></p></div>''' if titre else ""
     return f'''<section class="strip">
-  <div class="wrap">
-    {head}
-    <ul class="logos">{tiles}</ul>
-    <p class="fine">Also: {E(autres)}. {E(NOM)} is an independent company with no partnership with these insurers; logos belong to their respective owners.</p>
-  </div>
+  <div class="wrap">{head}</div>
+  <div class="ins-marquee" aria-label="Home insurers">{rows}</div>
+  <div class="wrap"><p class="fine">{E(NOM)} is an independent company with no partnership with these insurers; names and logos belong to their respective owners.</p></div>
 </section>'''
 
 

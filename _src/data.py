@@ -359,15 +359,17 @@ TARIFS = [
 
 # Insurers (name, logo file in assets/img/assureurs/ or None) – mentioned for information only, no partnership
 ASSUREURS = [
+    # Assureurs habitation et bancassureurs (liste vérifiée en novembre 2026)
     ("AXA", "axa"), ("Allianz", "allianz"), ("MAIF", "maif"), ("MACIF", "macif"), ("MAAF", "maaf"),
     ("Groupama", "groupama"), ("Generali", "generali"), ("Matmut", "matmut"), ("Caisse d'Épargne", "caisse-epargne"),
-    ("Covéa", "covea"), ("Abeille Assurances", "abeille"), ("Swiss Life", "swiss-life"), ("AG2R La Mondiale", "ag2r"),
+    ("Abeille Assurances", "abeille"), ("Swiss Life", "swiss-life"), ("AG2R La Mondiale", "ag2r"),
     ("Thélem", "thelem"), ("GAN", "gan"), ("MAE", "mae"), ("MACSF", "macsf"), ("Direct Assurance", "direct-assurance"),
     ("L'olivier Assurance", "lolivier"), ("Hiscox", "hiscox"), ("April", "april"), ("Assu 2000", "assu2000"),
-    ("Sogessur", "sogessur"), ("MGEN", "mgen"), ("Euro-Assurance", "euro-assurance"),
+    ("Sogessur", "sogessur"), ("Euro-Assurance", "euro-assurance"),
     ("GMF", None), ("MMA", None), ("Crédit Agricole Assurances", None), ("BNP Paribas Cardif", None),
     ("Société Générale Assurances", None), ("LCL", None), ("Crédit Mutuel", None), ("CIC", None),
     ("La Banque Postale", None), ("Banque Populaire", None), ("Allianz Direct", None), ("Leocare", None),
+    ("Mutuelle de Poitiers Assurances", None),
 ]
 
 # Brands we work on (name, logo file in assets/img/marques/, category)

@@ -785,6 +785,22 @@ sup{font-size:.62em;vertical-align:super;line-height:0}
 .rv-summary .score-card .btn{width:auto}
 .reviews-widget{min-height:200px}
 @media (max-width:760px){.rv-track .review{width:280px}}
+/* Assureurs : deux bandes défilantes */
+.ins-marquee{display:grid;gap:12px;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.ins-row{overflow:hidden}
+.ins-track{list-style:none;display:flex;gap:12px;width:max-content;animation:ins-scroll calc(var(--n) * 2.6s) linear infinite}
+.ins-row.rev .ins-track{animation-direction:reverse}
+.ins-marquee:hover .ins-track{animation-play-state:paused}
+@keyframes ins-scroll{to{transform:translateX(calc(-50% - 6px))}}
+.ins{flex:none;display:grid;place-items:center;height:68px;min-width:132px;padding:12px 20px;border-radius:12px;border:1px solid var(--line);background:#fff}
+.ins img{max-height:40px;width:auto;max-width:150px;object-fit:contain;filter:grayscale(1);opacity:.8;transition:.2s}
+.ins:hover img{filter:none;opacity:1}
+.ins-name span{font:800 15px/1.2 var(--head);color:#55607c;letter-spacing:-.01em;white-space:nowrap}
+.ins-name:hover span{color:var(--plum)}
+.strip .strip-head p{margin-bottom:22px}
+.strip .fine{margin-top:18px}
+@media (max-width:760px){.ins{height:54px;min-width:104px;padding:8px 14px}.ins img{max-height:28px;max-width:110px}.ins-name span{font-size:13px}}
+@media (prefers-reduced-motion:reduce){.ins-track{animation:none}.ins-row{overflow-x:auto}}
 @media (prefers-reduced-motion:reduce){.rv-track{animation:none}.rv-row{overflow-x:auto}}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
