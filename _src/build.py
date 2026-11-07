@@ -709,6 +709,7 @@ window.SLP_CONV={conv};
 <link rel="stylesheet" href="/assets/css/main.css?v={asset_v("assets/css/main.css")}">
 {ld_html}</head>
 <body>
+<div class="sky-scroll" aria-hidden="true"><i class="ss-night"></i><i class="ss-dusk"></i><i class="ss-horizon"></i></div>
 {SPRITE}
 <div class="topbar">
   <div class="wrap tb-in">

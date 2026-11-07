@@ -156,6 +156,21 @@
     r.addEventListener("input", function(){ f.style.setProperty("--pos", r.value + "%"); });
   });
 
+  // Ciel au fil du défilement : nuit (haut) -> couchant (milieu) -> horizon doré (bas)
+  var root = document.documentElement, ticking = false;
+  function sky(){
+    ticking = false;
+    var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    var p = Math.min(1, Math.max(0, window.scrollY / max));
+    root.style.setProperty("--p", p.toFixed(3));
+    root.style.setProperty("--o1", Math.max(0, 1 - p * 2).toFixed(3));
+    root.style.setProperty("--o2", Math.max(0, 1 - Math.abs(p - 0.5) * 2).toFixed(3));
+    root.style.setProperty("--o3", Math.max(0, p * 2 - 1).toFixed(3));
+  }
+  window.addEventListener("scroll", function(){ if (!ticking) { ticking = true; requestAnimationFrame(sky); } }, {passive: true});
+  window.addEventListener("resize", sky);
+  sky();
+
   // Bandeau cookies (choix conservé 6 mois)
   var box = document.getElementById("cookies");
   if (box) {
