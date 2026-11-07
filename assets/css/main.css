@@ -908,6 +908,17 @@ body.qm-lock{overflow:hidden}
   .gd-out,.ba-grid,.sl-grid{grid-template-columns:minmax(0,1fr)}
   .gd-acts .btn{flex:1 1 100%}
 }
+/* Accueil : grille compacte des services */
+.stiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.stile{position:relative;display:flex;flex-direction:column;gap:8px;padding:20px 18px;border-radius:14px;background:#fff;border:1px solid var(--line);transition:.2s}
+.stile:hover{border-color:transparent;box-shadow:var(--shadow-lg);transform:translateY(-3px)}
+.stile .svc-ic{width:46px;height:46px;margin-bottom:4px}
+.stile b{font:700 16.5px/1.25 var(--head);color:var(--ink)}
+.stile-p{font:700 14.5px var(--body);color:var(--plum)}
+.stile-tag{position:absolute;top:14px;right:14px;padding:3px 8px;border-radius:999px;background:#fdeee7;color:#b4472b;font:800 11px/1.2 var(--body)}
+.stiles-more{margin-top:22px}
+@media (max-width:1080px){.stiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.stiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stile{padding:16px 14px}.stile b{font-size:15px}}
 @media (prefers-reduced-motion:reduce){.ins-track{animation:none}.ins-row{overflow-x:auto}}
 @media (prefers-reduced-motion:reduce){.rv-track{animation:none}.rv-row{overflow-x:auto}}
 
