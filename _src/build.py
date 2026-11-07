@@ -687,7 +687,7 @@ window.SLP_CONV={conv};
 <meta name="robots" content="{robots}, max-image-preview:large">
 <link rel="canonical" href="{canonical}">
 <meta name="google-site-verification" content="{CONFIG["google_verification"]}">
-<meta name="theme-color" content="#0d1a3a">
+<meta name="theme-color" content="#0d1233">
 <meta name="geo.region" content="FR-75">
 <meta name="geo.placename" content="Paris">
 <meta name="geo.position" content="48.8566;2.3522">
