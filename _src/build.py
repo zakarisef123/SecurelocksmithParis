@@ -55,6 +55,9 @@ CONFIG = {
     "ads_id": "AW-17925645444",
     "ads_conv": {"call": "pIa-CPq274YcEITJzuNC", "wa": "", "form": ""},
     "google_verification": "26oalrhYl1sf4O17TalfT0E-_m-pbH7o4PDT2PE984Q",
+    # Widget d'avis Google qui se met à jour tout seul (Trustindex, Elfsight, EmbedSocial…) :
+    # collez ici le code d'intégration fourni par le service ; il remplace le carrousel ci-dessous.
+    "reviews_widget": "",
     # Entreprise (affichée sur le site et dans les mentions légales)
     "raison_sociale": "Secure Lock Serrurerie",
     "adresse": {"rue": "5 rue Camille du Gast", "cp": "92390", "ville": "Villeneuve-la-Garenne"},
@@ -425,15 +428,41 @@ def arr_grid(link=lambda z: z["url"], label=lambda z: z["surnom"], cls="arr-grid
         for z in ARR) + "</div>"
 
 
+def load_reviews():
+    """Avis : _src/reviews.json (mis à jour automatiquement si un script le remplit) + liste AVIS de data.py."""
+    lst = list(AVIS)
+    path = os.path.join(ROOT, "_src", "reviews.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        lst += data.get("reviews", data) if isinstance(data, dict) else data
+    return [r for r in lst if r.get("texte") or r.get("text")]
+
+
+REVIEWS = load_reviews()
+
+
+def review_card(r, hidden=False):
+    auteur = r.get("auteur") or r.get("author") or "Google user"
+    texte = r.get("texte") or r.get("text") or ""
+    note = int(r.get("note") or r.get("rating") or 5)
+    meta = " · ".join(x for x in (r.get("date", ""), r.get("arr", "")) if x)
+    return (f'<article class="review"{" aria-hidden=\"true\"" if hidden else ""}><header><span class="av">{E(auteur[:1].upper())}</span>'
+            f'<div><b>{E(auteur)}</b><small>{E(meta)}</small></div>{G_LOGO}</header>{stars(note)}<p>{E(texte)}</p></article>')
+
+
 def review_cards():
-    if not AVIS:
+    if not REVIEWS:
         return ""
-    cards = "".join(f'''<article class="review">
-  <header><span class="av">{E(r["auteur"][:1].upper())}</span><div><b>{E(r["auteur"])}</b><small>{E(r.get("date", ""))}{(" · " + E(r["arr"])) if r.get("arr") else ""}</small></div>{G_LOGO}</header>
-  {stars(int(r.get("note", 5)))}
-  <p>{E(r["texte"])}</p>
-</article>''' for r in AVIS)
-    return f'<div class="review-grid">{cards}</div>'
+    # Deux rangées qui défilent en sens inverse ; chaque rangée est doublée pour une boucle continue
+    half = (len(REVIEWS) + 1) // 2
+    rows = [REVIEWS[:half], REVIEWS[half:]] if len(REVIEWS) > 6 else [REVIEWS]
+    out = ""
+    for i, row in enumerate(rows):
+        cards = "".join(review_card(r) for r in row)
+        dup = "".join(review_card(r, True) for r in row)
+        out += f'<div class="rv-row{" rev" if i else ""}" style="--n:{len(row)}"><div class="rv-track">{cards}{dup}</div></div>'
+    return f'<div class="rv-marquee" aria-label="Google reviews">{out}</div>'
 
 
 def reviews_block(titre="What our customers say"):
@@ -447,8 +476,23 @@ def reviews_block(titre="What our customers say"):
   <a class="btn btn-navy btn-block" href="{E(MAPS)}" target="_blank" rel="noopener">Read our Google reviews</a>
   <a class="btn btn-outline btn-block" href="{E(AVIS_URL)}" target="_blank" rel="noopener">Leave a review</a>
 </div>'''
+    if CONFIG["reviews_widget"]:
+        return f'''<section class="sec soft" id="reviews">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
+    <div class="reviews-widget">{CONFIG["reviews_widget"]}</div>
+  </div>
+</section>'''
     cards = review_cards()
-    side = cards or f'''<div class="review-promise">
+    if cards:
+        return f'''<section class="sec soft" id="reviews">
+  <div class="wrap">
+    <div class="sec-head split"><div><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
+    <div class="rv-summary">{note}</div></div>
+  </div>
+  {cards}
+</section>'''
+    side = f'''<div class="review-promise">
   <h3>Public, verifiable reviews</h3>
   <p>We don't publish anonymous testimonials on our website: our reviews are posted by customers directly on our Google Business Profile. They are public and dated, and we can neither edit nor delete them.</p>
   <ul class="ticks">
