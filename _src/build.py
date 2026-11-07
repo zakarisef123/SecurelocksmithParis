@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Générateur du site Secure Locksmith Paris (serrurier Paris 75, 20 arrondissements).
+"""Générateur du site Secure Locksmith Paris (site en anglais, Paris 75, 20 arrondissements).
 
 Usage : python3 _src/build.py
-Écrit toutes les pages HTML, le sitemap, robots.txt et llms.txt à la racine du dépôt.
-Aucune dépendance : Python 3.12+.
+Écrit toutes les pages HTML, le sitemap, robots.txt, llms.txt et les redirections (_redirects)
+à la racine du dépôt. Aucune dépendance : Python 3.12+.
 
 Photos : déposez vos vraies photos (JPG ou WebP, ~1600 px de large) dans assets/img/photos/
 avec ces noms ; elles apparaissent automatiquement au prochain build :
-  accueil.jpg                     grande photo de l'accueil (vous, votre véhicule, une intervention)
-  equipe.jpg                      bloc « Qui sommes-nous »
-  ouverture-de-porte.jpg, serrure-bloquee.jpg, cle-cassee.jpg,
-  changement-de-serrure.jpg, serrure-connectee.jpg, apres-effraction.jpg   photos des services
+  home.jpg                        grande photo de l'accueil (vous, votre véhicule, une intervention)
+  team.jpg                        bloc « Why trust us »
+  <slug du service>.jpg           photo d'un service (ex. door-opening.jpg, armored-door.jpg)
 """
 import datetime
 import html
@@ -22,7 +21,7 @@ from data import ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF,
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Dépannages d'urgence d'abord, puis travaux et installation
+# Emergency services first, then works & installation
 SERVICES = [s for s in SERVICES if s["cat"] == "urgence"] + [s for s in SERVICES if s["cat"] != "urgence"]
 SVC_URG = [s for s in SERVICES if s["cat"] == "urgence"]
 SVC_TRAV = [s for s in SERVICES if s["cat"] != "urgence"]
@@ -34,13 +33,13 @@ SVC_BY_SLUG = {s["slug"]: s for s in SERVICES}
 CONFIG = {
     "site_url": "https://securelockserrurerie.com",  # nom de domaine, sans / final
     "nom": "Secure Locksmith Paris",
-    "slogan": "Votre serrurier de confiance",
-    "tel": "06 67 96 96 20",
+    "slogan": "Your trusted locksmith",
+    "tel": "+33 6 67 96 96 20",
     "tel_intl": "+33667969620",
     "wa": "33667969620",
     "email": "securelockserrurerie@gmail.com",
     "instagram": "https://www.instagram.com/securelockserrurerie/",
-    # Fiche Google Business Profile (remplacez par le lien exact de la fiche si besoin)
+    # Fiche Google Business Profile
     "maps_url": "https://www.google.com/maps/place/Secure+Lock+Serrurerie/@48.870843,1.155034,9z/data=!4m10!1m2!2m1!1sSecure+Lock+Serrurerie+Paris!3m6!1s0x267653ac7048cd93:0x27df91bfb8a939fd!8m2!3d48.870843!4d2.3745164!15sChxTZWN1cmUgTG9jayBTZXJydXJlcmllIFBhcmlzWh4iHHNlY3VyZSBsb2NrIHNlcnJ1cmVyaWUgcGFyaXOSAQlsb2Nrc21pdGiaAURDaTlEUVVsUlFVTnZaRU5vZEhsalJqbHZUMnhDZDAxR2EzaFNWV1IyVlRCU05GZFZZelJSVlhSMVkyeENNVk5yUlJBQuABAPoBBAg4EEc!16s%2Fg%2F11yz6fjq73",
     # Position de la fiche Google (carte et données structurées)
     "lat": 48.870843,
@@ -48,7 +47,7 @@ CONFIG = {
     # Lien « Demander des avis » de la fiche Google (ex. https://g.page/r/XXXX/review) ; vide = lien de la fiche
     "avis_url": "",
     # Note Google affichée sur le site : à tenir à jour (laisser vide pour ne rien afficher)
-    "avis_note": "5,0",
+    "avis_note": "5.0",
     "avis_nombre": 101,
     # Mesure d'audience (chargée seulement après accord du visiteur)
     "gtm_id": "GTM-N742H7F8",
@@ -56,16 +55,19 @@ CONFIG = {
     "ads_id": "AW-17925645444",
     "ads_conv": {"call": "pIa-CPq274YcEITJzuNC", "wa": "", "form": ""},
     "google_verification": "26oalrhYl1sf4O17TalfT0E-_m-pbH7o4PDT2PE984Q",
+    # Widget d'avis Google qui se met à jour tout seul (Trustindex, Elfsight, EmbedSocial…) :
+    # collez ici le code d'intégration fourni par le service ; il remplace le carrousel ci-dessous.
+    "reviews_widget": "",
     # Entreprise (affichée sur le site et dans les mentions légales)
     "raison_sociale": "Secure Lock Serrurerie",
     "adresse": {"rue": "5 rue Camille du Gast", "cp": "92390", "ville": "Villeneuve-la-Garenne"},
-    "siren": "",   # 9 chiffres, ex. "123456789"
+    "siren": "",   # 9 chiffres
     "siret": "",   # 14 chiffres
     "responsable": "",
     "mediateur": "",  # nom et site du médiateur de la consommation
-    # Facultatif, affiché seulement si rempli (ne mettez que des informations exactes et vérifiables)
-    "experience": "",  # ex. "Serruriers depuis 2015"
-    "assurance_rc": "",  # ex. "Assurance responsabilité civile professionnelle AXA, contrat n° …"
+    # Facultatif, affiché seulement si rempli (informations exactes et vérifiables uniquement)
+    "experience": "",  # ex. "Locksmiths since 2015"
+    "assurance_rc": "",  # ex. "Professional liability insurance: AXA, policy no. …"
 }
 
 TODAY = datetime.date.today().isoformat()
@@ -77,7 +79,8 @@ TEL_HREF = "tel:" + CONFIG["tel_intl"]
 WA = "https://wa.me/" + CONFIG["wa"]
 MAPS = CONFIG["maps_url"]
 AVIS_URL = CONFIG["avis_url"] or MAPS
-BID = URL + "/#serrurier"
+BID = URL + "/#locksmith"
+WA_MSG = "Hello, I need a locksmith in Paris."
 
 
 def wa_link(text):
@@ -86,7 +89,11 @@ def wa_link(text):
 
 
 def fmt_int(n):
-    return f"{n:,}".replace(",", " ")
+    return f"{n:,}"
+
+
+def eur(n):
+    return f"€{n:,}"
 
 
 def siret_fmt():
@@ -96,11 +103,11 @@ def siret_fmt():
 
 def adresse_txt():
     a = CONFIG["adresse"]
-    return ", ".join(v for v in (a["rue"], f'{a["cp"]} {a["ville"]}'.strip()) if v)
+    return ", ".join(v for v in (a["rue"], f'{a["cp"]} {a["ville"]}'.strip()) if v) + ", France"
 
 
 # ---------------------------------------------------------------------------
-# Icônes
+# Icons
 # ---------------------------------------------------------------------------
 _S = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
 ICONS = {
@@ -139,13 +146,21 @@ ICONS.update({
 })
 SPRITE = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + "".join(ICONS.values()) + "</defs></svg>"
 
+ICONS.update({
+    "i-building": f'<symbol id="i-building" viewBox="0 0 24 24" {_S}><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M10 21v-3h4v3"/></symbol>',
+    "i-card": f'<symbol id="i-card" viewBox="0 0 24 24" {_S}><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></symbol>',
+    "i-badge": f'<symbol id="i-badge" viewBox="0 0 24 24" {_S}><path d="m12 2.5 2.4 1.8 3 .1.9 2.9 2.4 1.8-.9 2.9.9 2.9-2.4 1.8-.9 2.9-3 .1L12 21.5l-2.4-1.8-3-.1-.9-2.9L3.3 15l.9-2.9-.9-2.9 2.4-1.8.9-2.9 3-.1z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>',
+    "i-chev": f'<symbol id="i-chev" viewBox="0 0 24 24" {_S} stroke-width="2.2"><path d="m9 6 6 6-6 6"/></symbol>',
+})
+SPRITE = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + "".join(ICONS.values()) + "</defs></svg>"
+
 
 def ico(name, cls="ic"):
     return f'<svg class="{cls}" aria-hidden="true"><use href="#{name}"/></svg>'
 
 
 def photo(name, alt, cls="", sizes="(max-width: 760px) 100vw, 600px", eager=False):
-    """Photo fournie dans assets/img/photos/<name>.(webp|jpg|jpeg|png), sinon chaîne vide."""
+    """Photo in assets/img/photos/<name>.(webp|jpg|jpeg|png), else empty string."""
     for ext in ("webp", "jpg", "jpeg", "png"):
         if os.path.exists(os.path.join(ROOT, "assets", "img", "photos", f"{name}.{ext}")):
             load = 'fetchpriority="high"' if eager else 'loading="lazy"'
@@ -156,14 +171,19 @@ def photo(name, alt, cls="", sizes="(max-width: 760px) 100vw, 600px", eager=Fals
 # ---------------------------------------------------------------------------
 # Arrondissements
 # ---------------------------------------------------------------------------
+def ordinal(n):
+    return "st" if n % 10 == 1 and n != 11 else "nd" if n % 10 == 2 and n != 12 else "rd" if n % 10 == 3 and n != 13 else "th"
+
+
 def build_arr():
     out = []
     for n, (surnom, pop, cps, quartiers, reperes, metros, habitat) in ARRONDISSEMENTS.items():
-        suf = "er" if n == 1 else "e"
+        suf = ordinal(n)
         out.append({
-            "n": n, "suf": suf, "num": f"{n}{suf}", "slug": f"serrurier-paris-{n}{suf}",
+            "n": n, "suf": suf, "num": f"{n}{suf}", "slug": f"locksmith-paris-{n}{suf}",
+            "fr_slug": f"serrurier-paris-{n}{'er' if n == 1 else 'e'}",
             "court": f"Paris {n}{suf}", "nom": f"Paris {n}{suf} arrondissement", "surnom": surnom,
-            "a": f"dans le {n}{suf} arrondissement", "a_court": f"à Paris {n}{suf}",
+            "a": f"in the {n}{suf} arrondissement", "a_court": f"in Paris {n}{suf}",
             "pop": pop, "cp": cps, "quartiers": quartiers, "reperes": reperes, "metros": metros, "habitat": habitat,
         })
     for i, z in enumerate(out):
@@ -177,20 +197,7 @@ ARR = build_arr()
 
 
 def et(lst):
-    return lst[0] if len(lst) == 1 else ", ".join(lst[:-1]) + " et " + lst[-1]
-
-
-def de(x):
-    """« de » + article contracté : de le → du, de les → des."""
-    if x.startswith("le "):
-        return "du " + x[3:]
-    if x.startswith("les "):
-        return "des " + x[4:]
-    return "de " + x
-
-
-def de_list(lst):
-    return et([de(x) for x in lst])
+    return lst[0] if len(lst) == 1 else ", ".join(lst[:-1]) + " and " + lst[-1]
 
 
 def svc_url(s):
@@ -201,14 +208,21 @@ def combo_url(s, z):
     return f"/{z['slug']}/{s['slug']}/"
 
 
+def prix_txt(s, strong=False):
+    if not s["prix_num"]:
+        return "<strong>free quote</strong>" if strong else "free quote"
+    p = eur(s["prix_num"])
+    return f"from <strong>{p} incl. VAT</strong>" if strong else f"from {p} incl. VAT"
+
+
 # ---------------------------------------------------------------------------
-# Composants
+# Components
 # ---------------------------------------------------------------------------
 def btn_call(label=None, cls="btn btn-gold", track="call"):
     return f'<a class="{cls}" href="{TEL_HREF}" data-track="{track}">{ico("i-phone")}<span>{E(label or TEL)}</span></a>'
 
 
-def btn_wa(text="Bonjour, j'ai besoin d'un serrurier à Paris.", label="WhatsApp", cls="btn btn-outline-light", track="wa"):
+def btn_wa(text=WA_MSG, label="WhatsApp", cls="btn btn-outline-light", track="wa"):
     return f'<a class="{cls}" href="{E(wa_link(text))}" target="_blank" rel="noopener" data-track="{track}">{ico("i-wa")}<span>{E(label)}</span></a>'
 
 
@@ -217,10 +231,10 @@ def ticks(items, cls="ticks"):
 
 
 def crumbs(items):
-    parts = ['<a href="/">Accueil</a>']
+    parts = ['<a href="/">Home</a>']
     for label, url in items:
         parts.append(f'<a href="{url}">{E(label)}</a>' if url else f'<span aria-current="page">{E(label)}</span>')
-    return '<nav class="crumbs" aria-label="Fil d\'Ariane">' + ico("i-chev", "sep").join(parts) + "</nav>"
+    return '<nav class="crumbs" aria-label="Breadcrumb">' + ico("i-chev", "sep").join(parts) + "</nav>"
 
 
 def stars(n=5, cls="st"):
@@ -237,7 +251,7 @@ def google_badge(cls="g-badge"):
     if not CONFIG["avis_note"]:
         return ""
     return (f'<a class="{cls}" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}'
-            f'<span><b>{CONFIG["avis_note"]}</b>{stars()}<small>{CONFIG["avis_nombre"]} avis Google</small></span></a>')
+            f'<span><b>{CONFIG["avis_note"]}</b>{stars()}<small>{CONFIG["avis_nombre"]} Google reviews</small></span></a>')
 
 
 def faq_html(faq):
@@ -252,7 +266,7 @@ def ld_faq(faq):
 
 
 def ld_crumbs(items):
-    lst = [{"@type": "ListItem", "position": 1, "name": "Accueil", "item": URL + "/"}]
+    lst = [{"@type": "ListItem", "position": 1, "name": "Home", "item": URL + "/"}]
     for i, (label, url) in enumerate(items, start=2):
         lst.append({"@type": "ListItem", "position": i, "name": label, "item": URL + url})
     return {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": lst}
@@ -265,7 +279,8 @@ def ld_business(full=False):
         "alternateName": CONFIG["raison_sociale"], "slogan": CONFIG["slogan"],
         "url": URL + "/", "telephone": CONFIG["tel_intl"], "email": CONFIG["email"],
         "image": URL + "/assets/img/og.jpg", "logo": URL + "/assets/img/icon-512.png",
-        "priceRange": "€€", "currenciesAccepted": "EUR", "paymentAccepted": "Carte bancaire, Espèces, Virement",
+        "priceRange": "€€", "currenciesAccepted": "EUR", "paymentAccepted": "Credit card, Cash, Bank transfer",
+        "knowsLanguage": ["en", "fr"],
         "address": {"@type": "PostalAddress", "streetAddress": a["rue"], "postalCode": a["cp"], "addressLocality": a["ville"],
                     "addressRegion": "Île-de-France", "addressCountry": "FR"},
         "geo": {"@type": "GeoCoordinates", "latitude": CONFIG["lat"], "longitude": CONFIG["lng"]},
@@ -279,7 +294,7 @@ def ld_business(full=False):
         d["identifier"] = {"@type": "PropertyValue", "propertyID": "SIRET", "value": CONFIG["siret"]}
     if full:
         d["areaServed"] += [{"@type": "AdministrativeArea", "name": z["nom"]} for z in ARR]
-        d["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": "Serrurerie à Paris", "itemListElement": [
+        d["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": "Locksmith services in Paris", "itemListElement": [
             {"@type": "Offer", "itemOffered": {"@type": "Service", "name": s["nom"], "url": URL + svc_url(s)},
              **({"priceSpecification": {"@type": "PriceSpecification", "minPrice": s["prix_num"], "priceCurrency": "EUR"}} if s["prix_num"] else {})}
             for s in SERVICES]}
@@ -289,60 +304,60 @@ def ld_business(full=False):
 FORM_N = [0]
 
 
-def lead_form(source, service=None, titre="Demande de devis gratuit", sous="Nous vous rappelons rapidement, 7j/7.", arr=""):
+def lead_form(source, service=None, titre="Request a free quote", sous="We call you back quickly, 7 days a week.", arr=""):
     FORM_N[0] += 1
     n = FORM_N[0]
     opts = "".join(f'<option{" selected" if service == s["court"] else ""}>{E(s["court"])}</option>' for s in SERVICES)
     arr_opts = "".join(f'<option{" selected" if arr == z["court"] else ""}>{E(z["court"])}</option>' for z in ARR)
-    return f'''<form class="lead-form" name="devis" method="POST" action="/merci/" data-netlify="true" netlify-honeypot="champ-robot">
-  <input type="hidden" name="form-name" value="devis"><input type="hidden" name="page" value="{E(source)}">
-  <p hidden><label>Laisser vide <input name="champ-robot"></label></p>
+    return f'''<form class="lead-form" name="quote" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field">
+  <input type="hidden" name="form-name" value="quote"><input type="hidden" name="page" value="{E(source)}">
+  <p hidden><label>Leave empty <input name="bot-field"></label></p>
   <div class="form-head"><h3>{E(titre)}</h3><p>{E(sous)}</p></div>
   <div class="grid2">
-    <label for="n{n}">Nom<input id="n{n}" name="nom" autocomplete="name" required placeholder="Votre nom"></label>
-    <label for="t{n}">Téléphone<input id="t{n}" name="telephone" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9+ .()-]{{10,}}" placeholder="06 00 00 00 00"></label>
+    <label for="n{n}">Name<input id="n{n}" name="name" autocomplete="name" required placeholder="Your name"></label>
+    <label for="t{n}">Phone<input id="t{n}" name="phone" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9+ .()-]{{8,}}" placeholder="+33 6 00 00 00 00"></label>
   </div>
   <div class="grid2">
-    <label for="s{n}">Votre besoin<select id="s{n}" name="service">{opts}<option{" selected" if not service else ""}>Autre demande</option></select></label>
-    <label for="a{n}">Arrondissement<select id="a{n}" name="arrondissement"><option value="">Choisir…</option>{arr_opts}</select></label>
+    <label for="s{n}">What do you need?<select id="s{n}" name="service">{opts}<option{" selected" if not service else ""}>Other request</option></select></label>
+    <label for="a{n}">Arrondissement<select id="a{n}" name="arrondissement"><option value="">Choose…</option>{arr_opts}</select></label>
   </div>
-  <label for="m{n}">Message<textarea id="m{n}" name="message" rows="3" placeholder="Type de porte, situation, horaire souhaité…"></textarea></label>
-  <button class="btn btn-navy btn-block btn-lg" type="submit">{ico("i-mail")}<span>Envoyer ma demande</span></button>
-  <p class="form-legal">{ico("i-lock", "ic xs")}Vos données servent uniquement à vous répondre. <a href="/confidentialite/">Confidentialité</a></p>
-  <div class="form-ok" role="status" hidden>{ico("i-check")}<div><strong>Demande bien reçue.</strong> Nous vous rappelons très vite. Urgence : <a href="{TEL_HREF}">{TEL}</a></div></div>
+  <label for="m{n}">Message<textarea id="m{n}" name="message" rows="3" placeholder="Type of door, situation, preferred time…"></textarea></label>
+  <button class="btn btn-navy btn-block btn-lg" type="submit">{ico("i-mail")}<span>Send my request</span></button>
+  <p class="form-legal">{ico("i-lock", "ic xs")}Your details are only used to reply to you. <a href="/privacy/">Privacy</a></p>
+  <div class="form-ok" role="status" hidden>{ico("i-check")}<div><strong>Request received.</strong> We will call you back very soon. Emergency: <a href="{TEL_HREF}">{TEL}</a></div></div>
 </form>'''
 
 
-def contact_band(titre="Besoin d'un serrurier à Paris ?", texte="Appelez-nous : un serrurier vous répond directement et vous annonce le prix avant de se déplacer.",
+def contact_band(titre="Need a locksmith in Paris?", texte="Call us: a locksmith answers directly and gives you the price before travelling.",
                  source="/", service=None, arr=""):
-    return f'''<section class="band" id="devis">
+    return f'''<section class="band" id="quote">
   <div class="wrap band-grid">
     <div class="band-text">
-      <span class="eyebrow light">Réponse immédiate · 24h/24</span>
-      <h2>{E(titre).replace(" ?", "&nbsp;?")}</h2>
+      <span class="eyebrow light">Immediate answer · 24/7</span>
+      <h2>{E(titre)}</h2>
       <p>{E(texte)}</p>
-      <a class="band-phone" href="{TEL_HREF}" data-track="call_band"><span class="ring">{ico("i-phone")}</span><span><small>Appel direct, sans plateforme</small><b>{TEL}</b></span></a>
-      {ticks(["Prix annoncé avant le déplacement", "Devis écrit signé avant toute intervention", "Facture détaillée pour votre assurance", "Paiement CB, espèces ou virement"], "ticks light")}
+      <a class="band-phone" href="{TEL_HREF}" data-track="call_band"><span class="ring">{ico("i-phone")}</span><span><small>Direct line, no call center</small><b>{TEL}</b></span></a>
+      {ticks(["Price given before we travel", "Written quote signed before any work", "Detailed invoice for your insurer", "Card, cash or bank transfer"], "ticks light")}
     </div>
     {lead_form(source, service, arr=arr)}
   </div>
 </section>'''
 
 
-def side_box(titre="Un serrurier disponible maintenant", texte="Décrivez votre situation au téléphone : le prix vous est annoncé avant tout déplacement."):
+def side_box(titre="A locksmith available now", texte="Describe your situation on the phone: you get the price before anyone travels."):
     return f'''<aside class="side-box">
-  <div class="side-head"><span class="live"><i></i>Disponible 24h/24</span><h3>{E(titre)}</h3></div>
+  <div class="side-head"><span class="live"><i></i>Available 24/7</span><h3>{E(titre)}</h3></div>
   <div class="side-body">
     <p>{E(texte)}</p>
     {btn_call(cls="btn btn-gold btn-block btn-lg", track="call_side")}
-    {btn_wa(label="Envoyer une photo", cls="btn btn-outline btn-block", track="wa_side")}
-    {ticks(["Devis gratuit et sans engagement", "Ouverture sans casse dans la plupart des cas", "Facture acceptée par les assurances"], "ticks small")}
+    {btn_wa(label="Send a photo", cls="btn btn-outline btn-block", track="wa_side")}
+    {ticks(["Free quote, no obligation", "Damage-free opening in most cases", "Invoice accepted by insurers"], "ticks small")}
     {google_badge("g-badge compact")}
   </div>
 </aside>'''
 
 
-SLOTS = [("jour", "i-sun", "Journée", "8h – 18h"), ("soir", "i-sunset", "Soirée", "18h – 22h"), ("nuit", "i-moon", "Nuit", "22h – 8h")]
+SLOTS = [("jour", "i-sun", "Day", "8am – 6pm"), ("soir", "i-sunset", "Evening", "6pm – 10pm"), ("nuit", "i-moon", "Night", "10pm – 8am")]
 
 
 def tarif_table():
@@ -350,9 +365,9 @@ def tarif_table():
     trav = [t for t in TARIFS if not all(t[1:])]
 
     def prix_html(v):
-        apd = v.startswith("À partir de")
-        m = (v[12:] if apd else v).replace(" ", "\u202f").replace("\u202f€", "\u00a0€")
-        return f'<span class="pv-from">{"à partir de" if apd else ""}</span><b class="pv-num">{E(m)}</b>'
+        apd = v.startswith("From ")
+        m = v[5:] if apd else v
+        return f'<span class="pv-from">{"from" if apd else ""}</span><b class="pv-num">{E(m)}</b>'
     tabs = "".join(f'<button type="button" role="tab" data-slot="{k}" aria-selected="{"true" if k == "jour" else "false"}">{ico(i)}<span><b>{l}</b><small>{h}</small></span></button>'
                    for k, i, l, h in SLOTS)
     rows = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price">'
@@ -361,18 +376,18 @@ def tarif_table():
     trv = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price"><span class="pv">{prix_html(j)}</span></span></li>' for p, j, *_ in trav)
     return f'''<div class="tarifs">
   <div class="tarif-card main" data-tarifs>
-    <div class="tc-head"><div><span class="eyebrow light">Dépannage 24h/24</span><h3>Le tarif change selon l'heure</h3></div><span class="tc-ttc">Prix TTC</span></div>
-    <div class="slot-tabs" role="tablist" aria-label="Heure d'intervention">{tabs}</div>
+    <div class="tc-head"><div><span class="eyebrow light">24/7 emergency call-outs</span><h3>Prices depend on the time of day</h3></div><span class="tc-ttc">Incl. VAT</span></div>
+    <div class="slot-tabs" role="tablist" aria-label="Time of call-out">{tabs}</div>
     <p class="slot-now" hidden></p>
     <ul class="price-list">{rows}</ul>
   </div>
   <div class="tarif-card">
-    <div class="tc-head light"><div><span class="eyebrow">Sur rendez-vous</span><h3>Travaux et pose</h3></div></div>
+    <div class="tc-head light"><div><span class="eyebrow">By appointment</span><h3>Works &amp; installation</h3></div></div>
     <ul class="price-list">{trv}</ul>
-    <p class="tarif-foot">Prix de départ en journée. Devis détaillé gratuit après visite.</p>
+    <p class="tarif-foot">Daytime starting prices. Free detailed quote after a visit.</p>
   </div>
 </div>
-<p class="tarif-note">{ico("i-file")}<span>Tarifs TTC, main d'œuvre comprise. Le prix exact dépend de votre porte et de votre serrure : il vous est annoncé au téléphone, puis confirmé par un devis écrit et signé avant l'intervention, conformément à l'arrêté du 24 janvier 2017.</span></p>'''
+<p class="tarif-note">{ico("i-file")}<span>Prices include VAT and labor. The exact price depends on your door and lock: it is given on the phone, then confirmed by a written, signed quote before any work, as required by French regulations (decree of 24 January 2017).</span></p>'''
 
 
 def logo_tile(nom, slug, folder):
@@ -381,27 +396,53 @@ def logo_tile(nom, slug, folder):
     return ""
 
 
+# Couleur de marque des assureurs affichés sans logo
+INS_COLORS = {"GMF": "#00529b", "MMA": "#e30613", "Crédit Agricole Assurances": "#007d8f", "BNP Paribas Cardif": "#00915a",
+              "Société Générale Assurances": "#e60028", "LCL": "#002f6c", "Crédit Mutuel": "#0060a9", "CIC": "#00a0e1",
+              "La Banque Postale": "#003da5", "Banque Populaire": "#0065b1", "Allianz Direct": "#003781", "Leocare": "#1e1e50",
+              "Mutuelle de Poitiers Assurances": "#003f7d"}
+
+
+def insurer_item(nom, slug, hidden=False):
+    ah = ' aria-hidden="true"' if hidden else ""
+    if slug and os.path.exists(os.path.join(ROOT, "assets", "img", "assureurs", f"{slug}.webp")):
+        return f'<li class="ins"{ah}><img src="/assets/img/assureurs/{slug}.webp" alt="{"" if hidden else E(nom)}" title="{E(nom)}" loading="lazy" decoding="async" height="40"></li>'
+    col = INS_COLORS.get(nom, "#1c3168")
+    return f'<li class="ins ins-name"{ah}><span style="color:{col}">{E(nom)}</span></li>'
+
+
 def assureurs_strip(titre=True):
-    tiles = "".join(logo_tile(n, s, "assureurs") for n, s in ASSUREURS)
-    autres = ", ".join(n for n, s in ASSUREURS if not s)
-    head = f'''<div class="strip-head"><p><b>Factures reconnues par les assureurs habitation</b><span>Remboursement selon les garanties de votre contrat · <a href="/assurance/">en savoir plus</a></span></p></div>''' if titre else ""
+    # Deux bandes qui défilent en sens inverse (chaque bande est doublée pour une boucle continue)
+    half = (len(ASSUREURS) + 1) // 2
+    rows = ""
+    for i, part in enumerate((ASSUREURS[:half], ASSUREURS[half:])):
+        items = "".join(insurer_item(n, s) for n, s in part) + "".join(insurer_item(n, s, True) for n, s in part)
+        rows += f'<div class="ins-row{" rev" if i else ""}" style="--n:{len(part)}"><ul class="ins-track">{items}</ul></div>'
+    head = f'''<div class="strip-head"><p><b>Invoices recognized by French home insurers</b><span>Reimbursement depends on your policy · <a href="/insurance/">learn more</a></span></p></div>''' if titre else ""
     return f'''<section class="strip">
-  <div class="wrap">
-    {head}
-    <ul class="logos">{tiles}</ul>
-    <p class="fine">Et aussi : {E(autres)}. {E(NOM)} est une entreprise indépendante, sans partenariat avec ces compagnies ; les logos appartiennent à leurs propriétaires.</p>
-  </div>
+  <div class="wrap">{head}</div>
+  <div class="ins-marquee" aria-label="Home insurers">{rows}</div>
+  <div class="wrap"><p class="fine">{E(NOM)} is an independent company with no partnership with these insurers; names and logos belong to their respective owners.</p></div>
 </section>'''
 
 
 def marques_block():
-    tiles = "".join(logo_tile(n, s, "marques") for n, s, _ in MARQUES)
+    def item(nom, slug, hidden=False):
+        ah = ' aria-hidden="true"' if hidden else ""
+        if slug and os.path.exists(os.path.join(ROOT, "assets", "img", "marques", f"{slug}.webp")):
+            return f'<li class="ins"{ah}><img src="/assets/img/marques/{slug}.webp" alt="{"" if hidden else E(nom)}" title="{E(nom)}" loading="lazy" decoding="async" height="40"></li>'
+        return f'<li class="ins ins-name"{ah}><span>{E(nom)}</span></li>'
+    half = (len(MARQUES) + 1) // 2
+    rows = ""
+    for i, part in enumerate((MARQUES[:half], MARQUES[half:])):
+        items = "".join(item(n, s) for n, s, _ in part) + "".join(item(n, s, True) for n, s, _ in part)
+        rows += f'<div class="ins-row{" rev" if i else ""}" style="--n:{len(part)}"><ul class="ins-track">{items}</ul></div>'
     cats = {}
     for n, _, c in MARQUES:
         cats.setdefault(c, []).append(n)
-    txt = " · ".join(f"<b>{E(c)}</b> : {E(', '.join(l))}" for c, l in cats.items())
+    txt = " · ".join(f"<b>{E(c)}</b>: {E(', '.join(l))}" for c, l in cats.items())
     return f'''<div class="brands">
-  <ul class="logos brands-logos">{tiles}</ul>
+  <div class="ins-marquee brands-marquee" aria-label="Lock and door brands">{rows}</div>
   <p class="fine">{txt}.</p>
 </div>'''
 
@@ -413,41 +454,82 @@ def arr_grid(link=lambda z: z["url"], label=lambda z: z["surnom"], cls="arr-grid
         for z in ARR) + "</div>"
 
 
+def load_reviews():
+    """Avis : _src/reviews.json (mis à jour automatiquement si un script le remplit) + liste AVIS de data.py."""
+    lst = list(AVIS)
+    path = os.path.join(ROOT, "_src", "reviews.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        lst += data.get("reviews", data) if isinstance(data, dict) else data
+    return [r for r in lst if r.get("texte") or r.get("text")]
+
+
+REVIEWS = load_reviews()
+
+
+def review_card(r, hidden=False):
+    auteur = r.get("auteur") or r.get("author") or "Google user"
+    texte = r.get("texte") or r.get("text") or ""
+    note = int(r.get("note") or r.get("rating") or 5)
+    meta = " · ".join(x for x in (r.get("date", ""), r.get("arr", "")) if x)
+    return (f'<article class="review"{" aria-hidden=\"true\"" if hidden else ""}><header><span class="av">{E(auteur[:1].upper())}</span>'
+            f'<div><b>{E(auteur)}</b><small>{E(meta)}</small></div>{G_LOGO}</header>{stars(note)}<p>{E(texte)}</p></article>')
+
+
 def review_cards():
-    if not AVIS:
+    if not REVIEWS:
         return ""
-    cards = "".join(f'''<article class="review">
-  <header><span class="av">{E(r["auteur"][:1].upper())}</span><div><b>{E(r["auteur"])}</b><small>{E(r.get("date", ""))}{(" · " + E(r["arr"])) if r.get("arr") else ""}</small></div>{G_LOGO}</header>
-  {stars(int(r.get("note", 5)))}
-  <p>{E(r["texte"])}</p>
-</article>''' for r in AVIS)
-    return f'<div class="review-grid">{cards}</div>'
+    # Deux rangées qui défilent en sens inverse ; chaque rangée est doublée pour une boucle continue
+    half = (len(REVIEWS) + 1) // 2
+    rows = [REVIEWS[:half], REVIEWS[half:]] if len(REVIEWS) > 6 else [REVIEWS]
+    out = ""
+    for i, row in enumerate(rows):
+        cards = "".join(review_card(r) for r in row)
+        dup = "".join(review_card(r, True) for r in row)
+        out += f'<div class="rv-row{" rev" if i else ""}" style="--n:{len(row)}"><div class="rv-track">{cards}{dup}</div></div>'
+    return f'<div class="rv-marquee" aria-label="Google reviews">{out}</div>'
 
 
-def reviews_block(titre="Ce que nos clients disent de nous"):
+def reviews_block(titre="What our customers say"):
     note = ""
     if CONFIG["avis_note"]:
         note = f'''<div class="score-card">
-  <div class="score-top">{G_LOGO}<span>Avis Google</span></div>
+  <div class="score-top">{G_LOGO}<span>Google reviews</span></div>
   <div class="score"><b>{CONFIG["avis_note"]}</b><span>/5</span></div>
   {stars(5, "st lg")}
-  <p>Note moyenne sur <b>{CONFIG["avis_nombre"]} avis</b> publiés par nos clients</p>
-  <a class="btn btn-navy btn-block" href="{E(MAPS)}" target="_blank" rel="noopener">Lire les avis sur Google</a>
-  <a class="btn btn-outline btn-block" href="{E(AVIS_URL)}" target="_blank" rel="noopener">Laisser un avis</a>
+  <p>Average rating from <b>{CONFIG["avis_nombre"]} reviews</b> posted by our customers</p>
+  <a class="btn btn-navy btn-block" href="{E(MAPS)}" target="_blank" rel="noopener">Read our Google reviews</a>
+  <a class="btn btn-outline btn-block" href="{E(AVIS_URL)}" target="_blank" rel="noopener">Leave a review</a>
 </div>'''
+    if CONFIG["reviews_widget"]:
+        return f'''<section class="sec soft" id="reviews">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
+    <div class="reviews-widget">{CONFIG["reviews_widget"]}</div>
+  </div>
+</section>'''
     cards = review_cards()
-    side = cards or f'''<div class="review-promise">
-  <h3>Des avis publics et vérifiables</h3>
-  <p>Nous ne publions pas de témoignages anonymes sur notre site : nos avis sont déposés par nos clients directement sur notre fiche Google. Ils sont publics, datés, et nous ne pouvons ni les modifier ni les supprimer.</p>
+    if cards:
+        return f'''<section class="sec soft" id="reviews">
+  <div class="wrap">
+    <div class="sec-head split"><div><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
+    <div class="rv-summary">{note}</div></div>
+  </div>
+  {cards}
+</section>'''
+    side = f'''<div class="review-promise">
+  <h3>Public, verifiable reviews</h3>
+  <p>We don't publish anonymous testimonials on our website: our reviews are posted by customers directly on our Google Business Profile. They are public and dated, and we can neither edit nor delete them.</p>
   <ul class="ticks">
-    <li>{ico("i-check")}<span>Déposés directement par nos clients sur Google</span></li>
-    <li>{ico("i-check")}<span>Consultables avant même de nous appeler</span></li>
-    <li>{ico("i-check")}<span>Prix, délai, propreté : jugez sur pièces avant d'appeler</span></li>
+    <li>{ico("i-check")}<span>Posted directly by our customers on Google</span></li>
+    <li>{ico("i-check")}<span>Available to read before you even call us</span></li>
+    <li>{ico("i-check")}<span>Price, speed, tidiness: judge for yourself before calling</span></li>
   </ul>
 </div>'''
-    return f'''<section class="sec soft" id="avis">
+    return f'''<section class="sec soft" id="reviews">
   <div class="wrap">
-    <div class="sec-head"><span class="eyebrow">Avis clients</span><h2>{E(titre)}</h2></div>
+    <div class="sec-head"><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
     <div class="reviews">{note}{side}</div>
   </div>
 </section>'''
@@ -456,55 +538,55 @@ def reviews_block(titre="Ce que nos clients disent de nous"):
 def map_embed():
     from urllib.parse import quote
     q = quote(f"Secure Lock Serrurerie @{CONFIG['lat']},{CONFIG['lng']}")
-    return (f'<div class="map"><iframe title="{E(NOM)} sur Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
-            f'src="https://maps.google.com/maps?q={q}&amp;z=14&amp;hl=fr&amp;output=embed"></iframe>'
-            f'<a class="map-link" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}Voir notre fiche Google</a></div>')
+    return (f'<div class="map"><iframe title="{E(NOM)} on Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
+            f'src="https://maps.google.com/maps?q={q}&amp;z=14&amp;hl=en&amp;output=embed"></iframe>'
+            f'<a class="map-link" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}See our Google profile</a></div>')
 
 
 def comparatif_block():
     rows = "".join(f'<li><div class="cmp-bad"><span class="cmp-ic">×</span><p>{E(b)}</p></div><div class="cmp-good">{ico("i-check")}<p>{E(g)}</p></div></li>'
                    for b, g in COMPARATIF)
     return f'''<div class="cmp">
-  <div class="cmp-head"><span>Les pratiques abusives à fuir</span><span>Chez {E(NOM)}</span></div>
+  <div class="cmp-head"><span>Abusive practices to avoid</span><span>At {E(NOM)}</span></div>
   <ul>{rows}</ul>
 </div>'''
 
 
-def inclus_block(titre="Ce qui est compris dans le prix"):
+def inclus_block(titre="What the price includes"):
     lis = "".join(f"<li>{ico('i-check')}<span>{E(i)}</span></li>" for i in INCLUS)
     return f'<div class="inclus"><h3>{E(titre)}</h3><ul>{lis}</ul></div>'
 
 
 def engagements_short():
     lis = "".join(f'<li>{ico(i)}<span><b>{E(t.split(". ", 1)[1])}</b></span></li>' for i, t, _ in CHARTE[:6])
-    return f'''<div class="eng-short"><h3>Nos engagements, par écrit</h3><ul>{lis}</ul>
-  <a class="text-link" href="/nos-engagements/">Lire notre charte de confiance {ico("i-arrow", "ic sm")}</a></div>'''
+    return f'''<div class="eng-short"><h3>Our commitments, in writing</h3><ul>{lis}</ul>
+  <a class="text-link" href="/our-commitments/">Read our trust charter {ico("i-arrow", "ic sm")}</a></div>'''
 
 
 def company_card():
-    rows = [("i-building", "Entreprise", f"{E(CONFIG['raison_sociale'])}")]
+    rows = [("i-building", "Company", f"{E(CONFIG['raison_sociale'])}")]
     if CONFIG["siret"]:
-        rows.append(("i-file", "SIRET", siret_fmt()))
-    rows += [("i-pin", "Siège", E(adresse_txt())), ("i-phone", "Téléphone", f'<a href="{TEL_HREF}">{TEL}</a>'),
-             ("i-mail", "E-mail", f'<a href="mailto:{CONFIG["email"]}">{CONFIG["email"]}</a>'),
-             ("i-card", "Paiement", "Carte bancaire, espèces, virement")]
+        rows.append(("i-file", "SIRET (company no.)", siret_fmt()))
+    rows += [("i-pin", "Registered office", E(adresse_txt())), ("i-phone", "Phone", f'<a href="{TEL_HREF}">{TEL}</a>'),
+             ("i-mail", "Email", f'<a href="mailto:{CONFIG["email"]}">{CONFIG["email"]}</a>'),
+             ("i-card", "Payment", "Card, cash, bank transfer")]
     if CONFIG["experience"]:
-        rows.insert(1, ("i-award", "Expérience", E(CONFIG["experience"])))
+        rows.insert(1, ("i-award", "Experience", E(CONFIG["experience"])))
     if CONFIG["assurance_rc"]:
-        rows.append(("i-shield", "Assurance", E(CONFIG["assurance_rc"])))
+        rows.append(("i-shield", "Insurance", E(CONFIG["assurance_rc"])))
     lis = "".join(f'<li>{ico(i)}<span><small>{l}</small>{v}</span></li>' for i, l, v in rows)
     return f'''<div class="company">
-  <div class="company-head"><img src="/assets/img/logo-112.webp" width="56" height="56" alt=""><div><b>{E(NOM)}</b><small>Fiche d'identité</small></div></div>
+  <div class="company-head"><img src="/assets/img/logo-112.webp" width="56" height="56" alt=""><div><b>{E(NOM)}</b><small>Company details</small></div></div>
   <ul>{lis}</ul>
-  <a class="company-link" href="/mentions-legales/">Mentions légales complètes {ico("i-arrow", "ic sm")}</a>
+  <a class="company-link" href="/legal-notice/">Full legal notice {ico("i-arrow", "ic sm")}</a>
 </div>'''
 
 
 # ---------------------------------------------------------------------------
-# Gabarit de page
+# Page template
 # ---------------------------------------------------------------------------
-NAV = [("Urgence", "/urgence/"), ("Services", "/services/"), ("Tarifs", "/tarifs/"), ("Engagements", "/nos-engagements/"),
-       ("Arrondissements", "/serrurier-paris/"), ("Contact", "/contact/")]
+NAV = [("Emergency", "/emergency/"), ("Services", "/services/"), ("Prices", "/prices/"), ("Our commitments", "/our-commitments/"),
+       ("Arrondissements", "/locksmith-paris/"), ("Contact", "/contact/")]
 SITEMAP = []
 
 
@@ -518,9 +600,9 @@ def asset_v(rel):
 
 
 def logo_html(cls="brand"):
-    return (f'<a href="/" class="{cls}" aria-label="{E(NOM)} – accueil"><picture><source type="image/webp" srcset="/assets/img/logo-112.webp">'
+    return (f'<a href="/" class="{cls}" aria-label="{E(NOM)} – home"><picture><source type="image/webp" srcset="/assets/img/logo-112.webp">'
             f'<img src="/assets/img/logo-112.png" width="52" height="52" alt=""></picture>'
-            f'<span class="wordmark"><b>Secure Locksmith</b><small>Serrurier · Paris</small></span></a>')
+            f'<span class="wordmark"><b>Secure Locksmith</b><small>Locksmith · Paris</small></span></a>')
 
 
 def footer():
@@ -530,23 +612,23 @@ def footer():
     return f'''<footer class="foot">
   <div class="wrap">
     <div class="foot-cta">
-      <div><b>Une urgence ? Un serrurier vous répond tout de suite.</b><span>24h/24 · 7j/7 · dimanches et jours fériés</span></div>
+      <div><b>An emergency? A locksmith answers right away.</b><span>24/7 · Sundays and public holidays included</span></div>
       {btn_call(cls="btn btn-gold btn-lg", track="call_footer_cta")}
     </div>
     <div class="foot-grid">
       <div class="foot-brand">
         {logo_html("brand brand-foot")}
-        <p>Serrurier à Paris, dans les 20 arrondissements. Dépannage 24h/24, prix annoncé avant le déplacement, devis signé avant travaux, facture pour votre assurance.</p>
+        <p>Locksmith in Paris, across all 20 arrondissements. 24/7 call-outs, price given before we travel, signed quote before any work, invoice for your insurer. English-speaking service.</p>
         <p class="foot-id">{E(CONFIG["raison_sociale"])}<br>{E(adresse_txt())}{siret}</p>
       </div>
       <div><h4>Services</h4><ul>{svc}</ul></div>
-      <div><h4>Informations</h4><ul><li><a href="/nos-engagements/">Nos engagements</a></li><li><a href="/tarifs/">Tarifs</a></li><li><a href="/assurance/">Assurance et remboursement</a></li><li><a href="/avis/">Avis clients</a></li><li><a href="/questions-frequentes/">Questions fréquentes</a></li><li><a href="/conseils/">Conseils</a></li><li><a href="/contact/">Contact</a></li></ul></div>
+      <div><h4>Information</h4><ul><li><a href="/our-commitments/">Our commitments</a></li><li><a href="/prices/">Prices</a></li><li><a href="/insurance/">Insurance &amp; reimbursement</a></li><li><a href="/reviews/">Customer reviews</a></li><li><a href="/faq/">FAQ</a></li><li><a href="/advice/">Advice</a></li><li><a href="/contact/">Contact</a></li></ul></div>
       <div><h4>Contact</h4><ul class="foot-contact"><li><a href="{TEL_HREF}" data-track="call_footer">{ico("i-phone", "ic sm")}{TEL}</a></li><li><a href="mailto:{CONFIG["email"]}">{ico("i-mail", "ic sm")}{CONFIG["email"]}</a></li><li><a href="{CONFIG["instagram"]}" target="_blank" rel="noopener me">{ico("i-insta", "ic sm")}Instagram</a></li></ul>
         <h4 class="mt">Arrondissements</h4><div class="arr-mini">{arr}</div></div>
     </div>
     <div class="foot-bottom">
       <span>© {TODAY[:4]} {E(NOM)} – {E(CONFIG["raison_sociale"])}</span>
-      <nav><a href="/mentions-legales/">Mentions légales</a><a href="/confidentialite/">Confidentialité</a><a href="/plan-du-site/">Plan du site</a><button type="button" class="linklike" data-open-consent>Cookies</button></nav>
+      <nav><a href="/legal-notice/">Legal notice</a><a href="/privacy/">Privacy</a><a href="/site-map/">Site map</a><button type="button" class="linklike" data-open-consent>Cookies</button></nav>
     </div>
   </div>
 </footer>'''
@@ -554,15 +636,15 @@ def footer():
 
 def page(path, title, desc, body, ld=(), active=None, robots="index, follow", og_type="website"):
     canonical = URL + path
-    nav = "".join(f'<a href="{u}"{" class=\"nav-urg\"" if u == "/urgence/" else ""}{" aria-current=\"page\"" if u == active else ""}>{"<i></i>" if u == "/urgence/" else ""}{E(l)}</a>' for l, u in NAV)
+    nav = "".join(f'<a href="{u}"{" class=\"nav-urg\"" if u == "/emergency/" else ""}{" aria-current=\"page\"" if u == active else ""}>{"<i></i>" if u == "/emergency/" else ""}{E(l)}</a>' for l, u in NAV)
     ld_html = "".join(f'<script type="application/ld+json">{json.dumps(d, ensure_ascii=False)}</script>\n' for d in ld)
     ads = CONFIG["ads_id"]
     conv = json.dumps({k: f"{ads}/{v}" for k, v in CONFIG["ads_conv"].items() if v}) if ads else "{}"
     ads_js = f"gtag('config','{ads}');" if ads else ""
-    note = (f'<a class="tb-rating" href="{E(MAPS)}" target="_blank" rel="noopener">{stars(5, "st xs")}<b>{CONFIG["avis_note"]}/5</b> sur Google ({CONFIG["avis_nombre"]} avis)</a>'
+    note = (f'<a class="tb-rating" href="{E(MAPS)}" target="_blank" rel="noopener">{stars(5, "st xs")}<b>{CONFIG["avis_note"]}/5</b> on Google ({CONFIG["avis_nombre"]} reviews)</a>'
             if CONFIG["avis_note"] else "")
     doc = f'''<!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -593,7 +675,7 @@ window.SLP_CONV={conv};
 <meta name="geo.placename" content="Paris">
 <meta name="geo.position" content="48.8566;2.3522">
 <meta property="og:type" content="{og_type}">
-<meta property="og:locale" content="fr_FR">
+<meta property="og:locale" content="en_GB">
 <meta property="og:site_name" content="{E(NOM)}">
 <meta property="og:title" content="{E(title)}">
 <meta property="og:description" content="{E(desc)}">
@@ -613,32 +695,32 @@ window.SLP_CONV={conv};
 {SPRITE}
 <div class="topbar">
   <div class="wrap tb-in">
-    <span class="tb-live"><i></i>Serruriers disponibles maintenant à Paris</span>
-    <span class="tb-items"><span>{ico("i-file", "ic xs")}Devis signé avant intervention</span><span>{ico("i-shield", "ic xs")}Facture acceptée par les assurances</span></span>
+    <span class="tb-live"><i></i>Locksmiths available now in Paris</span>
+    <span class="tb-items"><span>{ico("i-file", "ic xs")}Signed quote before any work</span><span>{ico("i-shield", "ic xs")}Invoices accepted by insurers</span></span>
     {note}
   </div>
 </div>
 <header class="top" id="top">
   <div class="wrap top-in">
     {logo_html()}
-    <nav class="menu" aria-label="Navigation principale">{nav}</nav>
+    <nav class="menu" aria-label="Main navigation">{nav}</nav>
     <div class="top-cta">
-      <a class="top-tel" href="{TEL_HREF}" data-track="call_header"><span class="ring">{ico("i-phone")}</span><span><small>Urgence 24h/24</small><b>{TEL}</b></span></a>
+      <a class="top-tel" href="{TEL_HREF}" data-track="call_header"><span class="ring">{ico("i-phone")}</span><span><small>24/7 emergency</small><b>{TEL}</b></span></a>
       <button class="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="drawer"><i></i><i></i><i></i></button>
     </div>
   </div>
-  <nav class="drawer" id="drawer" aria-label="Navigation mobile"><a href="/">Accueil</a>{nav}<a class="btn btn-gold" href="{TEL_HREF}" data-track="call_drawer">{ico("i-phone")}<span>Appeler le {TEL}</span></a></nav>
+  <nav class="drawer" id="drawer" aria-label="Mobile navigation"><a href="/">Home</a>{nav}<a class="btn btn-gold" href="{TEL_HREF}" data-track="call_drawer">{ico("i-phone")}<span>Call {TEL}</span></a></nav>
 </header>
 <main>
 {body}
 </main>
 {footer()}
 <div class="cookies" id="cookies" role="dialog" aria-label="Cookies" hidden>
-  <p><strong>Votre vie privée</strong> Avec votre accord, nous mesurons l'audience du site (Google Analytics, Google Tag Manager) pour l'améliorer. Aucun outil n'est chargé sans votre accord. <a href="/confidentialite/#cookies">En savoir plus</a></p>
-  <div><button type="button" class="btn btn-outline btn-sm" data-cookies="denied">Refuser</button><button type="button" class="btn btn-navy btn-sm" data-cookies="granted">Accepter</button></div>
+  <p><strong>Your privacy</strong> With your consent, we measure website traffic (Google Analytics, Google Tag Manager) to improve it. Nothing is loaded without your consent. <a href="/privacy/#cookies">Learn more</a></p>
+  <div><button type="button" class="btn btn-outline btn-sm" data-cookies="denied">Decline</button><button type="button" class="btn btn-navy btn-sm" data-cookies="granted">Accept</button></div>
 </div>
 <div class="dock">
-  <a class="btn btn-gold" href="{TEL_HREF}" data-track="call_dock">{ico("i-phone")}<span>Appeler · 24h/24</span></a>
+  <a class="btn btn-gold" href="{TEL_HREF}" data-track="call_dock">{ico("i-phone")}<span>Call now · 24/7</span></a>
   <a class="btn btn-wa" href="{WA}" target="_blank" rel="noopener" data-track="wa_dock" aria-label="WhatsApp">{ico("i-wa")}</a>
 </div>
 <script src="/assets/js/main.js?v={asset_v("assets/js/main.js")}" defer></script>
@@ -654,10 +736,10 @@ window.SLP_CONV={conv};
 
 
 PARIS_BG = {
-    "tour-eiffel": "La tour Eiffel au coucher du soleil", "toits-de-paris": "Les toits de Paris",
-    "notre-dame": "Notre-Dame de Paris et la Seine", "pantheon": "Le Panthéon", "conciergerie": "La Conciergerie au bord de la Seine",
-    "place-des-victoires": "La place des Victoires", "sacre-coeur": "Le Sacré-Cœur de Montmartre",
-    "vue-sacre-coeur": "Vue sur Montmartre", "avenue-etoile": "Avenue parisienne vue de l'Arc de Triomphe", "mairie": "Une mairie d'arrondissement",
+    "tour-eiffel": "The Eiffel Tower at sunset", "toits-de-paris": "The rooftops of Paris",
+    "notre-dame": "Notre-Dame de Paris and the Seine", "pantheon": "The Panthéon", "conciergerie": "The Conciergerie on the Seine",
+    "place-des-victoires": "Place des Victoires", "sacre-coeur": "The Sacré-Cœur in Montmartre",
+    "vue-sacre-coeur": "View of Montmartre", "avenue-etoile": "Parisian avenue seen from the Arc de Triomphe", "mairie": "A Paris town hall",
 }
 BG_BY_ARR = {1: "conciergerie", 2: "place-des-victoires", 4: "notre-dame", 5: "pantheon", 7: "tour-eiffel", 8: "toits-de-paris",
              16: "tour-eiffel", 17: "avenue-etoile", 18: "sacre-coeur", 19: "vue-sacre-coeur"}
@@ -698,30 +780,31 @@ def hero(crumb_items, h1, lead, extra="", kicker=None, card=None, bg=None):
 </section>'''
 
 
-def hero_card(prix="dès 110 € TTC", label="Ouverture de porte"):
+def hero_card(prix="from €110 incl. VAT", label="Door opening"):
     return f'''<aside class="hcard">
   <ul>
     <li>{ico("i-euro")}<span><small>{E(label)}</small><b>{E(prix)}</b></span></li>
-    <li>{ico("i-clock")}<span><small>Délai moyen dans Paris</small><b>≈ 30 minutes</b></span></li>
-    <li>{ico("i-file")}<span><small>Devis</small><b>Gratuit, signé avant travaux</b></span></li>
+    <li>{ico("i-clock")}<span><small>Average arrival time in Paris</small><b>≈ 30 minutes</b></span></li>
+    <li>{ico("i-file")}<span><small>Quote</small><b>Free, signed before any work</b></span></li>
   </ul>
   {google_badge("g-badge compact")}
 </aside>'''
 
 
 # ---------------------------------------------------------------------------
-# Accueil
+# Home
 # ---------------------------------------------------------------------------
 HOME_FAQ = [
-    ("Quel est le prix d'une ouverture de porte à Paris ?", "Une porte claquée est ouverte pour 110 € TTC en journée (8h–18h), 150 € en soirée et 220 € la nuit. Le tarif vous est annoncé au téléphone, puis confirmé par un devis écrit avant toute intervention."),
-    ("Intervenez-vous dans tout Paris ?", "Oui, dans les 20 arrondissements, du 1er au 20e, 24h/24 et 7j/7, jours fériés compris. Nos serruriers sont répartis dans la capitale pour arriver vite."),
-    ("En combien de temps arrivez-vous ?", "Comptez environ 30 minutes en moyenne dans Paris. Le délai précis dépend de la circulation : il vous est donné au téléphone avant le départ du serrurier."),
-    ("Le devis est-il gratuit ?", "Oui, gratuit et sans engagement. Rien n'est fait sans votre signature, et vous restez libre de refuser."),
-    ("Mon assurance peut-elle me rembourser ?", "Souvent, oui : effraction, vol ou perte de clés selon votre contrat. Notre facture détaillée est acceptée par les assureurs habitation."),
-    ("Comment puis-je payer ?", "Par carte bancaire, en espèces ou par virement. Une facture vous est toujours remise."),
+    ("How much does it cost to open a door in Paris?", "A slammed door is opened for €110 incl. VAT during the day (8am–6pm), €150 in the evening and €220 at night. The price is given on the phone, then confirmed in a written quote before any work."),
+    ("Do you cover the whole of Paris?", "Yes, all 20 arrondissements, from the 1st to the 20th, 24/7, public holidays included. Our locksmiths are spread across the city so they can get to you quickly."),
+    ("How quickly can you get here?", "About 30 minutes on average within Paris. The exact time depends on traffic and is given on the phone before the locksmith sets off."),
+    ("Is the quote free?", "Yes, free and with no obligation. Nothing is done without your signature, and you remain free to say no."),
+    ("Do you speak English?", "Yes. You can call us or message us on WhatsApp in English, and the quote and invoice are explained to you clearly."),
+    ("Can my insurance reimburse me?", "Often, yes: break-in, theft or loss of keys, depending on your policy. Our detailed invoice is accepted by French home insurers."),
+    ("How can I pay?", "By card, cash or bank transfer. You always receive an invoice."),
 ]
 
-MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+MOIS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 
 def fr_date(iso):
@@ -738,24 +821,24 @@ def urgences_block(light=False):
     cards = "".join(f'''<a class="urg" href="{svc_url(SVC_BY_SLUG[slug])}">
   <span class="urg-ic">{ico(SVC_BY_SLUG[slug]["icon"])}</span>
   <span class="urg-t"><b>{E(t)}</b><small>{E(conseil)}</small></span>
-  <span class="urg-p"><small>{"journée" if prix != "sur devis" else "tarif"}</small>{E(prix)}</span>
+  <span class="urg-p"><small>{"daytime" if prix != "quote" else "price"}</small>{E("free quote" if prix == "quote" else prix)}</span>
 </a>''' for t, slug, prix, conseil in URGENCES)
     return f'''<div class="urg-grid{" light" if light else ""}">{cards}</div>'''
 
 
 def urgence_section():
-    return f'''<section class="urgence" id="urgence">
+    return f'''<section class="urgence" id="emergency">
   <div class="wrap">
     <div class="urg-head">
       <div>
-        <span class="urg-badge"><i></i>Urgence 24h/24 · 7j/7</span>
-        <h2>Une urgence ? Un serrurier chez vous en ≈ 30 minutes</h2>
-        <p>Nuit, week-end, jour férié : un serrurier décroche et part tout de suite. Le prix vous est annoncé au téléphone, avant le déplacement.</p>
+        <span class="urg-badge"><i></i>Emergency 24/7</span>
+        <h2>An emergency? A locksmith at your door in about 30 minutes</h2>
+        <p>Night, weekend, public holiday: a locksmith answers and sets off right away. The price is given on the phone, before anyone travels.</p>
       </div>
-      <a class="urg-call" href="{TEL_HREF}" data-track="call_urgence"><span class="ring">{ico("i-phone")}</span><span><small>Appel direct</small><b>{TEL}</b></span></a>
+      <a class="urg-call" href="{TEL_HREF}" data-track="call_urgence"><span class="ring">{ico("i-phone")}</span><span><small>Direct line</small><b>{TEL}</b></span></a>
     </div>
     {urgences_block()}
-    <p class="urg-foot">Tarifs de journée (8h–18h) indiqués à titre de repère. Soirée et nuit : voir la <a href="/tarifs/">grille complète</a>. <a href="/urgence/">Que faire en cas d'urgence ?</a></p>
+    <p class="urg-foot">Daytime prices (8am–6pm) shown as a guide. Evening and night: see the <a href="/prices/">full price list</a>. <a href="/emergency/">What to do in an emergency</a></p>
   </div>
 </section>'''
 
@@ -763,7 +846,7 @@ def urgence_section():
 def svc_cards(lst=None):
     out = []
     for s in (lst if lst is not None else SVC_URG):
-        prix = f'<small>à partir de</small><b>{s["prix_num"]} € TTC</b>' if s["prix_num"] else "<small>tarif</small><b>Devis gratuit</b>"
+        prix = f'<small>from (incl. VAT)</small><b>{eur(s["prix_num"])}</b>' if s["prix_num"] else "<small>price</small><b>Free quote</b>"
         ph = photo(s["slug"], s["nom"], "svc-photo", "(max-width: 760px) 100vw, 380px")
         out.append(f'''<a class="svc{" has-photo" if ph else ""}" href="{svc_url(s)}">
   {ph}
@@ -771,14 +854,14 @@ def svc_cards(lst=None):
     <span class="svc-ic">{ico(s["icon"])}</span>
     <h3>{E(s["nom"])}</h3>
     <p>{E(s["resume"])}</p>
-    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-go">Détails {ico("i-arrow", "ic sm")}</span></div>
+    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-go">Details {ico("i-arrow", "ic sm")}</span></div>
   </div>
 </a>''')
     if len(out) % 3:
         out.append(f'''<a class="svc svc-cta" href="{TEL_HREF}" data-track="call_svc_grid">
-  <div class="svc-body"><span class="svc-ic">{ico("i-phone")}</span><h3>Une autre urgence ?</h3>
-  <p>Porte de garage, local commercial, serrure ancienne… Décrivez-nous la situation : nous vous disons tout de suite si nous pouvons intervenir, et à quel prix.</p>
-  <div class="svc-foot"><span class="svc-prix"><small>appel direct 24h/24</small><b>{TEL}</b></span><span class="svc-go">Appeler {ico("i-arrow", "ic sm")}</span></div></div>
+  <div class="svc-body"><span class="svc-ic">{ico("i-phone")}</span><h3>Another emergency?</h3>
+  <p>Garage door, shop, old lock… Describe the situation and we'll tell you straight away whether we can help, and at what price.</p>
+  <div class="svc-foot"><span class="svc-prix"><small>direct line 24/7</small><b>{TEL}</b></span><span class="svc-go">Call {ico("i-arrow", "ic sm")}</span></div></div>
 </a>''')
     return '<div class="svc-grid">' + "".join(out) + "</div>"
 
@@ -786,47 +869,47 @@ def svc_cards(lst=None):
 def articles_cards(lst):
     return '<div class="posts">' + "".join(f'''<article class="post">
   <div class="post-top"><span class="post-ic">{ico(a["icon"])}</span><span class="post-cat">{E(a["cat"])}</span></div>
-  <h3><a href="/conseils/{a["slug"]}/">{E(a["court"])}</a></h3>
+  <h3><a href="/advice/{a["slug"]}/">{E(a["court"])}</a></h3>
   <p>{E(a["desc"])}</p>
-  <span class="post-more"><time datetime="{a["date"]}">{fr_date(a["date"])}</time><span>Lire {ico("i-arrow", "ic sm")}</span></span>
+  <span class="post-more"><time datetime="{a["date"]}">{fr_date(a["date"])}</time><span>Read {ico("i-arrow", "ic sm")}</span></span>
 </article>''' for a in lst) + "</div>"
 
 
 def engagements():
     items = [
-        ("i-euro", "Prix annoncé avant le déplacement", "Vous décrivez la situation, nous vous donnons le tarif TTC. Il ne change pas en route."),
-        ("i-file", "Devis signé avant toute intervention", "Conformément à l'arrêté du 24 janvier 2017 : rien ne commence sans votre accord écrit."),
-        ("i-door", "Ouverture sans casse en priorité", "Radio, crochetage, contournement : on préserve votre serrure chaque fois que c'est possible."),
-        ("i-shield", "Matériel de grandes marques", "Cylindres et serrures de fabricants reconnus, modèles certifiés A2P sur demande."),
-        ("i-card", "Paiement en toute transparence", "Carte bancaire, espèces ou virement, avec une facture détaillée à chaque fois."),
-        ("i-phone", "Un serrurier au bout du fil", "Pas de centre d'appels : c'est un professionnel qui décroche, de jour comme de nuit."),
+        ("i-euro", "Price given before we travel", "You describe the situation and we give you the price including VAT. It doesn't change on the way."),
+        ("i-file", "Signed quote before any work", "As required by French regulations: nothing starts without your written agreement."),
+        ("i-door", "Damage-free opening first", "Shims, picking, cylinder bypass: we preserve your lock whenever possible."),
+        ("i-shield", "Leading brands", "Cylinders and locks from recognized manufacturers, A2P-certified models on request."),
+        ("i-card", "Transparent payment", "Card, cash or bank transfer, with a detailed invoice every time."),
+        ("i-phone", "A locksmith on the line", "No call center: a professional answers, day and night, in English or French."),
     ]
     return '<div class="engage">' + "".join(f'<div>{ico(i)}<h3>{E(t)}</h3><p>{E(d)}</p></div>' for i, t, d in items) + "</div>"
 
 
 def build_home():
-    visual = photo("accueil", f"{NOM}, serrurier à Paris", "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
+    visual = photo("home", f"{NOM}, locksmith in Paris", "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
     if not visual:
-        visual = '<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="Logo Secure Locksmith Paris" fetchpriority="high"></picture>'
-    equipe = photo("equipe", "Serrurier qui conseille des clients devant leur porte", "about-photo")
+        visual = '<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="Secure Locksmith Paris logo" fetchpriority="high"></picture>'
+    equipe = photo("team", "Locksmith advising customers at their front door", "about-photo")
     about_visual = equipe or company_card()
     body = f'''<section class="hero has-bg">
   {bg_img("tour-eiffel")}
   <div class="wrap hero-grid">
     <div class="hero-text">
-      <span class="eyebrow light">Serrurier Paris 75 · 20 arrondissements</span>
-      <h1>Serrurier à Paris,<br><span class="gold">24h/24 et 7j/7</span></h1>
-      <p class="lead">Porte claquée, serrure bloquée, clé cassée, effraction : un serrurier qualifié intervient chez vous en 30 minutes en moyenne. Le prix vous est annoncé au téléphone et le devis est signé avant de commencer.</p>
-      <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}<a class="btn btn-outline-light btn-xl" href="#devis">{ico("i-mail")}<span>Devis gratuit</span></a></div>
+      <span class="eyebrow light">Locksmith in Paris · all 20 arrondissements</span>
+      <h1>Locksmith in Paris,<br><span class="gold">24/7</span></h1>
+      <p class="lead">Locked out, jammed lock, broken key, break-in: a qualified, English-speaking locksmith comes to you in about 30 minutes on average. The price is given on the phone and the quote is signed before any work.</p>
+      <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}<a class="btn btn-outline-light btn-xl" href="#quote">{ico("i-mail")}<span>Free quote</span></a></div>
       <div class="hero-proof">
         {google_badge("g-badge dark")}
-        <ul class="proof-list"><li>{ico("i-check")}Ouverture dès 110 € TTC</li><li>{ico("i-check")}Sans frais cachés</li><li>{ico("i-check")}Facture pour l'assurance</li></ul>
+        <ul class="proof-list"><li>{ico("i-check")}Door opening from €110</li><li>{ico("i-check")}No hidden fees</li><li>{ico("i-check")}Invoice for your insurer</li></ul>
       </div>
     </div>
     <div class="hero-visual">
       {visual}
-      <div class="float f1"><span class="live"><i></i>Disponible maintenant</span><b>Intervention ≈ 30 min</b></div>
-      <div class="float f2">{ico("i-shield")}<span><b>Devis signé</b><small>avant chaque intervention</small></span></div>
+      <div class="float f1"><span class="live"><i></i>Available now</span><b>Arrival ≈ 30 min</b></div>
+      <div class="float f2">{ico("i-shield")}<span><b>Signed quote</b><small>before every job</small></span></div>
     </div>
   </div>
 </section>
@@ -835,25 +918,25 @@ def build_home():
 <section class="sec" id="services">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Nos services</span><h2>Toutes les interventions de serrurerie, partout dans Paris</h2></div>
-      <p>Appartement, maison de ville, commerce, cave ou local : nous intervenons sur tous les types de portes et de serrures, de la porte palière ancienne à la porte blindée multipoints.</p>
+      <div><span class="eyebrow">Our services</span><h2>Every locksmith service, everywhere in Paris</h2></div>
+      <p>Apartment, townhouse, shop, cellar or storage room: we work on every type of door and lock, from old Parisian landing doors to multi-point armored doors.</p>
     </div>
-    <h3 class="group-title">{ico("i-clock")}Dépannage d'urgence <small>24h/24 · 7j/7</small></h3>
+    <h3 class="group-title">{ico("i-clock")}Emergency call-outs <small>24/7</small></h3>
     {svc_cards(SVC_URG)}
-    <h3 class="group-title">{ico("i-shield")}Travaux, portes blindées et installation <small>sur rendez-vous · devis gratuit</small></h3>
+    <h3 class="group-title">{ico("i-shield")}Works, armored doors &amp; installation <small>by appointment · free quote</small></h3>
     {svc_rows(SVC_TRAV)}
   </div>
 </section>
 <section class="sec soft">
   <div class="wrap about">
     <div class="about-text">
-      <span class="eyebrow">Pourquoi nous faire confiance</span>
-      <h2>Un serrurier parisien identifié, qui s'engage par écrit</h2>
-      <p class="lead-dark">Le dépannage en serrurerie a mauvaise réputation, souvent à juste titre. Chez {E(NOM)}, nous avons fait le choix inverse : une entreprise identifiée, des tarifs publics, et des engagements que vous pouvez vérifier.</p>
-      <p class="about-p">Quand on est bloqué devant sa porte, souvent tard le soir, on n'a ni le temps ni l'envie de comparer. C'est précisément dans ces moments-là que les mauvaises surprises arrivent. Notre réponse est simple : vous connaissez le prix avant que le serrurier ne parte, vous signez un devis avant qu'il ne commence, et vous recevez une facture détaillée à la fin. Pas de « supplément » découvert sur place, pas de serrure changée sans raison.</p>
-      <p class="about-p">Nous intervenons uniquement à Paris. Cette spécialisation nous permet d'arriver vite et de bien connaître les portes parisiennes : portes palières d'immeubles haussmanniens, portes blindées multipoints, serrures anciennes, résidences récentes à badge.</p>
+      <span class="eyebrow">Why trust us</span>
+      <h2>An identified Paris locksmith who commits in writing</h2>
+      <p class="lead-dark">Emergency locksmiths have a bad reputation, often for good reason. At {E(NOM)}, we have chosen the opposite approach: an identified company, published prices and commitments you can check.</p>
+      <p class="about-p">When you are stuck outside your door, often late at night, you have neither the time nor the energy to compare offers. That is exactly when nasty surprises happen, especially if you don't speak French. Our answer is simple: you know the price before the locksmith sets off, you sign a quote before he starts, and you receive a detailed invoice at the end. No "extra charges" discovered on site, no lock replaced for no reason.</p>
+      <p class="about-p">We work only in Paris. That focus lets us arrive quickly and know Parisian doors well: landing doors in Haussmann buildings, multi-point armored doors, old locks and modern badge-access residences.</p>
       {engagements()}
-      <a class="btn btn-navy" style="margin-top:34px" href="/nos-engagements/">{ico("i-file")}<span>Lire notre charte de confiance</span></a>
+      <a class="btn btn-navy" style="margin-top:34px" href="/our-commitments/">{ico("i-file")}<span>Read our trust charter</span></a>
     </div>
     <div class="about-side">{about_visual}{company_card() if equipe else ""}</div>
   </div>
@@ -861,40 +944,40 @@ def build_home():
 <section class="sec">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Arnaques au serrurier</span><h2>Ce que vous ne verrez jamais chez nous</h2></div>
-      <p>Le dépannage en serrurerie fait partie des secteurs qui suscitent le plus de signalements auprès de la répression des fraudes (DGCCRF). Voici, point par point, les pratiques abusives les plus courantes et la façon dont nous travaillons à la place.</p>
+      <div><span class="eyebrow">Locksmith scams</span><h2>What you will never see from us</h2></div>
+      <p>Emergency locksmith services are among the sectors generating the most complaints to the French consumer protection authority (DGCCRF). Here, point by point, are the most common abusive practices and how we work instead.</p>
     </div>
     {comparatif_block()}
-    <p class="cmp-foot">Un doute sur un dépanneur ? Lisez notre guide <a href="/conseils/reconnaitre-serrurier-honnete/">Comment reconnaître un serrurier honnête</a>.</p>
+    <p class="cmp-foot">Unsure about a locksmith? Read our guide <a href="/advice/spot-an-honest-locksmith/">How to spot an honest locksmith</a>.</p>
   </div>
 </section>
-<section class="sec" id="tarifs">
+<section class="sec" id="prices">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Tarifs</span><h2>Des prix clairs, publiés avant toute intervention</h2></div>
-      <p>Nos tarifs dépendent de l'heure d'intervention. Ils sont affichés ici, annoncés au téléphone et confirmés par écrit : vous savez ce que vous allez payer avant que le serrurier ne parte.</p>
+      <div><span class="eyebrow">Prices</span><h2>Clear prices, published before any work</h2></div>
+      <p>Our prices depend on the time of the call-out. They are shown here, given on the phone and confirmed in writing: you know what you will pay before the locksmith sets off.</p>
     </div>
     {tarif_table()}
   </div>
 </section>
 <section class="sec navy">
   <div class="wrap">
-    <div class="sec-head center"><span class="eyebrow light">Déroulement</span><h2>Comment se passe une intervention</h2></div>
+    <div class="sec-head center"><span class="eyebrow light">How it works</span><h2>What happens when you call us</h2></div>
     <ol class="steps">
-      <li><b>1</b><h3>Vous appelez</h3><p>Vous décrivez la porte et la situation, ou envoyez une photo sur WhatsApp.</p></li>
-      <li><b>2</b><h3>Prix annoncé</h3><p>Le tarif TTC vous est donné immédiatement, avant le départ du serrurier.</p></li>
-      <li><b>3</b><h3>Devis signé</h3><p>Sur place, le prix est confirmé par écrit. Rien ne commence sans votre signature.</p></li>
-      <li><b>4</b><h3>Intervention et facture</h3><p>Travail soigné, facture détaillée à transmettre à votre assureur.</p></li>
+      <li><b>1</b><h3>You call</h3><p>You describe the door and the situation, or send a photo on WhatsApp.</p></li>
+      <li><b>2</b><h3>Price given</h3><p>You get the price including VAT straight away, before the locksmith sets off.</p></li>
+      <li><b>3</b><h3>Signed quote</h3><p>On site, the price is confirmed in writing. Nothing starts without your signature.</p></li>
+      <li><b>4</b><h3>Work &amp; invoice</h3><p>Careful work and a detailed invoice to send to your insurer.</p></li>
     </ol>
-    <div class="steps-cta">{btn_call("Appeler un serrurier", cls="btn btn-gold btn-lg", track="call_steps")}<span>ou envoyez une photo sur <a href="{E(wa_link("Bonjour, j'ai besoin d'un serrurier à Paris."))}" target="_blank" rel="noopener" data-track="wa_steps">WhatsApp</a></span></div>
+    <div class="steps-cta">{btn_call("Call a locksmith", cls="btn btn-gold btn-lg", track="call_steps")}<span>or send a photo on <a href="{E(wa_link(WA_MSG))}" target="_blank" rel="noopener" data-track="wa_steps">WhatsApp</a></span></div>
   </div>
 </section>
 {reviews_block()}
 <section class="sec">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Marques</span><h2>Nous intervenons sur toutes les grandes marques</h2></div>
-      <p>Serrures, cylindres, portes blindées et serrures connectées : nos serruriers connaissent les principaux fabricants et ont les pièces courantes dans leur véhicule.</p>
+      <div><span class="eyebrow">Brands</span><h2>We work on all the major brands</h2></div>
+      <p>Locks, cylinders, armored doors and smart locks: our locksmiths know the main manufacturers and carry common parts in their van.</p>
     </div>
     {marques_block()}
   </div>
@@ -902,8 +985,8 @@ def build_home():
 <section class="sec soft" id="arrondissements">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Zone d'intervention</span><h2>Un serrurier dans chaque arrondissement de Paris</h2></div>
-      <p>Nous intervenons exclusivement dans Paris intra-muros. Choisissez votre arrondissement pour voir les quartiers desservis et nos services près de chez vous.</p>
+      <div><span class="eyebrow">Service area</span><h2>A locksmith in every Paris arrondissement</h2></div>
+      <p>We work exclusively within Paris. Choose your arrondissement to see the neighborhoods we cover and our services near you.</p>
     </div>
     {arr_grid()}
   </div>
@@ -911,10 +994,10 @@ def build_home():
 <section class="sec" id="faq">
   <div class="wrap faq-wrap">
     <div class="sec-head">
-      <span class="eyebrow">Questions fréquentes</span>
-      <h2>Vos questions, nos réponses</h2>
-      <p>Une autre question ? Appelez-nous, nous répondons 24h/24.</p>
-      <a class="btn btn-outline" href="/questions-frequentes/">Toutes les questions</a>
+      <span class="eyebrow">FAQ</span>
+      <h2>Your questions, our answers</h2>
+      <p>Another question? Call us, we answer 24/7.</p>
+      <a class="btn btn-outline" href="/faq/">All questions</a>
     </div>
     {faq_html(HOME_FAQ)}
   </div>
@@ -922,17 +1005,17 @@ def build_home():
 <section class="sec soft">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Conseils</span><h2>Guides pratiques de nos serruriers</h2></div>
-      <p><a class="text-link" href="/conseils/">Voir tous les conseils {ico("i-arrow", "ic sm")}</a></p>
+      <div><span class="eyebrow">Advice</span><h2>Practical guides from our locksmiths</h2></div>
+      <p><a class="text-link" href="/advice/">See all our advice {ico("i-arrow", "ic sm")}</a></p>
     </div>
     {articles_cards(ARTICLES[:4])}
   </div>
 </section>
 {contact_band()}'''
     ld = [ld_business(full=True), ld_faq(HOME_FAQ),
-          {"@context": "https://schema.org", "@type": "WebSite", "name": NOM, "url": URL + "/", "inLanguage": "fr-FR", "publisher": {"@id": BID}}]
-    page("/", f"Serrurier Paris 24h/24 – {TEL} | {NOM}",
-         f"Serrurier à Paris (75), 24h/24 dans les 20 arrondissements. Ouverture de porte dès 110 € TTC, prix annoncé avant déplacement, devis signé, facture pour l'assurance. ☎ {TEL}",
+          {"@context": "https://schema.org", "@type": "WebSite", "name": NOM, "url": URL + "/", "inLanguage": "en", "publisher": {"@id": BID}}]
+    page("/", f"Locksmith Paris 24/7 – English-speaking – {TEL} | {NOM}",
+         f"English-speaking locksmith in Paris, 24/7 across all 20 arrondissements. Door opening from €110 incl. VAT, price given before we travel, signed quote, invoice for your insurer. ☎ {TEL}",
          body, ld)
 
 
@@ -940,244 +1023,242 @@ def build_home():
 # Services
 # ---------------------------------------------------------------------------
 def build_services():
-    items = (f'<h2 class="group-title">{ico("i-clock")}Dépannage d\'urgence <small>24h/24 · 7j/7</small></h2>' + svc_rows(SVC_URG, "h3")
-             + f'<h2 class="group-title">{ico("i-shield")}Travaux, portes blindées et installation <small>sur rendez-vous</small></h2>' + svc_rows(SVC_TRAV, "h3"))
-    body = hero([("Services", None)], "Nos services de serrurerie à Paris",
-                "Dépannage d'urgence 24h/24 (porte claquée, serrure bloquée, clé cassée, effraction) et travaux sur rendez-vous (blindage, porte blindée, porte de cave, serrure connectée, boîte aux lettres), avec leurs prix de départ.",
-                kicker="24h/24 · 7j/7")
+    items = (f'<h2 class="group-title">{ico("i-clock")}Emergency call-outs <small>24/7</small></h2>' + svc_rows(SVC_URG, "h3")
+             + f'<h2 class="group-title">{ico("i-shield")}Works, armored doors &amp; installation <small>by appointment</small></h2>' + svc_rows(SVC_TRAV, "h3"))
+    body = hero([("Services", None)], "Our locksmith services in Paris",
+                "24/7 emergency call-outs (lockouts, jammed locks, broken keys, break-ins) and works by appointment (door armoring, armored doors, cellar doors, smart locks, mailbox locks), with their starting prices.",
+                kicker="24/7")
     body += f'<section class="sec"><div class="wrap layout"><div>{items}</div>{side_box()}</div></section>'
-    body += assureurs_strip() + f'<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Marques</span><h2>Toutes les grandes marques</h2></div>{marques_block()}</div></section>' + contact_band(source="/services/")
-    page("/services/", f"Services de serrurerie à Paris 24h/24 | {NOM}",
-         "Tous nos dépannages de serrurerie à Paris : ouverture de porte dès 110 €, serrure bloquée, clé cassée, changement de serrure, serrure connectée, après effraction.",
+    body += assureurs_strip() + f'<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Brands</span><h2>All the major brands</h2></div>{marques_block()}</div></section>' + contact_band(source="/services/")
+    page("/services/", f"Locksmith services in Paris 24/7 | {NOM}",
+         "All our locksmith services in Paris: door opening from €110, jammed locks, broken keys, lock replacement, smart locks, break-in repair, armored doors.",
          body, [ld_business(), ld_crumbs([("Services", "/services/")])], active="/services/")
 
     for s in SERVICES:
         path = svc_url(s)
         secs = "".join(f"<h2>{E(t)}</h2><p>{c}</p>" for t, c in s["sections"])
-        prix = f"dès <strong>{s['prix_num']} € TTC</strong>" if s["prix_num"] else "<strong>sur devis gratuit</strong>"
         others = "".join(f'<a class="chip" href="{svc_url(o)}">{ico(o["icon"])}{E(o["court"])}</a>' for o in SERVICES if o is not s)
         ph = photo(s["slug"], s["nom"], "prose-photo", "(max-width: 1100px) 100vw, 760px")
         content = f'''<article class="prose">
   <p class="intro">{s["intro"]}</p>
   {ph}
-  <div class="note-box">{ico("i-euro")}<p>Tarif : {prix}. Le prix exact vous est annoncé au téléphone et confirmé par un devis écrit avant l'intervention. <a href="/tarifs/">Grille jour, soirée, nuit</a></p></div>
+  <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}. The exact price is given on the phone and confirmed in a written quote before any work. <a href="/prices/">Day, evening and night prices</a></p></div>
   {secs}
-  <h2>{E(s["court"])} : choisissez votre arrondissement</h2>
+  <h2>{E(s["court"])}: choose your arrondissement</h2>
   {arr_grid(link=lambda z: combo_url(s, z), cls="arr-grid compact")}
-  <h2>Un prix clair, tout compris</h2>
-  <p>Le tarif qui vous est annoncé au téléphone est un prix TTC, main d'œuvre comprise. Il est confirmé par un devis écrit avant l'intervention : si la situation sur place est différente de ce que vous avez décrit, le serrurier vous l'explique et vous propose un nouveau devis, que vous êtes libre de refuser.</p>
+  <h2>A clear, all-inclusive price</h2>
+  <p>The price you are given on the phone includes VAT and labor. It is confirmed in a written quote before any work: if the situation on site turns out to be different from what you described, the locksmith explains why and offers a new quote, which you are free to refuse.</p>
   <div class="trust-duo">{inclus_block()}{engagements_short()}</div>
-  <h2>Questions fréquentes</h2>
+  <h2>Frequently asked questions</h2>
   {faq_html(s["faq"])}
-  <h2>Nos autres services</h2><div class="chips">{others}</div>
+  <h2>Our other services</h2><div class="chips">{others}</div>
 </article>'''
-        card = hero_card("dès %d € TTC" % s["prix_num"] if s["prix_num"] else "Devis gratuit", s["court"])
-        body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} à Paris',
-                    f'{E(s["resume"])} Partout dans Paris, 24h/24.',
-                    ticks(["Prix annoncé avant déplacement", "Devis signé avant travaux", "Facture pour l'assurance"], "ticks light inline"), kicker="Service", card=card)
+        card = hero_card(prix_txt(s), s["court"])
+        body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} in Paris',
+                    f'{E(s["resume"])} Anywhere in Paris, 24/7.',
+                    ticks(["Price given before we travel", "Signed quote before any work", "Invoice for your insurer"], "ticks light inline"), kicker="Service", card=card)
         body += f'<section class="sec"><div class="wrap layout">{content}{side_box()}</div></section>'
-        body += assureurs_strip() + reviews_block() + contact_band(f"{s['court']} ? Nous intervenons rapidement.", "Appelez ou laissez vos coordonnées : nous vous rappelons avec un prix clair.", source=path, service=s["court"])
+        body += assureurs_strip() + reviews_block() + contact_band(f"{s['court']}? We'll be there fast.", "Call us or leave your details: we call you back with a clear price.", source=path, service=s["court"])
         ld = [ld_business(), ld_crumbs([("Services", "/services/"), (s["court"], path)]), ld_faq(s["faq"]),
               {"@context": "https://schema.org", "@type": "Service", "name": s["nom"], "serviceType": s["nom"], "url": URL + path,
                "provider": {"@id": BID}, "areaServed": {"@type": "City", "name": "Paris"},
                **({"offers": {"@type": "Offer", "priceSpecification": {"@type": "PriceSpecification", "minPrice": s["prix_num"], "priceCurrency": "EUR"}}} if s["prix_num"] else {})}]
-        page(path, f'{s["nom"]} Paris 24h/24 – {s["prix"].replace(" TTC", "").replace("sur devis gratuit", "devis gratuit")} | {NOM}',
-             f'{s["nom"]} à Paris, 24h/24 et 7j/7. {s["resume"]} Prix annoncé avant déplacement. ☎ {TEL}', body, ld, active="/services/")
+        page(path, f'{s["nom"]} Paris 24/7 – {s["prix"]} | {NOM}',
+             f'{s["nom"]} in Paris, 24/7. {s["resume"]} Price given before we travel. ☎ {TEL}', body, ld, active="/services/")
 
 
 # ---------------------------------------------------------------------------
 # Arrondissements
 # ---------------------------------------------------------------------------
 ARR_INTROS = [
-    "Bloqué devant chez vous {a} ? {nom} envoie un serrurier qualifié à votre porte, jour et nuit, généralement en une trentaine de minutes. Le tarif vous est donné au téléphone avant son départ.",
-    "Du côté {r0} comme dans les rues plus calmes du {num}, nos serruriers interviennent 24h/24 pour les portes claquées, les serrures bloquées et les clés cassées, avec un devis signé avant tout travail.",
-    "Avec {pop} habitants, le {num} arrondissement ({surnom}) voit chaque jour son lot de portes claquées et de clés perdues. Nos serruriers connaissent ses immeubles et les serrures qui les équipent.",
-    "Une urgence de serrurerie {a} ? Des quartiers {q} jusqu'aux abords {r1}, nous intervenons vite, à prix annoncé, avec une facture acceptée par votre assurance.",
+    "Locked out {a}? {nom} sends a qualified locksmith to your door, day or night, usually within about thirty minutes. The price is given on the phone before he sets off.",
+    "From {r0} to the quieter streets of the {num}, our locksmiths work 24/7 on lockouts, jammed locks and broken keys, with a signed quote before any work.",
+    "With {pop} residents, the {num} arrondissement ({surnom}) sees its share of lockouts and lost keys every day. Our locksmiths know its buildings and the locks fitted in them.",
+    "A locksmith emergency {a}? From the {q} neighborhoods to the area around {r1}, we come quickly, at a price agreed in advance, with an invoice your insurer will accept.",
 ]
 
 
 def arr_faq(z):
     return [
-        (f"Combien coûte un serrurier {z['a_court']} ?", f"Une ouverture de porte claquée {z['a']} coûte 110 € TTC en journée, 150 € en soirée et 220 € la nuit. Un changement de cylindre démarre à 160 €. Le prix est toujours annoncé avant le déplacement et confirmé par écrit."),
-        (f"En combien de temps arrivez-vous {z['a']} ?", f"Environ 30 minutes en moyenne. Le délai exact dépend de la circulation dans Paris et vous est annoncé au téléphone avant le départ du serrurier."),
-        (f"Intervenez-vous la nuit {z['a_court']} ?", "Oui, 24h/24 et 7j/7, y compris le dimanche et les jours fériés, avec un tarif de nuit annoncé à l'avance."),
-        ("Ma facture sera-t-elle remboursée ?", "Notre facture détaillée est acceptée par les assureurs habitation. Le remboursement dépend des garanties de votre contrat (effraction, vol ou perte de clés)."),
+        (f"How much does a locksmith cost {z['a_court']}?", f"Opening a slammed door {z['a']} costs €110 incl. VAT during the day, €150 in the evening and €220 at night. A cylinder replacement starts at €160. The price is always given before we travel and confirmed in writing."),
+        (f"How quickly can you get here {z['a']}?", "About 30 minutes on average. The exact time depends on Paris traffic and is given on the phone before the locksmith sets off."),
+        (f"Do you work at night {z['a_court']}?", "Yes, 24/7, including Sundays and public holidays, with a night rate given in advance."),
+        ("Will my invoice be reimbursed?", "Our detailed invoice is accepted by French home insurers. Reimbursement depends on your policy (break-in, theft or loss of keys)."),
     ]
 
 
 def build_arr_pages():
-    body = hero([("Arrondissements", None)], "Serrurier dans les <em>20 arrondissements de Paris</em>",
-                "Choisissez votre arrondissement : tarifs, quartiers desservis et services disponibles près de chez vous.", kicker="Paris 75")
+    body = hero([("Arrondissements", None)], "Locksmith in all <em>20 Paris arrondissements</em>",
+                "Choose your arrondissement: prices, neighborhoods covered and services available near you.", kicker="Paris 75")
     body += f'''<section class="sec"><div class="wrap">
   {arr_grid(label=lambda z: z["surnom"])}
   <div class="prose narrow">
-    <h2>Un serrurier parisien, pas une plateforme</h2>
-    <p>{E(NOM)} intervient exclusivement dans Paris intra-muros. Cette spécialisation nous permet d'arriver vite et de bien connaître le bâti parisien : portes palières d'immeubles haussmanniens, portes blindées multipoints, serrures anciennes à gorges, résidences modernes à badge.</p>
-    <p class="note-box">{ico("i-pin")}Vous êtes juste en dehors de Paris ? Appelez-nous au <a href="{TEL_HREF}">{TEL}</a> : selon la disponibilité de nos serruriers, nous pouvons parfois intervenir, avec des frais de déplacement annoncés à l'avance.</p>
+    <h2>A Paris locksmith, not a call center</h2>
+    <p>{E(NOM)} works exclusively within Paris. That focus lets us arrive quickly and know Parisian buildings well: landing doors in Haussmann buildings, multi-point armored doors, old mortise locks and modern badge-access residences.</p>
+    <p class="note-box">{ico("i-pin")}Just outside Paris? Call us on <a href="{TEL_HREF}">{TEL}</a>: depending on availability, we can sometimes come, with travel costs given in advance.</p>
   </div>
-</div></section>''' + reviews_block() + contact_band(source="/serrurier-paris/")
-    page("/serrurier-paris/", f"Serrurier Paris : les 20 arrondissements 24h/24 | {NOM}",
-         f"Serrurier dans tout Paris, du 1er au 20e arrondissement, 24h/24. Ouverture de porte dès 110 € TTC, prix annoncé avant déplacement. ☎ {TEL}",
-         body, [ld_business(full=True), ld_crumbs([("Arrondissements", "/serrurier-paris/")])], active="/serrurier-paris/")
+</div></section>''' + reviews_block() + contact_band(source="/locksmith-paris/")
+    page("/locksmith-paris/", f"Locksmith Paris: all 20 arrondissements 24/7 | {NOM}",
+         f"Locksmith everywhere in Paris, from the 1st to the 20th arrondissement, 24/7. Door opening from €110 incl. VAT, price given before we travel. ☎ {TEL}",
+         body, [ld_business(full=True), ld_crumbs([("Arrondissements", "/locksmith-paris/")])], active="/locksmith-paris/")
 
     for i, z in enumerate(ARR):
         path = z["url"]
-        intro = ARR_INTROS[i % 4].format(a=z["a"], nom=E(NOM), num=z["num"], r0=de(z["reperes"][0]), r1=de(z["reperes"][1]),
+        intro = ARR_INTROS[i % 4].format(a=z["a"], nom=E(NOM), num=z["num"], r0=z["reperes"][0], r1=z["reperes"][1],
                                          pop=fmt_int(z["pop"]), surnom=z["surnom"], q=et(z["quartiers"][:2]))
         facts = f'''<div class="facts">
-  <div><small>Code postal</small><b>{E(" / ".join(z["cp"]))}</b></div>
-  <div><small>Ouverture de porte</small><b>dès 110 € TTC</b></div>
-  <div><small>Disponibilité</small><b>24h/24 · 7j/7</b></div>
-  <div><small>Délai moyen</small><b>≈ 30 min</b></div>
+  <div><small>Postcode</small><b>{E(" / ".join(z["cp"]))}</b></div>
+  <div><small>Door opening</small><b>from €110</b></div>
+  <div><small>Availability</small><b>24/7</b></div>
+  <div><small>Average arrival</small><b>≈ 30 min</b></div>
 </div>'''
         svc = "".join(f'''<a class="svc-row" href="{combo_url(s, z)}"><span class="svc-ic">{ico(s["icon"])}</span>
   <div><h3>{E(s["nom"])} {E(z["a_court"])}</h3><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}</span></a>''' for s in SERVICES)
         nav_arr = ""
         if z["prev"]:
-            nav_arr += f'<a href="{z["prev"]["url"]}">← Serrurier {E(z["prev"]["court"])}</a>'
+            nav_arr += f'<a href="{z["prev"]["url"]}">← Locksmith {E(z["prev"]["court"])}</a>'
         if z["next"]:
-            nav_arr += f'<a href="{z["next"]["url"]}">Serrurier {E(z["next"]["court"])} →</a>'
+            nav_arr += f'<a href="{z["next"]["url"]}">Locksmith {E(z["next"]["court"])} →</a>'
         faq = arr_faq(z)
         content = f'''<article class="prose">
   <p class="intro">{intro}</p>
   {facts}
-  <h2>Nos services {E(z["a"])}</h2>
+  <h2>Our services {E(z["a"])}</h2>
   <div class="svc-rows">{svc}</div>
-  <h2>Quartiers desservis dans le {z["num"]}</h2>
-  <p>Nous couvrons les quatre quartiers administratifs de l'arrondissement : <strong>{E(et(z["quartiers"]))}</strong>. Que vous habitiez près {E(de_list(z["reperes"]))}, un serrurier peut être chez vous rapidement.</p>
+  <h2>Neighborhoods covered in the {z["num"]}</h2>
+  <p>We cover the arrondissement's four administrative quarters: <strong>{E(et(z["quartiers"]))}</strong>. Whether you live near {E(et(z["reperes"]))}, a locksmith can be with you quickly.</p>
   <div class="local">
-    <div>{ico("i-metro")}<h3>Repères</h3><p>Stations {E(et(z["metros"]))}</p></div>
-    <div>{ico("i-home")}<h3>Le bâti</h3><p>{E(z["habitat"][0].upper() + z["habitat"][1:])}.</p></div>
-    <div>{ico("i-pin")}<h3>Population</h3><p>{fmt_int(z["pop"])} habitants (INSEE)</p></div>
+    <div>{ico("i-metro")}<h3>Landmarks</h3><p>Metro: {E(et(z["metros"]))}</p></div>
+    <div>{ico("i-home")}<h3>Buildings</h3><p>{E(z["habitat"][0].upper() + z["habitat"][1:])}.</p></div>
+    <div>{ico("i-pin")}<h3>Population</h3><p>{fmt_int(z["pop"])} residents (INSEE)</p></div>
   </div>
-  <h2>Pourquoi nous appeler {E(z["a"])} ?</h2>
-  <p>Quand on cherche un serrurier en urgence {E(z["a_court"])}, on tombe souvent sur des numéros anonymes et des prix d'appel irréalistes. Chez {E(NOM)}, vous savez à qui vous parlez : une entreprise identifiée, des tarifs publiés, un devis signé avant chaque intervention et des avis clients publics sur Google.</p>
+  <h2>Why call us {E(z["a"])}?</h2>
+  <p>When you need an emergency locksmith {E(z["a_court"])}, you often come across anonymous numbers and unrealistic teaser prices. With {E(NOM)}, you know who you are dealing with: an identified company, published prices, a signed quote before every job and public customer reviews on Google.</p>
   <ul class="check-list">
-    <li>{ico("i-check")}<span><strong>Prix annoncé au téléphone</strong>, puis devis écrit signé avant l'intervention.</span></li>
-    <li>{ico("i-check")}<span><strong>Ouverture sans casse</strong> dans la grande majorité des cas.</span></li>
-    <li>{ico("i-check")}<span><strong>Facture détaillée</strong> acceptée par les assureurs habitation.</span></li>
-    <li>{ico("i-check")}<span><strong>Avis publics</strong> et vérifiables sur <a href="{E(MAPS)}" target="_blank" rel="noopener">notre fiche Google</a>.</span></li>
+    <li>{ico("i-check")}<span><strong>Price given on the phone</strong>, then a written quote signed before any work.</span></li>
+    <li>{ico("i-check")}<span><strong>Damage-free opening</strong> in the vast majority of cases.</span></li>
+    <li>{ico("i-check")}<span><strong>Detailed invoice</strong> accepted by French home insurers.</span></li>
+    <li>{ico("i-check")}<span><strong>Public reviews</strong> you can check on <a href="{E(MAPS)}" target="_blank" rel="noopener">our Google profile</a>.</span></li>
   </ul>
-  <h2>Questions fréquentes {E(z["a_court"])}</h2>
+  <h2>Frequently asked questions {E(z["a_court"])}</h2>
   {faq_html(faq)}
-  <nav class="prev-next" aria-label="Arrondissements voisins">{nav_arr}</nav>
+  <nav class="prev-next" aria-label="Neighboring arrondissements">{nav_arr}</nav>
 </article>'''
-        h1 = f'Serrurier {E(z["court"])} <em>24h/24</em>'
-        lead = f'Ouverture de porte dès 110 € TTC, serrure bloquée, clé cassée, changement de serrure {E(z["a"])} ({E(z["surnom"])}). Prix annoncé avant déplacement, devis gratuit.'
-        crumb_items = [("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", None)]
-        body = hero(crumb_items, h1, lead, ticks(["Devis gratuit", "Sans frais cachés", "Nuit, week-end, jours fériés"], "ticks light inline"),
+        h1 = f'Locksmith {E(z["court"])} <em>24/7</em>'
+        lead = f'Door opening from €110 incl. VAT, jammed locks, broken keys, lock replacement {E(z["a"])} ({E(z["surnom"])}). Price given before we travel, free quote.'
+        crumb_items = [("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", None)]
+        body = hero(crumb_items, h1, lead, ticks(["Free quote", "No hidden fees", "Nights, weekends, holidays"], "ticks light inline"),
                     kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z))
-        body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"Serrurier {z["court"]}")}</div></section>'
-        body += assureurs_strip() + contact_band(f"Bloqué dehors {z['a_court']} ?", "Appelez-nous : prix annoncé au téléphone, serrurier en route aussitôt.", source=path, arr=z["court"])
-        ld = [ld_business(), ld_crumbs([("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", path)]), ld_faq(faq),
-              {"@context": "https://schema.org", "@type": "Service", "name": f"Serrurier {z['nom']}", "serviceType": "Serrurerie, dépannage 24h/24",
+        body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"Locksmith {z["court"]}")}</div></section>'
+        body += assureurs_strip() + contact_band(f"Locked out {z['a_court']}?", "Call us: price given on the phone, locksmith on the way straight away.", source=path, arr=z["court"])
+        ld = [ld_business(), ld_crumbs([("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", path)]), ld_faq(faq),
+              {"@context": "https://schema.org", "@type": "Service", "name": f"Locksmith {z['nom']}", "serviceType": "24/7 locksmith services",
                "url": URL + path, "provider": {"@id": BID},
                "areaServed": {"@type": "AdministrativeArea", "name": z["nom"], "postalCode": z["cp"][0]},
                "offers": {"@type": "Offer", "priceSpecification": {"@type": "PriceSpecification", "minPrice": 110, "priceCurrency": "EUR"}}}]
-        page(path, f"Serrurier {z['court']} ({z['cp'][0]}) 24h/24 – {TEL}",
-             f"Serrurier {z['court']} ({z['cp'][0]}), 24h/24 et 7j/7 : ouverture de porte dès 110 € TTC, serrure bloquée, clé cassée, changement de serrure. Prix annoncé avant déplacement. ☎ {TEL}",
-             body, ld, active="/serrurier-paris/")
+        page(path, f"Locksmith {z['court']} ({z['cp'][0]}) 24/7 – {TEL}",
+             f"Locksmith {z['court']} ({z['cp'][0]}), 24/7: door opening from €110 incl. VAT, jammed locks, broken keys, lock replacement. Price given before we travel. ☎ {TEL}",
+             body, ld, active="/locksmith-paris/")
 
 
 # ---------------------------------------------------------------------------
 # Service × arrondissement
 # ---------------------------------------------------------------------------
 SVC_LOCAL = {
-    "blindage-de-porte": {
+    "door-opening": {
         "intros": [
-            "Vous voulez sécuriser votre porte palière {a} sans la remplacer ? Le blindage renforce votre porte existante avec une tôle d'acier, une serrure multipoints et des cornières anti-pinces, tout en conservant son aspect côté palier.",
-            "Blindage de porte {a} : nous venons mesurer votre porte, vérifier le bâti et vous présenter plusieurs niveaux de protection, avec un devis gratuit et détaillé. La pose se fait en général en une journée.",
-            "Une porte palière ancienne, une serrure simple, un bâti qui fatigue : c'est le cas de nombreux appartements {a}. Le blindage est souvent la solution la plus efficace pour décourager les cambrioleurs, sans gros travaux.",
+            "Locked out {a} with your keys inside? A {nom} locksmith sets off right away to open your door gently, often in a few minutes and without touching the lock. You get the price before he leaves.",
+            "Don't panic if the door has slammed shut behind you {a}: a slammed door can almost always be opened without damage. We come day and night, at a price agreed in advance.",
+            "Stuck on the landing {a}? Call us: you know the price before the locksmith arrives, and your door is opened without damage in the vast majority of cases.",
         ],
-        "conseil": "Vérifiez votre règlement de copropriété : un blindage qui conserve l'aspect extérieur de la porte est en général accepté sans formalité.",
+        "conseil": "Avoid the credit-card trick and screwdrivers: they damage the strike plate and the seal, which makes the job longer.",
     },
-    "porte-blindee": {
+    "jammed-lock": {
         "intros": [
-            "Pose de porte blindée {a} : nous installons des blocs-portes certifiés A2P BP1, BP2 ou BP3, fabriqués sur mesure et assortis à votre palier. Devis gratuit après visite.",
-            "Bâti abîmé, porte trop légère, logement exposé {a} : le bloc-porte blindé remplace l'ensemble porte et huisserie par une fermeture conçue pour résister à l'effraction.",
-            "Vous cherchez la protection la plus complète pour votre appartement {a} ? Le bloc-porte blindé associe acier, serrure multipoints et isolation, dans une finition adaptée à votre immeuble.",
+            "Key won't turn {a}? Our locksmiths find the cause and fix it on site: cleaning, adjusting the strike plate or replacing the cylinder if needed. Price given before we travel.",
+            "Stiff lock, a door that won't open or won't lock {a}: a locksmith arrives with common parts to sort it out in a single visit in most cases.",
+            "A rubbing bolt, a clogged cylinder, a door that has shifted: jammed locks are common {a}. We repair first, and only replace when it is really necessary.",
         ],
-        "conseil": "Demandez à votre assureur quel niveau de certification il exige (BP1, BP2 ou BP3) avant de choisir votre modèle.",
+        "conseil": "Don't force the key and forget about cooking oil: a dry lubricant (graphite or PTFE) works much better.",
     },
-    "porte-de-cave": {
+    "broken-key": {
         "intros": [
-            "Cave forcée ou mal protégée {a} ? Nous posons des blocs-portes de cave métalliques avec serrure de sûreté, fabriqués aux dimensions de votre ouverture.",
-            "Les caves d'immeubles sont souvent visitées {a}. Une porte de cave métallique avec une vraie serrure de sûreté met fin aux cadenas fragiles et aux portes en bois qui cèdent au premier coup.",
-            "Porte de cave {a} : sécurisation en urgence après une effraction, puis pose d'une porte définitive sur devis gratuit.",
+            "Key broken in the lock {a}? Our locksmiths remove the piece with dedicated extractors, usually without taking the lock apart, 24/7, on a free quote.",
+            "A piece of key stuck in the cylinder {a}: a locksmith comes to extract it, checks the cylinder and only replaces it on the spot if that is useful.",
+            "An old key snapping in the lock is common {a}. We remove the piece cleanly, then advise you: get a new key cut or replace a worn cylinder.",
         ],
-        "conseil": "Informez votre syndic avant de changer la porte de votre cave, et signalez toute effraction : d'autres caves ont peut-être été touchées.",
+        "conseil": "No glue, no paper clip: you could push the piece further in and ruin the cylinder.",
     },
-    "boite-aux-lettres": {
+    "lock-replacement": {
         "intros": [
-            "Clé de boîte aux lettres perdue {a} ? Nous remplaçons la serrure par un modèle compatible, avec des clés neuves, pour 110 € TTC sur un modèle basique.",
-            "Vous emménagez {a} et vous ne savez pas qui possède la clé de votre boîte aux lettres ? Changer la serrure prend peu de temps et protège votre courrier.",
-            "Serrure de boîte aux lettres forcée ou bloquée {a} : nous ouvrons sans abîmer le portillon et posons une serrure neuve.",
+            "Lost keys, moving in or a worn lock {a}: we replace cylinders and locks, from standard models to A2P-certified multi-point locks. Free quote, signed before any work.",
+            "Lock replacement {a}: the locksmith arrives with a choice of cylinders in stock, shows you the options and their prices, then fits the one you choose the same day.",
+            "Just moved {a} or lost your keys? Replacing the cylinder is the simplest way to take back control of who can get in. Certified equipment, detailed invoice.",
         ],
-        "conseil": "Si tout votre trousseau a disparu, faites aussi vérifier le cylindre de votre porte d'entrée et la serrure de votre cave lors du même passage.",
+        "conseil": "Look at the number of A2P stars (1 to 3): it rates break-in resistance and is sometimes required by insurers.",
     },
-    "ouverture-de-porte": {
+    "smart-lock": {
         "intros": [
-            "Porte claquée {a} et clés restées à l'intérieur ? Un serrurier {nom} se met en route aussitôt pour l'ouvrir en douceur, souvent en quelques minutes et sans toucher à la serrure. Le prix vous est donné avant son départ.",
-            "Pas de panique si la porte s'est refermée derrière vous {a} : une porte claquée s'ouvre presque toujours sans dégât, à la radio ou au crochetage. Nous intervenons jour et nuit, à tarif annoncé.",
-            "Coincé sur le palier {a} ? Appelez : vous connaissez le prix avant l'arrivée du serrurier, et votre porte est ouverte sans casse dans la grande majorité des cas.",
+            "Want to open your door with your phone {a}? We install and set up smart locks compatible with your door, and repair those that stop responding.",
+            "Smart lock {a}: installation, setup, and repair when the batteries are flat or the motor is stuck. We check your cylinder's compatibility before installing anything.",
+            "Smart lock failure or an installation project {a}: we open doors fitted with a stuck smart lock 24/7, and install by appointment.",
         ],
-        "conseil": "Évitez la carte bancaire ou le tournevis : ils abîment la gâche et le joint, ce qui rallonge l'intervention.",
+        "conseil": "Keep a mechanical backup key and watch the batteries: they are the number one cause of stuck smart locks.",
     },
-    "serrure-bloquee": {
+    "break-in-repair": {
         "intros": [
-            "Votre clé refuse de tourner {a} ? Nos serruriers diagnostiquent le blocage et le règlent sur place : nettoyage, réglage de la gâche ou remplacement du cylindre s'il le faut. Prix annoncé avant le déplacement.",
-            "Serrure grippée, porte qui ne s'ouvre plus ou ne se verrouille plus {a} : un serrurier arrive avec les pièces courantes pour tout régler en une seule visite dans la plupart des cas.",
-            "Un pêne qui frotte, un cylindre encrassé, une porte qui a bougé : les serrures bloquées sont fréquentes {a}. Nous réparons d'abord, et ne remplaçons que si c'est vraiment nécessaire.",
+            "Burglary or attempted break-in {a}? We secure your door as an emergency, 24/7, then repair or reinforce it. Detailed invoice for your insurer.",
+            "Door forced open {a}: a locksmith comes day or night to fit a temporary or permanent lock and replace the damaged cylinder.",
+            "After a break-in {a}, the priority is being able to lock up tonight. We come quickly, on a free quote, and advise you on the right reinforcements.",
         ],
-        "conseil": "Ne forcez pas sur la clé et oubliez l'huile de cuisine : un lubrifiant sec (graphite, PTFE) est bien plus adapté.",
+        "conseil": "Photograph the damage and file a police report before permanent repairs: your insurer will ask for the receipt.",
     },
-    "cle-cassee": {
+    "door-armoring": {
         "intros": [
-            "Clé cassée dans la serrure {a} ? Nos serruriers retirent le morceau avec des extracteurs dédiés, sans démonter la serrure dans la plupart des cas, 24h/24, sur devis gratuit.",
-            "Un fragment de clé coincé dans le cylindre {a} : un serrurier vient l'extraire, vérifie le cylindre et le remplace sur place seulement si c'est utile.",
-            "Une vieille clé qui cède dans la serrure, c'est courant {a}. Nous retirons le morceau proprement, puis vous conseillons : refaire une clé ou changer un cylindre fatigué.",
+            "Want to secure your front door {a} without replacing it? Armoring reinforces your existing door with a steel plate, a multi-point lock and anti-jemmy bars, while keeping its look from the landing.",
+            "Door armoring {a}: we come to measure your door, check the frame and present several levels of protection, with a free, detailed quote. Fitting usually takes one day.",
+            "An old landing door, a basic lock, a tired frame: that's the case in many apartments {a}. Armoring is often the most effective way to deter burglars without major works.",
         ],
-        "conseil": "Ni colle, ni trombone : vous risquez d'enfoncer le morceau et de rendre le cylindre irrécupérable.",
+        "conseil": "Check your building's co-ownership rules: armoring that keeps the door's outside appearance is usually accepted without formalities.",
     },
-    "changement-de-serrure": {
+    "armored-door": {
         "intros": [
-            "Clés perdues, emménagement ou serrure usée {a} : nous remplaçons cylindres et serrures, du modèle standard à la multipoints certifiée A2P. Devis gratuit et signé avant travaux.",
-            "Changement de serrure {a} : le serrurier arrive avec un choix de cylindres en stock, vous présente les options et leurs prix, puis pose le modèle retenu le jour même.",
-            "Vous venez d'emménager {a} ou vous avez perdu vos clés ? Remplacer le cylindre est la façon la plus simple de reprendre la main sur vos accès. Matériel certifié, facture détaillée.",
+            "Armored door installation {a}: we fit A2P BP1, BP2 or BP3 certified door sets, made to measure and matched to your landing. Free quote after a visit.",
+            "Damaged frame, a door that's too light, an exposed home {a}: a complete armored door set replaces the door and frame with a closure designed to resist break-ins.",
+            "Looking for the most complete protection for your apartment {a}? An armored door set combines steel, a multi-point lock and insulation, in a finish suited to your building.",
         ],
-        "conseil": "Regardez le nombre d'étoiles A2P (de 1 à 3) : c'est le niveau de résistance à l'effraction, parfois exigé par l'assurance.",
+        "conseil": "Ask your insurer which certification level it requires (BP1, BP2 or BP3) before choosing your model.",
     },
-    "serrure-connectee": {
+    "cellar-door": {
         "intros": [
-            "Envie d'ouvrir votre porte avec votre téléphone {a} ? Nous installons et paramétrons des serrures connectées compatibles avec votre porte, et dépannons celles qui ne répondent plus.",
-            "Serrure connectée {a} : pose, réglage, dépannage en cas de piles vides ou de moteur bloqué. Nous vérifions la compatibilité de votre cylindre avant toute installation.",
-            "Smart lock en panne ou projet d'installation {a} : nous ouvrons 24h/24 une porte équipée d'une serrure connectée bloquée, et installons sur rendez-vous.",
+            "Cellar broken into or poorly protected {a}? We fit steel cellar door sets with a security lock, made to the size of your opening.",
+            "Building cellars are often targeted {a}. A steel cellar door with a proper security lock puts an end to weak padlocks and wooden doors that give way at the first push.",
+            "Cellar door {a}: emergency securing after a break-in, then a permanent door on a free quote.",
         ],
-        "conseil": "Gardez une clé mécanique de secours et surveillez les piles : c'est la première cause de serrure connectée bloquée.",
+        "conseil": "Inform your building manager before replacing your cellar door, and report any break-in: other cellars may have been hit.",
     },
-    "apres-effraction": {
+    "mailbox-lock": {
         "intros": [
-            "Cambriolage ou tentative d'effraction {a} ? Nous sécurisons votre porte en urgence, 24h/24, puis la remettons en état ou la renforçons. Facture détaillée pour votre assurance.",
-            "Porte forcée {a} : un serrurier se déplace jour et nuit pour poser une fermeture provisoire ou définitive et remplacer le cylindre abîmé.",
-            "Après une effraction {a}, l'urgence est de pouvoir refermer dès ce soir. Nous intervenons vite, sur devis gratuit, et vous conseillons sur les renforts adaptés.",
+            "Lost your mailbox key {a}? We replace the lock with a compatible model and new keys, for €110 incl. VAT on a standard model.",
+            "Just moved in {a} and don't know who has the mailbox key? Changing the lock takes little time and protects your mail.",
+            "Mailbox lock forced or jammed {a}: we open it without damaging the flap and fit a new lock.",
         ],
-        "conseil": "Photographiez les dégâts et déposez plainte avant les travaux définitifs : votre assureur demandera le récépissé.",
+        "conseil": "If your whole key ring is gone, have your front-door cylinder and cellar lock checked during the same visit.",
     },
 }
 
 ETAPES = [
-    ("Appel", "vous décrivez la situation, le prix vous est annoncé"),
-    ("Trajet", "le serrurier part vers votre adresse {a} et vous prévient de son arrivée"),
-    ("Devis", "il confirme le prix par écrit, vous signez avant qu'il commence"),
-    ("Intervention", "travail soigné, puis facture détaillée pour votre assureur"),
+    ("Call", "you describe the situation and get the price"),
+    ("Travel", "the locksmith heads to your address {a} and lets you know when he is close"),
+    ("Quote", "he confirms the price in writing and you sign before he starts"),
+    ("Work", "careful work, then a detailed invoice for your insurer"),
 ]
 
 
 def combo_faq(s, z, k):
-    prix = f"dès {s['prix_num']} € TTC" if s["prix_num"] else "sur devis gratuit"
     return [
-        (f"Quel prix pour {s['phrase']} {z['a_court']} ?", f"Ce service est proposé {prix} {z['a']}. Le prix exact dépend de votre porte et de votre serrure : il est annoncé au téléphone puis confirmé par un devis signé."),
-        (f"Pouvez-vous venir rapidement {z['a']} ?", "Oui, en environ 30 minutes en moyenne, 24h/24 et 7j/7, nuits, week-ends et jours fériés compris."),
+        (f"How much does {s['phrase']} cost {z['a_court']}?", f"This service is available {prix_txt(s)} {z['a']}. The exact price depends on your door and lock: it is given on the phone, then confirmed by a signed quote."),
+        (f"Can you come quickly {z['a']}?", "Yes, in about 30 minutes on average, 24/7, nights, weekends and public holidays included."),
         s["faq"][k % len(s["faq"])],
     ]
 
@@ -1193,56 +1274,55 @@ def build_combo_pages():
             t2, c2 = s["sections"][(k + 1) % 3]
             etapes = "".join(f"<li><b>{E(t)}</b><span>{E(d.format(a=z['a']))}</span></li>" for t, d in ETAPES)
             faq = combo_faq(s, z, k)
-            prix_txt = f"dès <strong>{s['prix_num']} € TTC</strong>" if s["prix_num"] else "<strong>sur devis gratuit</strong>"
             others = "".join(f'<a class="chip" href="{combo_url(o, z)}">{ico(o["icon"])}{E(o["court"])}</a>' for o in SERVICES if o is not s)
             voisins = [v for v in (z["prev"], z["next"]) if v]
             vlinks = "".join(f'<a class="chip" href="{combo_url(s, v)}">{ico(s["icon"])}{E(s["court"])} {E(v["court"])}</a>' for v in voisins)
             content = f'''<article class="prose">
   <p class="intro">{intro}</p>
   <div class="facts">
-    <div><small>Tarif</small><b>{E(s["prix"].replace(" TTC", ""))}</b></div>
-    <div><small>Code postal</small><b>{E(" / ".join(z["cp"]))}</b></div>
-    <div><small>Disponibilité</small><b>24h/24 · 7j/7</b></div>
-    <div><small>Délai moyen</small><b>≈ 30 min</b></div>
+    <div><small>Price</small><b>{E(s["prix"])}</b></div>
+    <div><small>Postcode</small><b>{E(" / ".join(z["cp"]))}</b></div>
+    <div><small>Availability</small><b>24/7</b></div>
+    <div><small>Average arrival</small><b>≈ 30 min</b></div>
   </div>
-  <div class="note-box">{ico("i-euro")}<p>Tarif {prix_txt}, annoncé au téléphone et confirmé par un devis signé. Aucun frais caché. <a href="/tarifs/">Voir tous nos tarifs →</a></p></div>
-  <h2>{E(s["court"])} dans le {z["num"]} : où intervenons-nous ?</h2>
-  <p>Partout dans l'arrondissement ({E(z["surnom"])}) : quartiers <strong>{E(et(z["quartiers"]))}</strong>, autour {E(de_list(z["reperes"]))} et des stations {E(et(z["metros"]))}. On y trouve surtout des {E(z["habitat"])} : nos serruriers sont équipés pour ces configurations, des portes anciennes aux portes blindées multipoints.</p>
+  <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}, given on the phone and confirmed by a signed quote. No hidden fees. <a href="/prices/">See all our prices →</a></p></div>
+  <h2>{E(s["court"])} in the {z["num"]}: where do we work?</h2>
+  <p>Everywhere in the arrondissement ({E(z["surnom"])}): the <strong>{E(et(z["quartiers"]))}</strong> quarters, around {E(et(z["reperes"]))} and the metro stations {E(et(z["metros"]))}. The area mostly has {E(z["habitat"])}: our locksmiths are equipped for these, from old doors to multi-point armored doors.</p>
   <h2>{E(t1)}</h2><p>{c1}</p>
-  <h2>Déroulement de l'intervention</h2>
+  <h2>How the call-out works</h2>
   <ol class="steps-list">{etapes}</ol>
   <h2>{E(t2)}</h2><p>{c2}</p>
-  <div class="note-box tip">{ico("i-award")}<p><strong>Le conseil du serrurier :</strong> {E(loc["conseil"])}</p></div>
+  <div class="note-box tip">{ico("i-award")}<p><strong>Locksmith's tip:</strong> {E(loc["conseil"])}</p></div>
   <div class="trust-duo">{inclus_block()}{engagements_short()}</div>
-  <h2>Questions fréquentes</h2>
+  <h2>Frequently asked questions</h2>
   {faq_html(faq)}
-  <h2>Autres services {E(z["a_court"])}</h2>
-  <div class="chips">{others}<a class="chip" href="{z["url"]}">{ico("i-pin")}Serrurier {E(z["court"])}</a></div>
-  <h2>Arrondissements voisins</h2>
-  <div class="chips">{vlinks}<a class="chip" href="{svc_url(s)}">{ico(s["icon"])}{E(s["court"])} dans tout Paris</a></div>
+  <h2>Other services {E(z["a_court"])}</h2>
+  <div class="chips">{others}<a class="chip" href="{z["url"]}">{ico("i-pin")}Locksmith {E(z["court"])}</a></div>
+  <h2>Neighboring arrondissements</h2>
+  <div class="chips">{vlinks}<a class="chip" href="{svc_url(s)}">{ico(s["icon"])}{E(s["court"])} across Paris</a></div>
 </article>'''
             h1 = f'{E(s["nom"])} <em>{E(z["a_court"])}</em>'
-            lead = f'{E(s["resume"])} Intervention 24h/24 {E(z["a"])}, {"dès %d € TTC" % s["prix_num"] if s["prix_num"] else "sur devis gratuit"}.'
-            crumb_items = [("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], None)]
-            body = hero(crumb_items, h1, lead, ticks(["Prix annoncé avant déplacement", "Devis signé", "Nuit et week-end"], "ticks light inline"),
-                        kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z))
+            lead = f'{E(s["resume"])} Available 24/7 {E(z["a"])}, {prix_txt(s)}.'
+            crumb_items = [("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], None)]
+            body = hero(crumb_items, h1, lead, ticks(["Price given before we travel", "Signed quote", "Nights & weekends"], "ticks light inline"),
+                        kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z), card=hero_card(prix_txt(s), s["court"]))
             body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"{s["court"]} {z["court"]}")}</div></section>'
-            body += contact_band(f"{s['court']} {z['a_court']} ?", "Appelez-nous : prix annoncé au téléphone, serrurier en route aussitôt.",
+            body += contact_band(f"{s['court']} {z['a_court']}?", "Call us: price given on the phone, locksmith on the way straight away.",
                                  source=path, service=s["court"], arr=z["court"])
-            prix_court = f"dès {s['prix_num']} €" if s["prix_num"] else "devis gratuit"
-            title = f'{s["court"]} {z["court"]} ({z["cp"][0]}) – {prix_court}, 24h/24'
-            desc = (f'{s["nom"]} {z["a_court"]} ({z["cp"][0]}), 24h/24 et 7j/7, {"dès %d € TTC" % s["prix_num"] if s["prix_num"] else "devis gratuit"}. '
-                    f'Prix annoncé avant déplacement, devis signé, facture pour l\'assurance. ☎ {TEL}')
-            ld = [ld_business(), ld_crumbs([("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], path)]), ld_faq(faq),
+            prix_court = f"from {eur(s['prix_num'])}" if s["prix_num"] else "free quote"
+            title = f'{s["court"]} {z["court"]} ({z["cp"][0]}) – {prix_court}, 24/7'
+            desc = (f'{s["nom"]} {z["a_court"]} ({z["cp"][0]}), 24/7, {prix_txt(s)}. '
+                    f'Price given before we travel, signed quote, invoice for your insurer. ☎ {TEL}')
+            ld = [ld_business(), ld_crumbs([("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], path)]), ld_faq(faq),
                   {"@context": "https://schema.org", "@type": "Service", "name": f"{s['nom']} {z['a_court']}", "serviceType": s["nom"],
                    "url": URL + path, "provider": {"@id": BID},
                    "areaServed": {"@type": "AdministrativeArea", "name": z["nom"], "postalCode": z["cp"][0]},
                    **({"offers": {"@type": "Offer", "priceSpecification": {"@type": "PriceSpecification", "minPrice": s["prix_num"], "priceCurrency": "EUR"}}} if s["prix_num"] else {})}]
-            page(path, title, desc, body, ld, active="/serrurier-paris/")
+            page(path, title, desc, body, ld, active="/locksmith-paris/")
 
 
 # ---------------------------------------------------------------------------
-# Pages simples
+# Simple pages
 # ---------------------------------------------------------------------------
 def simple(path, crumb, h1, lead, prose, title, desc, extra_ld=(), active=None, after="", aside=True, robots="index, follow"):
     body = hero([(crumb, None)], h1, lead)
@@ -1254,298 +1334,327 @@ def simple(path, crumb, h1, lead, prose, title, desc, extra_ld=(), active=None, 
 def ld_tarifs():
     offers = []
     for p, jour, *_ in TARIFS:
-        m = re.search(r"([\d  ]+)\s*€", jour)
+        m = re.search(r"€([\d,]+)", jour)
         if not m:
             continue
-        val = int(re.sub(r"\D", "", m.group(1)))
+        val = int(m.group(1).replace(",", ""))
         spec = {"@type": "PriceSpecification", "priceCurrency": "EUR", "valueAddedTaxIncluded": True}
-        spec.update({"minPrice": val} if jour.startswith("À partir") else {"price": val})
+        spec.update({"minPrice": val} if jour.startswith("From") else {"price": val})
         offers.append({"@type": "Offer", "name": p, "priceSpecification": spec, "itemOffered": {"@type": "Service", "name": p}, "seller": {"@id": BID}})
-    return {"@context": "https://schema.org", "@type": "OfferCatalog", "name": f"Tarifs {NOM}", "url": URL + "/tarifs/", "itemListElement": offers}
+    return {"@context": "https://schema.org", "@type": "OfferCatalog", "name": f"{NOM} prices", "url": URL + "/prices/", "itemListElement": offers}
 
 
 def build_static():
-    # Tarifs
-    body = hero([("Tarifs", None)], "Nos tarifs, <em>affichés noir sur blanc</em>",
-                "Prix par prestation et par heure d'intervention. Tout est annoncé avant le déplacement, rien n'est ajouté en route.", kicker="Transparence")
+    # Prices
+    body = hero([("Prices", None)], "Our prices, <em>in black and white</em>",
+                "Prices per service and per time of day. Everything is given before we travel and nothing is added on the way.", kicker="Transparency")
     body += f'''<section class="sec"><div class="wrap">
   {tarif_table()}
   <div class="layout" style="margin-top:56px">
     <article class="prose">
-      <h2>Ce que le prix comprend</h2>
-      <ul><li>La main d'œuvre du serrurier.</li><li>Le déplacement dans Paris, offert si des travaux sont réalisés.</li><li>La TVA : tous nos prix sont TTC.</li><li>Une facture détaillée, conforme pour votre assurance.</li></ul>
-      <h2>Nos engagements</h2>
-      <ul><li><strong>Tarif annoncé</strong> avant le départ du technicien.</li><li><strong>Devis écrit et signé</strong> avant tout travail.</li><li><strong>Pas de majoration surprise</strong> : le tarif de soirée ou de nuit est donné au téléphone.</li><li><strong>Matériel certifié</strong> et garanti.</li></ul>
-      <h2>Clé cassée, serrure connectée, après effraction</h2>
-      <p>Ces interventions dépendent beaucoup de la situation : elles font l'objet d'un <strong>devis gratuit</strong>, donné au téléphone puis confirmé par écrit.</p>
-      <h2>Paiement</h2><p>Carte bancaire, espèces ou virement.</p>
+      <h2>What the price includes</h2>
+      <ul><li>The locksmith's labor.</li><li>Travel within Paris, free if work is carried out.</li><li>VAT: all our prices include VAT.</li><li>A detailed invoice suitable for your insurer.</li></ul>
+      <h2>Our commitments</h2>
+      <ul><li><strong>Price given</strong> before the locksmith sets off.</li><li><strong>Written, signed quote</strong> before any work.</li><li><strong>No surprise surcharge</strong>: the evening or night rate is given on the phone.</li><li><strong>Certified equipment</strong> from recognized brands.</li></ul>
+      <h2>Broken keys, smart locks, break-ins</h2>
+      <p>These jobs depend heavily on the situation: they come with a <strong>free quote</strong>, given on the phone and then confirmed in writing.</p>
+      <h2>Payment</h2><p>Card, cash or bank transfer.</p>
     </article>
-    {side_box("Votre prix au téléphone", "Décrivez la situation : vous connaissez le tarif exact avant que nous partions.")}
+    {side_box("Your price on the phone", "Describe the situation: you know the exact price before we set off.")}
   </div>
-</div></section>''' + assureurs_strip() + contact_band(source="/tarifs/")
-    page("/tarifs/", f"Tarifs serrurier Paris – jour, soirée, nuit | {NOM}",
-         "Tarifs serrurier à Paris : ouverture de porte claquée 110 € TTC en journée, porte fermée à clé dès 180 €, changement de cylindre dès 160 €. Prix de soirée et de nuit affichés.",
-         body, [ld_business(), ld_crumbs([("Tarifs", "/tarifs/")]), ld_tarifs()], active="/tarifs/")
+</div></section>''' + assureurs_strip() + contact_band(source="/prices/")
+    page("/prices/", f"Locksmith prices Paris – day, evening, night | {NOM}",
+         "Locksmith prices in Paris: slammed door opening €110 incl. VAT during the day, locked door from €180, cylinder replacement from €160. Evening and night rates shown.",
+         body, [ld_business(), ld_crumbs([("Prices", "/prices/")]), ld_tarifs()], active="/prices/")
 
-    # Assurance
-    simple("/assurance/", "Assurance", "Serrurier et assurance : <em>se faire rembourser</em>",
-           "Nos factures sont acceptées par les assureurs habitation. Voici comment obtenir le remboursement d'une intervention.",
-           f'''<h2>Dans quels cas l'assurance rembourse ?</h2>
-<p>La plupart des contrats multirisques habitation couvrent les frais de serrurerie après un <strong>cambriolage ou une tentative d'effraction</strong>. Certains prennent aussi en charge le <strong>vol</strong> ou la <strong>perte des clés</strong>, parfois en option. Une porte simplement claquée est rarement couverte, sauf garantie d'assistance : relisez votre contrat.</p>
-<h2>Les pièces à fournir</h2>
-<ul><li>Le <strong>récépissé de plainte</strong> en cas d'effraction ou de vol.</li><li>Notre <strong>facture détaillée</strong> (intervention, matériel posé, prix TTC).</li><li>Le <strong>devis signé</strong> et, sur demande, des <strong>photos avant/après</strong>.</li></ul>
-<h2>Les délais</h2>
-<p>Après un vol ou un cambriolage, la déclaration doit en général être faite sous <strong>2 jours ouvrés</strong>. Pour les autres sinistres, le délai est souvent de 5 jours ouvrés. Votre contrat fait foi.</p>
-<h2>Notre accompagnement</h2>
-<p>Nous vous remettons tous les justificatifs et pouvons sécuriser provisoirement la porte en attendant le passage de l'expert.</p>
-<p class="note-box">{ico("i-shield")}{E(NOM)} est une entreprise indépendante, sans partenariat avec les compagnies d'assurance. Le remboursement dépend des garanties de votre contrat.</p>''',
-           f"Serrurier et assurance habitation : facture remboursable | {NOM}",
-           "Faire rembourser un serrurier par son assurance habitation : garanties, documents, délais. Nos factures sont acceptées par les assureurs.",
-           after=assureurs_strip() + contact_band(source="/assurance/"))
+    # Insurance
+    simple("/insurance/", "Insurance", "Locksmith &amp; insurance: <em>getting reimbursed</em>",
+           "Our invoices are accepted by French home insurers. Here is how to get a locksmith call-out reimbursed.",
+           f'''<h2>When does insurance pay?</h2>
+<p>Most French home insurance policies (multirisque habitation) cover locksmith costs after a <strong>burglary or attempted break-in</strong>. Some also cover <strong>theft</strong> or <strong>loss of keys</strong>, sometimes as an option. A door that has simply slammed shut is rarely covered, unless you have an assistance guarantee: check your policy. If you are a visitor, your travel insurance may also include assistance.</p>
+<h2>Documents to provide</h2>
+<ul><li>The <strong>police report receipt</strong> in case of break-in or theft.</li><li>Our <strong>detailed invoice</strong> (work done, parts fitted, price including VAT).</li><li>The <strong>signed quote</strong> and, on request, <strong>before/after photos</strong>.</li></ul>
+<h2>Deadlines</h2>
+<p>After a theft or burglary, you usually have <strong>2 working days</strong> to notify your insurer. For other claims, the deadline is often 5 working days. Your policy is the reference.</p>
+<h2>How we help</h2>
+<p>We give you all the supporting documents and can temporarily secure your door until the insurance assessor visits.</p>
+<p class="note-box">{ico("i-shield")}{E(NOM)} is an independent company with no partnership with insurance companies. Reimbursement depends on your policy.</p>''',
+           f"Locksmith &amp; home insurance: reimbursable invoice | {NOM}".replace("&amp;", "&"),
+           "How to get a locksmith reimbursed by your home insurance in France: guarantees, documents, deadlines. Our invoices are accepted by insurers.",
+           after=assureurs_strip() + contact_band(source="/insurance/"))
 
     # FAQ
     allfaq = HOME_FAQ + [q for s in SERVICES for q in s["faq"]]
-    simple("/questions-frequentes/", "Questions fréquentes", "Questions <em>fréquentes</em>",
-           "Prix, délais, assurance, techniques d'ouverture : tout ce que l'on nous demande le plus souvent.",
-           "<h2>En général</h2>" + faq_html(HOME_FAQ) + "".join(f'<h2>{E(s["court"])}</h2>' + faq_html(s["faq"]) for s in SERVICES),
-           f"Questions fréquentes – serrurier Paris | {NOM}",
-           "Prix d'une ouverture de porte, délai d'intervention, remboursement par l'assurance, ouverture sans casse : nos réponses.",
-           extra_ld=[ld_faq(allfaq)], after=contact_band(source="/questions-frequentes/"))
+    simple("/faq/", "FAQ", "Frequently asked <em>questions</em>",
+           "Prices, arrival times, insurance, opening techniques: everything we are asked most often.",
+           "<h2>General</h2>" + faq_html(HOME_FAQ) + "".join(f'<h2>{E(s["court"])}</h2>' + faq_html(s["faq"]) for s in SERVICES),
+           f"FAQ – locksmith Paris | {NOM}",
+           "Door opening prices, arrival times, insurance reimbursement, damage-free opening: our answers.",
+           extra_ld=[ld_faq(allfaq)], after=contact_band(source="/faq/"))
 
-    # Avis
-    body = hero([("Avis clients", None)], "Avis clients <em>sur Google</em>",
-                "Nos clients publient leurs avis sur notre fiche Google : ils sont publics et vérifiables.", google_badge("g-badge dark"))
-    body += reviews_block("Notre réputation, en toute transparence") + contact_band(source="/avis/")
-    page("/avis/", f"Avis clients – serrurier Paris | {NOM}", "Consultez les avis Google de nos clients et laissez le vôtre. Serrurier à Paris 24h/24.",
-         body, [ld_business(), ld_crumbs([("Avis clients", "/avis/")])], active="/avis/")
+    # Reviews
+    body = hero([("Customer reviews", None)], "Customer reviews <em>on Google</em>",
+                "Our customers post their reviews on our Google Business Profile: they are public and verifiable.", google_badge("g-badge dark"))
+    body += reviews_block("Our reputation, fully transparent") + contact_band(source="/reviews/")
+    page("/reviews/", f"Customer reviews – locksmith Paris | {NOM}", "Read our customers' Google reviews and leave your own. Locksmith in Paris, 24/7.",
+         body, [ld_business(), ld_crumbs([("Customer reviews", "/reviews/")])], active="/reviews/")
 
     # Contact
-    body = hero([("Contact", None)], "Contacter <em>votre serrurier</em>",
-                "Pour une urgence, le téléphone est le plus rapide. Pour un devis ou des travaux, écrivez-nous.")
+    body = hero([("Contact", None)], "Contact <em>your locksmith</em>",
+                "For an emergency, calling is fastest. For a quote or planned work, write to us.")
     body += f'''<section class="sec cream"><div class="wrap contact-grid">
   <div class="contact-card">
     <h2>{E(NOM)}</h2>
-    <p>{E(CONFIG["slogan"])}, dans les 20 arrondissements de Paris, 24h/24 et 7j/7.</p>
-    <a class="c-line" href="{TEL_HREF}" data-track="call_contact">{ico("i-phone")}<span><small>Téléphone 24h/24</small><b>{TEL}</b></span></a>
-    <a class="c-line" href="{E(wa_link("Bonjour, j'ai besoin d'un serrurier à Paris."))}" target="_blank" rel="noopener" data-track="wa_contact">{ico("i-wa")}<span><small>WhatsApp</small><b>Envoyer une photo</b></span></a>
-    <a class="c-line" href="mailto:{CONFIG["email"]}">{ico("i-mail")}<span><small>E-mail</small><b>{CONFIG["email"]}</b></span></a>
+    <p>{E(CONFIG["slogan"])} in all 20 Paris arrondissements, 24/7. We speak English and French.</p>
+    <a class="c-line" href="{TEL_HREF}" data-track="call_contact">{ico("i-phone")}<span><small>Phone 24/7</small><b>{TEL}</b></span></a>
+    <a class="c-line" href="{E(wa_link(WA_MSG))}" target="_blank" rel="noopener" data-track="wa_contact">{ico("i-wa")}<span><small>WhatsApp</small><b>Send a photo</b></span></a>
+    <a class="c-line" href="mailto:{CONFIG["email"]}">{ico("i-mail")}<span><small>Email</small><b>{CONFIG["email"]}</b></span></a>
     <a class="c-line" href="{CONFIG["instagram"]}" target="_blank" rel="noopener me">{ico("i-insta")}<span><small>Instagram</small><b>@securelockserrurerie</b></span></a>
-    <div class="c-line">{ico("i-pin")}<span><small>Zone d'intervention</small><b>Paris, du 1<sup>er</sup> au 20<sup>e</sup> arrondissement</b></span></div>
+    <div class="c-line">{ico("i-pin")}<span><small>Service area</small><b>Paris, 1st to 20th arrondissement</b></span></div>
   </div>
-  {lead_form("/contact/", titre="Écrivez-nous", sous="Devis, rappel, question : réponse rapide, 7j/7.")}
+  {lead_form("/contact/", titre="Write to us", sous="Quote, call-back, question: quick reply, 7 days a week.")}
 </div></section>
-<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Notre fiche Google</span><h2>Où nous trouver</h2></div>{map_embed()}</div></section>''' + reviews_block()
-    page("/contact/", f"Contact – serrurier Paris 24h/24 | {NOM}",
-         f"Contactez {NOM} au {TEL}, 24h/24 et 7j/7, par WhatsApp ou par e-mail. Devis gratuit, intervention rapide dans tout Paris.",
+<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Google Business Profile</span><h2>Find us</h2></div>{map_embed()}</div></section>''' + reviews_block()
+    page("/contact/", f"Contact – locksmith Paris 24/7 | {NOM}",
+         f"Contact {NOM} on {TEL}, 24/7, by phone, WhatsApp or email. Free quote, fast call-out anywhere in Paris. English spoken.",
          body, [ld_business(full=True), ld_crumbs([("Contact", "/contact/")])], active="/contact/")
 
-    # Mentions légales
-    a = CONFIG["adresse"]
-    adresse = ", ".join(v for v in (a["rue"], f'{a["cp"]} {a["ville"]}'.strip()) if v)
-    lignes = [E(CONFIG["raison_sociale"]) + (f" ({E(NOM)})" if NOM != CONFIG["raison_sociale"] else "")]
+    # Legal notice
+    lignes = [E(CONFIG["raison_sociale"]) + (f" (trading as {E(NOM)})" if NOM != CONFIG["raison_sociale"] else "")]
     if CONFIG["responsable"]:
-        lignes.append(f"Responsable de la publication : {E(CONFIG['responsable'])}")
+        lignes.append(f"Publication director: {E(CONFIG['responsable'])}")
     if CONFIG["siren"]:
-        lignes.append(f"SIREN : {CONFIG['siren']}")
+        lignes.append(f"SIREN: {CONFIG['siren']}")
     if CONFIG["siret"]:
-        lignes.append(f"SIRET : {CONFIG['siret']}")
-    lignes += [f"Adresse : {E(adresse)}", f"Téléphone : {TEL}", f"E-mail : {CONFIG['email']}"]
-    mediateur = E(CONFIG["mediateur"]) or "ses coordonnées vous sont communiquées sur simple demande à " + CONFIG["email"]
-    simple("/mentions-legales/", "Mentions légales", "Mentions légales", "Informations légales relatives au site et à l'entreprise.",
-           f'''<h2>Éditeur du site</h2><p>{"<br>".join(lignes)}</p>
-<h2>Hébergement</h2><p>Netlify, Inc. – 44 Montgomery Street, Suite 300, San Francisco, CA 94104, États-Unis.</p>
-<h2>Propriété intellectuelle</h2><p>Les textes, le logo et les éléments graphiques de ce site appartiennent à {E(NOM)}, sauf mention contraire. Les noms de compagnies d'assurance et de marques sont cités à titre informatif et n'impliquent aucun partenariat.</p>
-<h2>Médiation de la consommation</h2><p>Conformément à l'article L612-1 du Code de la consommation, vous pouvez recourir gratuitement à un médiateur de la consommation : {mediateur}.</p>
-<h2>Prix et devis</h2><p>Les prix affichés sont des prix de départ TTC. Conformément à l'arrêté du 24 janvier 2017 relatif aux prestations de dépannage, de réparation et d'entretien dans le secteur du bâtiment, un devis détaillé et gratuit est remis et signé avant toute intervention, et une note détaillée est remise à la fin de la prestation.</p>
-<h2>Responsabilité</h2><p>Les informations de ce site sont données à titre indicatif et peuvent évoluer.</p>''',
-           f"Mentions légales | {NOM}", f"Mentions légales du site {NOM}, serrurier à Paris.", aside=False)
+        lignes.append(f"SIRET: {CONFIG['siret']}")
+    lignes += [f"Address: {E(adresse_txt())}", f"Phone: {TEL}", f"Email: {CONFIG['email']}"]
+    mediateur = E(CONFIG["mediateur"]) or "their contact details are available on request at " + CONFIG["email"]
+    simple("/legal-notice/", "Legal notice", "Legal notice", "Legal information about this website and the company.",
+           f'''<h2>Website publisher</h2><p>{"<br>".join(lignes)}</p>
+<h2>Hosting</h2><p>Netlify, Inc. – 44 Montgomery Street, Suite 300, San Francisco, CA 94104, United States.</p>
+<h2>Intellectual property</h2><p>The texts, logo and graphic elements of this website belong to {E(NOM)}, unless otherwise stated. Insurance company and brand names are mentioned for information only and do not imply any partnership.</p>
+<h2>Consumer mediation</h2><p>In accordance with article L612-1 of the French Consumer Code, you may use a consumer mediator free of charge: {mediateur}.</p>
+<h2>Prices and quotes</h2><p>Prices shown are starting prices including VAT. In accordance with the French decree of 24 January 2017 on repair and maintenance call-outs in the building sector, a free, detailed quote is given and signed before any work, and a detailed invoice is provided at the end.</p>
+<h2>Liability</h2><p>The information on this website is provided for guidance and may change.</p>''',
+           f"Legal notice | {NOM}", f"Legal notice of the {NOM} website, locksmith in Paris.", aside=False)
 
-    simple("/confidentialite/", "Confidentialité", "Politique de confidentialité", "Comment nous traitons vos données personnelles.",
-           f'''<h2>Données collectées</h2><p>Quand vous nous contactez (téléphone, WhatsApp, e-mail ou formulaire), nous recueillons uniquement ce qui est nécessaire pour traiter votre demande : nom, téléphone, adresse d'intervention et description du problème.</p>
-<h2>Finalité</h2><p>Ces données servent à organiser l'intervention et à établir le devis et la facture. Elles ne sont ni vendues ni cédées.</p>
-<h2>Formulaire et WhatsApp</h2><p>Les demandes envoyées par formulaire transitent par Netlify Forms (hébergeur du site). Les messages WhatsApp sont soumis aux conditions de WhatsApp (Meta).</p>
-<h2 id="cookies">Cookies et mesure d'audience</h2><p>Avec votre accord uniquement, ce site utilise <strong>Google Tag Manager</strong> et <strong>Google Analytics</strong> (Google Ireland Ltd) pour mesurer sa fréquentation et l'usage des boutons d'appel, de WhatsApp et du formulaire. Sans accord, aucun de ces outils n'est chargé.</p>
-<p>Votre choix est conservé 6 mois dans votre navigateur et modifiable à tout moment via le lien « Cookies » en bas de page.</p>
-<h2>Durée de conservation</h2><p>Les données de facturation sont conservées 10 ans (obligation légale). Les autres données sont supprimées au plus tard 3 ans après le dernier contact.</p>
-<h2>Vos droits</h2><p>Vous disposez d'un droit d'accès, de rectification, d'effacement et d'opposition (RGPD). Écrivez à {CONFIG["email"]}. Vous pouvez aussi saisir la CNIL.</p>''',
-           f"Politique de confidentialité | {NOM}", f"Politique de confidentialité du site {NOM}.", aside=False)
+    simple("/privacy/", "Privacy", "Privacy policy", "How we handle your personal data.",
+           f'''<h2>Data collected</h2><p>When you contact us (phone, WhatsApp, email or form), we only collect what is needed to handle your request: name, phone number, call-out address and description of the problem.</p>
+<h2>Purpose</h2><p>This data is used to organize the call-out and to issue the quote and invoice. It is never sold or passed on.</p>
+<h2>Form and WhatsApp</h2><p>Requests sent through the form are processed by Netlify Forms (our website host). WhatsApp messages are subject to WhatsApp's (Meta's) terms.</p>
+<h2 id="cookies">Cookies and analytics</h2><p>Only with your consent, this website uses <strong>Google Tag Manager</strong> and <strong>Google Analytics</strong> (Google Ireland Ltd) to measure traffic and the use of the call, WhatsApp and form buttons. Without consent, none of these tools is loaded.</p>
+<p>Your choice is stored for 6 months in your browser and can be changed at any time with the "Cookies" link at the bottom of each page.</p>
+<h2>Retention</h2><p>Billing data is kept for 10 years (legal requirement). Other data is deleted no later than 3 years after the last contact.</p>
+<h2>Your rights</h2><p>Under the GDPR, you have the right to access, correct, delete and object to the processing of your data. Write to {CONFIG["email"]}. You may also contact the French data protection authority (CNIL).</p>''',
+           f"Privacy policy | {NOM}", f"Privacy policy of the {NOM} website.", aside=False)
 
 
 URG_FAQ = [
-    ("Intervenez-vous vraiment la nuit et le dimanche ?", "Oui, 24h/24 et 7j/7, jours fériés compris. Le tarif de nuit (22h–8h) est annoncé au téléphone avant le départ du serrurier."),
-    ("En combien de temps arrivez-vous ?", "Environ 30 minutes en moyenne dans Paris. Le délai précis dépend de la circulation : il vous est donné au téléphone."),
-    ("Combien coûte une ouverture de porte en urgence ?", "110 € TTC en journée, 150 € en soirée et 220 € la nuit pour une porte claquée. Une porte fermée à clé démarre à 180 € en journée."),
-    ("Que dois-je préparer avant l'arrivée du serrurier ?", "Une pièce d'identité ou un justificatif de domicile si possible : le serrurier doit s'assurer que vous êtes bien l'occupant du logement. Si vos papiers sont à l'intérieur, un voisin ou le gardien peut en témoigner."),
-    ("Puis-je refuser le devis sur place ?", "Oui. Le devis est gratuit et sans engagement : si vous le refusez, rien n'est fait."),
+    ("Do you really come at night and on Sundays?", "Yes, 24/7, public holidays included. The night rate (10pm–8am) is given on the phone before the locksmith sets off."),
+    ("How quickly can you get here?", "About 30 minutes on average within Paris. The exact time depends on traffic and is given on the phone."),
+    ("How much does an emergency door opening cost?", "€110 incl. VAT during the day, €150 in the evening and €220 at night for a slammed door. A locked door starts at €180 during the day."),
+    ("What should I have ready when the locksmith arrives?", "If possible, an ID or proof of address: the locksmith must make sure you are the occupant. If your documents are inside, a neighbor, the caretaker or your host can vouch for you."),
+    ("Can I refuse the quote on site?", "Yes. The quote is free and with no obligation: if you refuse it, nothing is done."),
 ]
 
 
 def build_urgence():
     steps = "".join(f"<li><b>{i}</b><div><h3>{E(t)}</h3><p>{E(d)}</p></div></li>" for i, (t, d) in enumerate([
-        ("Restez calme et en sécurité", "Si quelqu'un est peut-être encore chez vous après une effraction, n'entrez pas et appelez le 17."),
-        ("Appelez-nous", f"Au {TEL}, 24h/24. Décrivez la porte et la situation, ou envoyez une photo sur WhatsApp."),
-        ("Le prix vous est annoncé", "Avant le départ du serrurier, selon l'heure d'intervention. Il ne change pas en route."),
-        ("Devis signé, puis intervention", "Sur place, le prix est confirmé par écrit. Le serrurier intervient seulement après votre signature."),
+        ("Stay calm and safe", "If someone may still be inside after a break-in, don't go in and call the police (17)."),
+        ("Call us", f"On {TEL}, 24/7. Describe the door and the situation, or send a photo on WhatsApp."),
+        ("You get the price", "Before the locksmith sets off, depending on the time of day. It doesn't change on the way."),
+        ("Signed quote, then the work", "On site, the price is confirmed in writing. The locksmith only starts once you have signed."),
     ], start=1))
-    body = hero([("Urgence 24h/24", None)], "Serrurier en urgence à Paris, <em>24h/24</em>",
-                "Porte claquée, clé cassée, serrure bloquée, cambriolage : un serrurier se déplace tout de suite dans les 20 arrondissements, la nuit, le week-end et les jours fériés. Prix annoncé avant le déplacement.",
-                ticks(["Arrivée ≈ 30 min", "Prix annoncé au téléphone", "Devis signé avant travaux"], "ticks light inline"), kicker="Intervention immédiate", bg="tour-eiffel")
+    body = hero([("Emergency 24/7", None)], "Emergency locksmith in Paris, <em>24/7</em>",
+                "Lockout, broken key, jammed lock, burglary: a locksmith comes right away anywhere in the 20 arrondissements, at night, at weekends and on public holidays. Price given before we travel.",
+                ticks(["Arrival ≈ 30 min", "Price given on the phone", "Signed quote before work"], "ticks light inline"), kicker="Immediate call-out", bg="tour-eiffel")
     body += f'''<section class="sec"><div class="wrap">
-  <div class="sec-head split"><div><span class="eyebrow">Votre situation</span><h2>Quelle est votre urgence ?</h2></div>
-  <p>Choisissez votre situation pour voir le détail de l'intervention et nos conseils. Dans tous les cas, appelez-nous : nous vous guidons au téléphone.</p></div>
+  <div class="sec-head split"><div><span class="eyebrow">Your situation</span><h2>What is your emergency?</h2></div>
+  <p>Choose your situation to see how we handle it and what to do meanwhile. Either way, call us: we will guide you on the phone.</p></div>
   {urgences_block(light=True)}
 </div></section>
 <section class="sec soft"><div class="wrap layout"><article class="prose">
-  <h2>Que faire en cas d'urgence ?</h2>
+  <h2>What to do in an emergency</h2>
   <ol class="urg-steps">{steps}</ol>
-  <h2>Nos tarifs d'urgence</h2>
-  <p>Nos tarifs dépendent de l'heure : journée (8h–18h), soirée (18h–22h) et nuit (22h–8h). L'onglet de l'heure actuelle est sélectionné automatiquement.</p>
-</article>{side_box("Urgence : appelez maintenant", "Un serrurier décroche directement et vous donne le prix avant de partir.")}</div>
+  <h2>Our emergency prices</h2>
+  <p>Our prices depend on the time of day: day (8am–6pm), evening (6pm–10pm) and night (10pm–8am). The current time slot is selected automatically.</p>
+</article>{side_box("Emergency: call now", "A locksmith answers directly and gives you the price before setting off.")}</div>
 <div class="wrap" style="margin-top:28px">{tarif_table()}</div></section>
-<section class="sec"><div class="wrap faq-wrap"><div class="sec-head"><span class="eyebrow">Questions</span><h2>Urgence : vos questions</h2></div>{faq_html(URG_FAQ)}</div></section>'''
-    body += assureurs_strip() + contact_band("Bloqué dehors ? Appelez-nous.", "Un serrurier vous répond tout de suite et vous annonce le prix avant de se déplacer.", source="/urgence/")
-    page("/urgence/", f"Serrurier urgence Paris 24h/24 – {TEL} | {NOM}",
-         f"Serrurier en urgence à Paris, 24h/24 et 7j/7 : porte claquée dès 110 € TTC, clé cassée, serrure bloquée, cambriolage. Arrivée en 30 min environ, prix annoncé avant déplacement. ☎ {TEL}",
-         body, [ld_business(full=True), ld_crumbs([("Urgence 24h/24", "/urgence/")]), ld_faq(URG_FAQ)], active="/urgence/")
+<section class="sec"><div class="wrap faq-wrap"><div class="sec-head"><span class="eyebrow">Questions</span><h2>Emergencies: your questions</h2></div>{faq_html(URG_FAQ)}</div></section>'''
+    body += assureurs_strip() + contact_band("Locked out? Call us.", "A locksmith answers right away and gives you the price before travelling.", source="/emergency/")
+    page("/emergency/", f"Emergency locksmith Paris 24/7 – {TEL} | {NOM}",
+         f"Emergency locksmith in Paris, 24/7: lockouts from €110 incl. VAT, broken keys, jammed locks, burglaries. Arrival in about 30 min, price given before we travel. English spoken. ☎ {TEL}",
+         body, [ld_business(full=True), ld_crumbs([("Emergency 24/7", "/emergency/")]), ld_faq(URG_FAQ)], active="/emergency/")
 
 
 def build_charte():
     items = "".join(f'<div class="charte-item">{ico(i)}<div><h2>{E(t)}</h2><p>{E(d)}</p></div></div>' for i, t, d in CHARTE)
-    body = hero([("Nos engagements", None)], "Notre charte de confiance",
-                "Huit engagements concrets, appliqués à chaque intervention, de jour comme de nuit. Vous pouvez nous les rappeler à tout moment.",
-                kicker="Transparence")
+    body = hero([("Our commitments", None)], "Our trust charter",
+                "Eight concrete commitments, applied to every job, day and night. Feel free to remind us of them at any time.",
+                kicker="Transparency")
     body += f'''<section class="sec"><div class="wrap layout"><article class="prose">
-  <p class="intro">Le dépannage en serrurerie souffre d'une mauvaise réputation : prix d'appel trompeurs, factures gonflées, serrures changées sans raison. Nous avons bâti {E(NOM)} sur le principe inverse. Voici, noir sur blanc, ce à quoi nous nous engageons envers chaque client.</p>
+  <p class="intro">Emergency locksmiths suffer from a bad reputation: misleading teaser prices, inflated invoices, locks replaced for no reason. We built {E(NOM)} on the opposite principle. Here, in black and white, is what we commit to for every customer.</p>
   <div class="charte">{items}</div>
-  <h2>Ce que vous ne verrez jamais chez nous</h2>
+  <h2>What you will never see from us</h2>
   {comparatif_block()}
-  <h2>Vos droits face à un dépanneur</h2>
-  <p>Pour un dépannage à domicile, le professionnel doit vous informer de ses tarifs et vous remettre un devis détaillé avant l'intervention (arrêté du 24 janvier 2017). Vous pouvez refuser ce devis. À la fin, une note ou facture détaillée doit vous être remise. En cas de litige, vous pouvez saisir gratuitement le médiateur de la consommation indiqué dans nos <a href="/mentions-legales/">mentions légales</a>, ou signaler une pratique sur le site public SignalConso.</p>
-  <h2>Vérifiez par vous-même</h2>
-  <p>Avant de nous appeler, consultez <a href="{E(MAPS)}" target="_blank" rel="noopener">nos {CONFIG["avis_nombre"]} avis Google</a>, notre <a href="/tarifs/">grille tarifaire</a> et nos <a href="/mentions-legales/">informations légales</a>. Et si un point de cette charte n'était pas respecté, dites-le-nous : c'est la seule façon de rester à la hauteur.</p>
-</article>{side_box("Un prix clair, dès l'appel", "Décrivez votre situation : le tarif vous est annoncé avant tout déplacement.")}</div></section>'''
-    body += reviews_block() + contact_band(source="/nos-engagements/")
-    page("/nos-engagements/", f"Nos engagements : charte de confiance | {NOM}",
-         "Prix annoncé avant le déplacement, devis signé avant travaux, pas de casse inutile, facture détaillée : la charte de confiance de notre serrurerie à Paris.",
-         body, [ld_business(), ld_crumbs([("Nos engagements", "/nos-engagements/")])], active="/nos-engagements/")
+  <h2>Your rights with a locksmith in France</h2>
+  <p>For a home call-out, the professional must inform you of their prices and give you a detailed quote before the work (decree of 24 January 2017). You can refuse the quote. At the end, a detailed invoice must be given to you. In the event of a dispute, you can contact the consumer mediator named in our <a href="/legal-notice/">legal notice</a> free of charge, or report a practice on the government's SignalConso website.</p>
+  <h2>Check for yourself</h2>
+  <p>Before calling us, read <a href="{E(MAPS)}" target="_blank" rel="noopener">our {CONFIG["avis_nombre"]} Google reviews</a>, our <a href="/prices/">price list</a> and our <a href="/legal-notice/">legal information</a>. And if any point of this charter were not respected, tell us: it's the only way to stay up to standard.</p>
+</article>{side_box("A clear price from the first call", "Describe your situation: you get the price before anyone travels.")}</div></section>'''
+    body += reviews_block() + contact_band(source="/our-commitments/")
+    page("/our-commitments/", f"Our commitments: trust charter | {NOM}",
+         "Price given before we travel, signed quote before any work, no unnecessary damage, detailed invoice: the trust charter of our Paris locksmith company.",
+         body, [ld_business(), ld_crumbs([("Our commitments", "/our-commitments/")])], active="/our-commitments/")
 
 
 def build_conseils():
-    body = hero([("Conseils", None)], "Conseils de serrurier <em>pour les Parisiens</em>",
-                "Guides pratiques pour réagir en cas d'urgence, sécuriser votre logement et éviter les mauvaises surprises.")
-    body += f'<section class="sec"><div class="wrap">{articles_cards(ARTICLES)}</div></section>' + contact_band(source="/conseils/")
-    page("/conseils/", f"Conseils serrurerie et sécurité à Paris | {NOM}",
-         "Clés perdues, porte blindée en copropriété, arnaques au serrurier, après un cambriolage : nos guides pratiques.",
-         body, [ld_business(), ld_crumbs([("Conseils", "/conseils/")])], active="/conseils/")
+    body = hero([("Advice", None)], "Locksmith advice <em>for Paris residents and visitors</em>",
+                "Practical guides to react in an emergency, secure your home and avoid nasty surprises.")
+    body += f'<section class="sec"><div class="wrap">{articles_cards(ARTICLES)}</div></section>' + contact_band(source="/advice/")
+    page("/advice/", f"Locksmith & security advice in Paris | {NOM}",
+         "Lost keys, armored doors in Parisian buildings, locksmith scams, after a burglary: our practical guides.",
+         body, [ld_business(), ld_crumbs([("Advice", "/advice/")])], active="/advice/")
     for a in ARTICLES:
-        path = f"/conseils/{a['slug']}/"
+        path = f"/advice/{a['slug']}/"
         parts = []
         for kind, val in a["corps"]:
             if kind in ("ul", "ol"):
                 parts.append(f"<{kind}>" + "".join(f"<li>{v}</li>" for v in val) + f"</{kind}>")
             else:
                 parts.append(f"<{kind}>{val}</{kind}>")
-        prose = "".join(parts) + (f'<div class="note-box">{ico("i-phone")}<p><strong>Besoin d\'un serrurier maintenant ?</strong> {E(NOM)} intervient 24h/24 dans tout Paris. '
-                                  f'Appelez le <a href="{TEL_HREF}">{TEL}</a> : le prix est annoncé au téléphone. Voir aussi nos <a href="/services/">services</a> et nos <a href="/tarifs/">tarifs</a>.</p></div>')
+        prose = "".join(parts) + (f'<div class="note-box">{ico("i-phone")}<p><strong>Need a locksmith now?</strong> {E(NOM)} works 24/7 across Paris. '
+                                  f'Call <a href="{TEL_HREF}">{TEL}</a>: the price is given on the phone. See also our <a href="/services/">services</a> and <a href="/prices/">prices</a>.</p></div>')
         rel = articles_cards([o for o in ARTICLES if o is not a][:3])
-        body = hero([("Conseils", "/conseils/"), (a["court"], None)], E(a["titre"]), E(a["desc"]),
-                    f'<p class="post-by">{E(a["cat"])} · {fr_date(a["date"])} · par l\'équipe {E(NOM)}</p>')
+        body = hero([("Advice", "/advice/"), (a["court"], None)], E(a["titre"]), E(a["desc"]),
+                    f'<p class="post-by">{E(a["cat"])} · {fr_date(a["date"])} · by the {E(NOM)} team</p>')
         body += f'<section class="sec"><div class="wrap layout"><article class="prose">{prose}</article>{side_box()}</div></section>'
-        body += f'<section class="sec cream"><div class="wrap"><div class="sec-head"><h2>À lire aussi</h2></div>{rel}</div></section>' + contact_band(source=path)
-        ld = [ld_business(), ld_crumbs([("Conseils", "/conseils/"), (a["court"], path)]),
+        body += f'<section class="sec cream"><div class="wrap"><div class="sec-head"><h2>Read next</h2></div>{rel}</div></section>' + contact_band(source=path)
+        ld = [ld_business(), ld_crumbs([("Advice", "/advice/"), (a["court"], path)]),
               {"@context": "https://schema.org", "@type": "BlogPosting", "headline": a["titre"], "description": a["desc"],
-               "datePublished": a["date"], "dateModified": a["date"], "inLanguage": "fr-FR", "mainEntityOfPage": URL + path,
+               "datePublished": a["date"], "dateModified": a["date"], "inLanguage": "en", "mainEntityOfPage": URL + path,
                "author": {"@type": "Organization", "name": NOM, "url": URL + "/"}, "publisher": {"@id": BID}, "image": URL + "/assets/img/og.jpg"}]
-        page(path, f'{a["titre"]} | {NOM}', a["desc"], body, ld, active="/conseils/", og_type="article")
+        page(path, f'{a["titre"]} | {NOM}', a["desc"], body, ld, active="/advice/", og_type="article")
 
 
 def build_misc():
     conv = CONFIG["ads_conv"].get("form")
     body = f'''<section class="phero center-page"><div class="wrap">
   <span class="big-ic">{ico("i-check")}</span>
-  <h1>Merci, votre demande est bien partie</h1>
-  <p class="lead">Nous vous rappelons très vite. Pour une urgence (porte claquée, effraction), appelez directement : c'est le plus rapide.</p>
-  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_merci")}<a class="btn btn-outline-light btn-lg" href="/">Retour à l'accueil</a></div>
+  <h1>Thank you, your request has been sent</h1>
+  <p class="lead">We will call you back very soon. For an emergency (lockout, break-in), call us directly: it's the fastest way.</p>
+  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_merci")}<a class="btn btn-outline-light btn-lg" href="/">Back to home</a></div>
 </div></section>'''
     if CONFIG["ads_id"] and conv:
         body += f"<script>gtag('event','conversion',{{'send_to':'{CONFIG['ads_id']}/{conv}','value':1.0,'currency':'EUR'}});</script>"
-    page("/merci/", f"Demande envoyée | {NOM}", "Votre demande a bien été envoyée.", body, robots="noindex, nofollow")
+    page("/thank-you/", f"Request sent | {NOM}", "Your request has been sent.", body, robots="noindex, nofollow")
 
     body = f'''<section class="phero center-page"><div class="wrap">
   <p class="err">404</p>
-  <h1>Cette page est introuvable</h1>
-  <p class="lead">Elle a peut-être été déplacée. Besoin d'un serrurier ? Nous sommes joignables 24h/24.</p>
-  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_404")}<a class="btn btn-outline-light btn-lg" href="/">Retour à l'accueil</a></div>
+  <h1>Page not found</h1>
+  <p class="lead">It may have moved. Need a locksmith? We are available 24/7.</p>
+  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_404")}<a class="btn btn-outline-light btn-lg" href="/">Back to home</a></div>
 </div></section>'''
-    page("/404.html", f"Page introuvable | {NOM}", "Cette page n'existe pas.", body, robots="noindex, follow")
+    page("/404.html", f"Page not found | {NOM}", "This page doesn't exist.", body, robots="noindex, follow")
 
-    groups = [("Pages principales", [("Accueil", "/"), ("Urgence 24h/24", "/urgence/"), ("Services", "/services/"), ("Arrondissements", "/serrurier-paris/"), ("Tarifs", "/tarifs/"),
-                                     ("Nos engagements", "/nos-engagements/"), ("Assurance", "/assurance/"), ("Avis clients", "/avis/"), ("Questions fréquentes", "/questions-frequentes/"),
-                                     ("Conseils", "/conseils/"), ("Contact", "/contact/")]),
+    groups = [("Main pages", [("Home", "/"), ("Emergency 24/7", "/emergency/"), ("Services", "/services/"), ("Arrondissements", "/locksmith-paris/"), ("Prices", "/prices/"),
+                              ("Our commitments", "/our-commitments/"), ("Insurance", "/insurance/"), ("Customer reviews", "/reviews/"), ("FAQ", "/faq/"),
+                              ("Advice", "/advice/"), ("Contact", "/contact/")]),
               ("Services", [(s["nom"], svc_url(s)) for s in SERVICES]),
-              ("Arrondissements", [(f"Serrurier {z['court']}", z["url"]) for z in ARR]),
-              ("Conseils", [(a["court"], f"/conseils/{a['slug']}/") for a in ARTICLES])]
+              ("Arrondissements", [(f"Locksmith {z['court']}", z["url"]) for z in ARR]),
+              ("Advice", [(a["court"], f"/advice/{a['slug']}/") for a in ARTICLES])]
     for s in SERVICES:
         groups.append((s["nom"], [(f"{s['court']} {z['court']}", combo_url(s, z)) for z in ARR]))
     prose = "".join(f'<h2>{E(t)}</h2><div class="chips">' + "".join(f'<a class="chip" href="{u}">{E(l)}</a>' for l, u in lst) + "</div>" for t, lst in groups)
-    simple("/plan-du-site/", "Plan du site", "Plan du site", f"Toutes les pages du site {NOM}.", prose,
-           f"Plan du site | {NOM}", f"Plan du site {NOM} : services, arrondissements, conseils.", aside=False)
+    simple("/site-map/", "Site map", "Site map", f"Every page of the {NOM} website.", prose,
+           f"Site map | {NOM}", f"Site map of {NOM}: services, arrondissements, advice.", aside=False)
 
 
 # ---------------------------------------------------------------------------
-# Fichiers SEO
+# SEO files and redirects
 # ---------------------------------------------------------------------------
 def write(name, content):
     with open(os.path.join(ROOT, name), "w", encoding="utf-8") as f:
         f.write(content)
 
 
+# Ancien site en français → nouvelles adresses en anglais (301)
+FR_SVC = {"ouverture-de-porte": "door-opening", "serrure-bloquee": "jammed-lock", "cle-cassee": "broken-key",
+          "changement-de-serrure": "lock-replacement", "serrure-connectee": "smart-lock", "apres-effraction": "break-in-repair",
+          "blindage-de-porte": "door-armoring", "porte-blindee": "armored-door", "porte-de-cave": "cellar-door", "boite-aux-lettres": "mailbox-lock"}
+FR_PAGES = {"/urgence/": "/emergency/", "/tarifs/": "/prices/", "/assurance/": "/insurance/", "/avis/": "/reviews/",
+            "/questions-frequentes/": "/faq/", "/nos-engagements/": "/our-commitments/", "/conseils/": "/advice/",
+            "/mentions-legales/": "/legal-notice/", "/confidentialite/": "/privacy/", "/merci/": "/thank-you/",
+            "/plan-du-site/": "/site-map/", "/serrurier-paris/": "/locksmith-paris/",
+            "/conseils/cles-perdues-paris/": "/advice/lost-keys-paris/",
+            "/conseils/porte-blindee-immeuble-parisien/": "/advice/armored-door-paris-apartment/",
+            "/conseils/reconnaitre-serrurier-honnete/": "/advice/spot-an-honest-locksmith/",
+            "/conseils/apres-cambriolage-appartement/": "/advice/after-a-burglary/",
+            "/english-locksmith-paris": "/", "/cerrajero-paris": "/"}
+
+
+def build_redirects():
+    rules = list(FR_PAGES.items())
+    rules += [(f"/services/{fr}/", f"/services/{en}/") for fr, en in FR_SVC.items()]
+    for z in ARR:
+        rules.append((f"/{z['fr_slug']}/", z["url"]))
+        rules += [(f"/{z['fr_slug']}/{fr}/", f"/{z['slug']}/{en}/") for fr, en in FR_SVC.items()]
+    lines = []
+    for old, new in rules:
+        lines.append(f"{old}  {new}  301")
+        if old.endswith("/"):
+            lines.append(f"{old.rstrip('/')}  {new}  301")
+    write("_redirects", "# Ancienne version française du site → version anglaise\n" + "\n".join(lines) + "\n")
+    return len(rules)
+
+
 def build_seo():
     def prio(p):
         if p == "/":
             return "1.0"
-        if p in ("/serrurier-paris/", "/services/", "/tarifs/", "/contact/", "/urgence/"):
+        if p in ("/locksmith-paris/", "/services/", "/prices/", "/contact/", "/emergency/"):
             return "0.9"
-        if p.startswith("/services/") or (p.startswith("/serrurier-paris-") and p.count("/") == 2):
+        if p.startswith("/services/") or (p.startswith("/locksmith-paris-") and p.count("/") == 2):
             return "0.8"
-        if p.startswith("/serrurier-paris-"):
+        if p.startswith("/locksmith-paris-"):
             return "0.7"
         return "0.5"
     urls = "".join(f"  <url><loc>{URL}{p}</loc><lastmod>{TODAY}</lastmod><priority>{prio(p)}</priority></url>\n" for p in SITEMAP)
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + "</urlset>\n")
-    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /_src/\nDisallow: /merci/\n\nSitemap: {URL}/sitemap.xml\n")
+    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /_src/\nDisallow: /thank-you/\n\nSitemap: {URL}/sitemap.xml\n")
 
-    svc = "\n".join(f"- [{s['nom']}]({URL}{svc_url(s)}) : {s['prix']}. {s['resume']}" for s in SERVICES)
-    grille = "\n".join(f"- {t[0]} : " + " / ".join(v or "sur devis" for v in t[1:]) for t in TARIFS)
-    arr = "\n".join(f"- [Serrurier {z['court']}]({URL}{z['url']}) – {z['cp'][0]}" for z in ARR)
-    note = f"- Note Google : {CONFIG['avis_note']}/5 ({CONFIG['avis_nombre']} avis)\n" if CONFIG["avis_note"] else ""
+    svc = "\n".join(f"- [{s['nom']}]({URL}{svc_url(s)}): {s['prix']}. {s['resume']}" for s in SERVICES)
+    grille = "\n".join(f"- {t[0]}: " + " / ".join(v or "quote" for v in t[1:]) for t in TARIFS)
+    arr = "\n".join(f"- [Locksmith {z['court']}]({URL}{z['url']}) – {z['cp'][0]}" for z in ARR)
+    note = f"- Google rating: {CONFIG['avis_note']}/5 ({CONFIG['avis_nombre']} reviews)\n" if CONFIG["avis_note"] else ""
     write("llms.txt", f"""# {NOM}
 
-> Serrurier à Paris (75), dans les 20 arrondissements, 24h/24 et 7j/7. Ouverture de porte claquée dès 110 € TTC, prix annoncé au téléphone avant le déplacement, devis écrit signé avant l'intervention, facture acceptée par les assureurs habitation.
+> English-speaking locksmith in Paris (75), across all 20 arrondissements, 24/7. Slammed door opening from €110 incl. VAT, price given on the phone before travelling, written quote signed before any work, invoice accepted by French home insurers.
 
-## Informations
-- Nom : {NOM} ({CONFIG['raison_sociale']})
-- Téléphone : {TEL} ({CONFIG['tel_intl']}), 24h/24, 7j/7
-- WhatsApp : {WA}
-- E-mail : {CONFIG['email']}
-- Site : {URL}/
-- Zone : Paris intra-muros uniquement, du 1er au 20e arrondissement
-- Délai moyen : environ 30 minutes
-- Paiement : carte bancaire, espèces, virement
+## Information
+- Name: {NOM} ({CONFIG['raison_sociale']})
+- Phone: {TEL}, 24/7
+- WhatsApp: {WA}
+- Email: {CONFIG['email']}
+- Website: {URL}/
+- Area: Paris only, 1st to 20th arrondissement
+- Average arrival: about 30 minutes
+- Languages: English, French
+- Payment: card, cash, bank transfer
 {note}
 ## Services
 {svc}
 
-## Tarifs TTC (journée 8h–18h / soirée 18h–22h / nuit 22h–8h)
+## Prices incl. VAT (day 8am–6pm / evening 6pm–10pm / night 10pm–8am)
 {grille}
 
 ## Arrondissements
 {arr}
 
-Chaque service a une page par arrondissement : {URL}/<arrondissement>/<service>/ (ex. {URL}{combo_url(SERVICES[0], ARR[14])}).
+Each service has a page per arrondissement: {URL}/<arrondissement>/<service>/ (e.g. {URL}{combo_url(SERVICES[0], ARR[14])}).
 """)
     write("site.webmanifest", json.dumps({
-        "name": f"{NOM} – serrurier 24h/24", "short_name": "Secure Locksmith", "lang": "fr", "start_url": "/",
+        "name": f"{NOM} – 24/7 locksmith", "short_name": "Secure Locksmith", "lang": "en", "start_url": "/",
         "display": "standalone", "background_color": "#151335", "theme_color": "#151335",
         "icons": [{"src": "/assets/img/logo-240.png", "sizes": "240x240", "type": "image/png"},
                   {"src": "/assets/img/icon-512.png", "sizes": "512x512", "type": "image/png"}]}, ensure_ascii=False, indent=2))
@@ -1562,7 +1671,8 @@ def main():
     build_conseils()
     build_misc()
     build_seo()
-    print(f"{len(SITEMAP)} pages indexables générées.")
+    n = build_redirects()
+    print(f"{len(SITEMAP)} pages indexables générées, {n} redirections depuis l'ancienne version française.")
 
 
 if __name__ == "__main__":
