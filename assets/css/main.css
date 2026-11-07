@@ -549,4 +549,73 @@ sup{font-size:.62em;vertical-align:super;line-height:0}
   .dock .btn-wa{padding:13px 16px}
   .cookies{left:12px;right:12px;bottom:86px}
 }
+/* ------------------------------------------------------------------
+   Palette du logo : ciel de Paris au coucher du soleil, en fondus doux
+   ------------------------------------------------------------------ */
+:root{
+  --night:#0e1436; --indigo:#221f52; --violet:#4a2a6e; --plum:#7d3470; --rose:#d0587a; --coral:#ee7a52; --amber:#f6b356;
+  --dusk:linear-gradient(180deg,#0e1436 0%,#1a1a4a 38%,#33235f 66%,#5a2a6c 86%,#7d3470 100%);
+  --dusk-h:linear-gradient(115deg,#121640 0%,#22205a 45%,#4a2a6e 80%,#7d3470 100%);
+  --sunset-soft:linear-gradient(90deg,rgba(74,42,110,0),#4a2a6e 12%,#d0587a 40%,#ee7a52 62%,#f6b356 85%,rgba(246,179,86,0));
+  --icon:linear-gradient(140deg,#221f52 0%,#4a2a6e 55%,#7d3470 100%);
+}
+/* en-têtes photo : le ciel du logo se fond dans la photo */
+.hero,.phero{background:var(--night)}
+.has-bg::before{background:
+  radial-gradient(70% 90% at 95% 110%,rgba(238,122,82,.45),rgba(208,88,122,.22) 40%,transparent 70%),
+  radial-gradient(60% 70% at 100% 0%,rgba(74,42,110,.55),transparent 70%),
+  linear-gradient(100deg,rgba(14,20,54,.95) 0%,rgba(26,26,74,.84) 38%,rgba(51,35,95,.55) 68%,rgba(125,52,112,.32) 100%)!important}
+.hero::after,.phero::after{display:block!important;content:"";position:absolute;left:0;right:0;bottom:0;top:auto;height:3px;opacity:1;z-index:1;background:var(--sunset-soft);mask-image:none}
+/* sections sombres : dégradé de crépuscule */
+.sec.navy,.band{background:var(--dusk)}
+.sec.navy::before{background:radial-gradient(60% 55% at 50% 115%,rgba(238,122,82,.45),rgba(208,88,122,.2) 45%,transparent 75%)}
+.band::before{background:radial-gradient(55% 70% at 0% 110%,rgba(238,122,82,.4),rgba(208,88,122,.18) 45%,transparent 75%),radial-gradient(45% 60% at 100% 0%,rgba(14,20,54,.7),transparent 70%)}
+.steps li{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border-color:rgba(255,255,255,.12);backdrop-filter:blur(6px)}
+/* sections claires : très léger voile lavande → pêche */
+.sec.soft{background:linear-gradient(180deg,#f6f4fb 0%,#faf5f4 60%,#fdf6ef 100%)}
+.strip{background:linear-gradient(180deg,#fff 0%,#fbf8fc 100%)}
+.assur,.sec{position:relative}
+/* surtitres en dégradé */
+.eyebrow{background:linear-gradient(90deg,#7d3470,#d0587a 55%,#ee7a52);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow.light{background:linear-gradient(90deg,#f6b356,#ee9a6a 60%,#f0a0b4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.phero h1 em,.gold{background:linear-gradient(90deg,#f7d27e 0%,#f6b356 45%,#ee7a52 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* icônes et pastilles aux couleurs du logo */
+.svc-ic,.arr-grid b,.review .av,.c-line .ic{background:var(--icon)}
+.svc-ic,.arr-grid b span,.review .av,.c-line .ic{color:var(--amber)}
+.engage .ic,.post-ic,.hcard li .ic{background:linear-gradient(140deg,#f3eefa,#fbeee9);color:var(--violet);box-shadow:none}
+.check-list .ic{background:var(--icon);color:var(--amber)}
+.steps-list li::before{background:var(--icon)}
+.local .ic,.chip .ic,.company li .ic,.go{color:var(--plum)}
+.svc::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--sunset-soft);opacity:0;transition:.25s}
+.svc{position:relative}
+.svc:hover::after{opacity:1}
+.svc-go,.text-link,.post-more span,.company-link,.prev-next a,.strip-head a{color:var(--plum)}
+/* bandeaux de cartes : crépuscule + liseré couchant */
+.tc-head:not(.light),.side-head,.company-head,.review-promise{background:var(--dusk-h)}
+.tc-head::after,.side-head::after,.company-head::after{background:var(--sunset-soft)}
+.tarif-table thead .now{background:linear-gradient(180deg,#fde6c8,#fbefe0);box-shadow:inset 0 3px 0 var(--coral)}
+.tarif-table .now{background:#fff6ec}
+.note-box{background:linear-gradient(110deg,#fdf1e6,#fbecf1);border-left-color:var(--coral)}
+.note-box .ic{color:var(--coral)}
+.note-box.tip{background:linear-gradient(110deg,#f1eefa,#f8f1fb);border-left-color:var(--violet)}
+.note-box.tip .ic{color:var(--violet)}
+/* boutons */
+.btn-navy{background:linear-gradient(110deg,#221f52 0%,#4a2a6e 60%,#7d3470 100%);background-size:140% 100%;transition:background-position .3s,transform .15s}
+.btn-navy:hover{background-position:100% 0}
+.top-tel{background:linear-gradient(110deg,#141842,#33235f)}
+.top-tel:hover{background:linear-gradient(110deg,#1b1d50,#4a2a6e)}
+.lead-form input:focus,.lead-form select:focus,.lead-form textarea:focus{border-color:var(--rose);box-shadow:0 0 0 4px rgba(208,88,122,.12)}
+.faq details[open]{border-color:#e6d3e3;box-shadow:0 12px 30px -18px rgba(125,52,112,.45)}
+.faq summary i::before,.faq summary i::after{background:var(--plum)}
+.arr-grid a:hover,.chip:hover,.btn-outline:hover{border-color:var(--rose)}
+.logo:hover{border-color:#ead7e4}
+/* emblème : halo couchant autour du logo */
+.emblem img{box-shadow:0 0 0 10px rgba(255,255,255,.04),0 0 0 22px rgba(255,255,255,.02),0 40px 80px -30px rgba(0,0,0,.8),0 0 90px rgba(238,122,82,.35),0 0 160px rgba(125,52,112,.45)}
+/* pied de page : la nuit qui tombe */
+.foot{background:linear-gradient(180deg,#1a1a4a 0%,#121640 30%,#0b1030 100%);position:relative}
+.foot::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--sunset-soft)}
+.arr-mini a:hover{background:linear-gradient(140deg,#d0587a,#ee7a52 60%,#f6b356);color:#fff;border-color:transparent}
+.topbar{background:linear-gradient(90deg,#0b1030,#1a1a4a 60%,#2a2058)}
+.topbar::after{background:var(--sunset-soft)}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
