@@ -1,0 +1,21 @@
+{
+  "name": "Secure Locksmith Paris – serrurier 24h/24",
+  "short_name": "Secure Locksmith",
+  "lang": "fr",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#151335",
+  "theme_color": "#151335",
+  "icons": [
+    {
+      "src": "/assets/img/logo-240.png",
+      "sizes": "240x240",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
