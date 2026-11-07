@@ -82,6 +82,80 @@
     });
   });
 
+  // Guide d'urgence (page /emergency/) : situation + tranche horaire -> prix et conseil
+  document.querySelectorAll("[data-guide]").forEach(function(g){
+    var data = {};
+    try { data = JSON.parse(document.getElementById("guide-data").textContent); } catch(e) {}
+    var sit = null, slot = current, idx = {jour:0, soir:1, nuit:2};
+    var slotNames = {jour:"Daytime rate (8am–6pm)", soir:"Evening rate (6pm–10pm)", nuit:"Night rate (10pm–8am)"};
+    var auto = g.querySelector(".gd-auto");
+    if (auto) { auto.textContent = "· it is " + fmtH(h) + " in Paris, we selected it for you"; auto.hidden = false; }
+    function q(n){ return g.querySelector('[data-g="' + n + '"]'); }
+    function render(){
+      g.querySelectorAll(".gd-opt").forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-sit") === sit ? "true" : "false"); });
+      g.querySelectorAll(".gd-slot").forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-slot") === slot ? "true" : "false"); });
+      if (!sit || !data[sit]) return;
+      var d = data[sit];
+      g.querySelector(".gd-empty").hidden = true;
+      g.querySelector(".gd-out").hidden = false;
+      q("slotlabel").textContent = d.label;
+      if (d.prices) {
+        q("price").textContent = (d.from ? "from " : "") + "€" + d.prices[idx[slot]];
+        q("note").textContent = "incl. VAT · " + slotNames[slot] + " · confirmed on the phone";
+      } else {
+        q("price").textContent = "Free quote";
+        q("note").textContent = "The price depends on your lock: we give it on the phone before we travel.";
+      }
+      q("tip").textContent = d.tip;
+      q("quote").setAttribute("data-quote", d.service);
+      q("more").setAttribute("href", d.url);
+      push("guide_urgence", {situation: sit, creneau: slot});
+    }
+    g.addEventListener("click", function(e){
+      var o = e.target.closest(".gd-opt"), sl = e.target.closest(".gd-slot");
+      if (o) {
+        sit = o.getAttribute("data-sit"); render();
+        // sur téléphone, le résultat est sous la liste : on l'amène à l'écran
+        if (window.innerWidth < 760) g.querySelector(".gd-result").scrollIntoView({behavior: "smooth", block: "start"});
+      }
+      if (sl) { slot = sl.getAttribute("data-slot"); render(); }
+    });
+    render();
+  });
+
+  // Fenêtre de devis : chaque bouton [data-quote] l'ouvre avec le service déjà choisi
+  var qm = document.getElementById("quote-modal");
+  if (qm && qm.showModal) {
+    var qmForm = qm.querySelector("form.lead-form"), qmSvc = qm.querySelector("[data-qm-service]");
+    document.addEventListener("click", function(e){
+      var b = e.target.closest("[data-quote]");
+      if (!b) return;
+      e.preventDefault();
+      var svc = b.getAttribute("data-quote");
+      var sel = qmForm.querySelector("select[name=service]");
+      var found = false;
+      for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].text === svc) { sel.selectedIndex = i; found = true; } }
+      if (!found) sel.selectedIndex = sel.options.length - 1;
+      qmSvc.innerHTML = "<small>Free quote</small>" + svc.replace(/[<>&]/g, "");
+      qmForm.querySelector("input[name=page]").value = location.pathname + " (popup)";
+      qmForm.querySelector(".form-ok").hidden = true;
+      qm.showModal();
+      document.body.classList.add("qm-lock");
+      var first = qmForm.querySelector("input[name=name]"); if (first) setTimeout(function(){ first.focus(); }, 60);
+      if (window.gtag) gtag("event", "quote_open", {service: svc});
+      push("ouverture_devis", {service: svc});
+    });
+    qm.addEventListener("close", function(){ document.body.classList.remove("qm-lock"); });
+    qm.querySelector("[data-qm-close]").addEventListener("click", function(){ qm.close(); });
+    qm.addEventListener("click", function(e){ if (e.target === qm) qm.close(); });
+  }
+
+  // Avant / après : le curseur déplace la séparation
+  document.querySelectorAll(".ba-frame").forEach(function(f){
+    var r = f.querySelector(".ba-range");
+    r.addEventListener("input", function(){ f.style.setProperty("--pos", r.value + "%"); });
+  });
+
   // Bandeau cookies (choix conservé 6 mois)
   var box = document.getElementById("cookies");
   if (box) {

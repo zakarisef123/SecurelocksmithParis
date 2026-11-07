@@ -59,4 +59,4 @@
 - [Locksmith Paris 19th](https://securelockserrurerie.com/locksmith-paris-19th/) – 75019
 - [Locksmith Paris 20th](https://securelockserrurerie.com/locksmith-paris-20th/) – 75020
 
-Each service has a page per arrondissement: https://securelockserrurerie.com/<arrondissement>/<service>/ (e.g. https://securelockserrurerie.com/locksmith-paris-15th/door-opening/).
+Each arrondissement page lists every service with its price and local details (e.g. https://securelockserrurerie.com/locksmith-paris-15th/#door-opening).
