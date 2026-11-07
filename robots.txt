@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /_src/
+Disallow: /merci/
+
+Sitemap: https://securelockserrurerie.com/sitemap.xml
