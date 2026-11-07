@@ -35,7 +35,10 @@ CONFIG = {
     "email": "securelockserrurerie@gmail.com",
     "instagram": "https://www.instagram.com/securelockserrurerie/",
     # Fiche Google Business Profile (remplacez par le lien exact de la fiche si besoin)
-    "maps_url": "https://www.google.com/maps/search/?api=1&query=Secure+Lock+Serrurerie+Paris",
+    "maps_url": "https://www.google.com/maps/place/Secure+Lock+Serrurerie/@48.870843,1.155034,9z/data=!4m10!1m2!2m1!1sSecure+Lock+Serrurerie+Paris!3m6!1s0x267653ac7048cd93:0x27df91bfb8a939fd!8m2!3d48.870843!4d2.3745164!15sChxTZWN1cmUgTG9jayBTZXJydXJlcmllIFBhcmlzWh4iHHNlY3VyZSBsb2NrIHNlcnJ1cmVyaWUgcGFyaXOSAQlsb2Nrc21pdGiaAURDaTlEUVVsUlFVTnZaRU5vZEhsalJqbHZUMnhDZDAxR2EzaFNWV1IyVlRCU05GZFZZelJSVlhSMVkyeENNVk5yUlJBQuABAPoBBAg4EEc!16s%2Fg%2F11yz6fjq73",
+    # Position de la fiche Google (carte et données structurées)
+    "lat": 48.870843,
+    "lng": 2.3745164,
     # Lien « Demander des avis » de la fiche Google (ex. https://g.page/r/XXXX/review) ; vide = lien de la fiche
     "avis_url": "",
     # Note Google affichée sur le site : à tenir à jour (laisser vide pour ne rien afficher)
@@ -256,7 +259,7 @@ def ld_business(full=False):
         "priceRange": "€€", "currenciesAccepted": "EUR", "paymentAccepted": "Carte bancaire, Espèces, Virement",
         "address": {"@type": "PostalAddress", "streetAddress": a["rue"], "postalCode": a["cp"], "addressLocality": a["ville"],
                     "addressRegion": "Île-de-France", "addressCountry": "FR"},
-        "geo": {"@type": "GeoCoordinates", "latitude": 48.8566, "longitude": 2.3522},
+        "geo": {"@type": "GeoCoordinates", "latitude": CONFIG["lat"], "longitude": CONFIG["lng"]},
         "hasMap": MAPS, "sameAs": [CONFIG["instagram"]],
         "openingHoursSpecification": {"@type": "OpeningHoursSpecification",
                                       "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
@@ -437,6 +440,14 @@ def reviews_block(titre="Ce que nos clients disent de nous"):
 </section>'''
 
 
+def map_embed():
+    from urllib.parse import quote
+    q = quote(f"Secure Lock Serrurerie @{CONFIG['lat']},{CONFIG['lng']}")
+    return (f'<div class="map"><iframe title="{E(NOM)} sur Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
+            f'src="https://maps.google.com/maps?q={q}&amp;z=14&amp;hl=fr&amp;output=embed"></iframe>'
+            f'<a class="map-link" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}Voir notre fiche Google</a></div>')
+
+
 def company_card():
     rows = [("i-building", "Entreprise", f"{E(CONFIG['raison_sociale'])}")]
     if CONFIG["siret"]:
@@ -605,10 +616,37 @@ window.SLP_CONV={conv};
         SITEMAP.append(path)
 
 
-def hero(crumb_items, h1, lead, extra="", kicker=None, card=None):
+PARIS_BG = {
+    "tour-eiffel": "La tour Eiffel au coucher du soleil", "toits-de-paris": "Les toits de Paris",
+    "notre-dame": "Notre-Dame de Paris et la Seine", "pantheon": "Le Panthéon", "conciergerie": "La Conciergerie au bord de la Seine",
+    "place-des-victoires": "La place des Victoires", "sacre-coeur": "Le Sacré-Cœur de Montmartre",
+    "vue-sacre-coeur": "Vue sur Montmartre", "avenue-etoile": "Avenue parisienne vue de l'Arc de Triomphe", "mairie": "Une mairie d'arrondissement",
+}
+BG_BY_ARR = {1: "conciergerie", 2: "place-des-victoires", 4: "notre-dame", 5: "pantheon", 7: "tour-eiffel", 8: "toits-de-paris",
+             16: "tour-eiffel", 17: "avenue-etoile", 18: "sacre-coeur", 19: "vue-sacre-coeur"}
+BG_ROTATION = ["toits-de-paris", "avenue-etoile", "notre-dame", "pantheon", "conciergerie", "place-des-victoires", "vue-sacre-coeur", "mairie", "sacre-coeur"]
+_BG_N = [0]
+
+
+def zone_bg(z):
+    return BG_BY_ARR.get(z["n"]) or BG_ROTATION[z["n"] % len(BG_ROTATION)]
+
+
+def bg_img(name, eager=True):
+    if not name or not os.path.exists(os.path.join(ROOT, "assets", "img", "paris", f"{name}.webp")):
+        return ""
+    return (f'<picture class="bg"><source media="(max-width: 760px)" srcset="/assets/img/paris/{name}-m.webp">'
+            f'<img src="/assets/img/paris/{name}.webp" alt="{E(PARIS_BG.get(name, "Paris"))}" {"fetchpriority=\"high\"" if eager else "loading=\"lazy\""} decoding="async"></picture>')
+
+
+def hero(crumb_items, h1, lead, extra="", kicker=None, card=None, bg=None):
     k = f'<span class="eyebrow light">{E(kicker)}</span>' if kicker else ""
     card = card if card is not None else hero_card()
-    return f'''<section class="phero">
+    if bg is None:
+        bg = BG_ROTATION[_BG_N[0] % len(BG_ROTATION)]
+        _BG_N[0] += 1
+    return f'''<section class="phero has-bg">
+  {bg_img(bg)}
   <div class="wrap phero-grid">
     <div class="phero-text">
       {crumbs(crumb_items)}
@@ -696,9 +734,10 @@ def build_home():
     visual = photo("accueil", f"{NOM}, serrurier à Paris", "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
     if not visual:
         visual = '<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="Logo Secure Locksmith Paris" fetchpriority="high"></picture>'
-    equipe = photo("equipe", f"L'équipe {NOM}", "about-photo")
+    equipe = photo("equipe", "Serrurier qui conseille des clients devant leur porte", "about-photo")
     about_visual = equipe or company_card()
-    body = f'''<section class="hero">
+    body = f'''<section class="hero has-bg">
+  {bg_img("tour-eiffel")}
   <div class="wrap hero-grid">
     <div class="hero-text">
       <span class="eyebrow light">Serrurier Paris 75 · 20 arrondissements</span>
@@ -932,7 +971,7 @@ def build_arr_pages():
         lead = f'Ouverture de porte dès 110 € TTC, serrure bloquée, clé cassée, changement de serrure {E(z["a"])} ({E(z["surnom"])}). Prix annoncé avant déplacement, devis gratuit.'
         crumb_items = [("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", None)]
         body = hero(crumb_items, h1, lead, ticks(["Devis gratuit", "Sans frais cachés", "Nuit, week-end, jours fériés"], "ticks light inline"),
-                    kicker=f"{z['cp'][0]} · {z['surnom']}")
+                    kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z))
         body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"Serrurier {z["court"]}")}</div></section>'
         body += assureurs_strip() + contact_band(f"Bloqué dehors {z['a_court']} ?", "Appelez-nous : prix annoncé au téléphone, serrurier en route aussitôt.", source=path, arr=z["court"])
         ld = [ld_business(), ld_crumbs([("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", path)]), ld_faq(faq),
@@ -1058,7 +1097,7 @@ def build_combo_pages():
             lead = f'{E(s["resume"])} Intervention 24h/24 {E(z["a"])}, {"dès %d € TTC" % s["prix_num"] if s["prix_num"] else "sur devis gratuit"}.'
             crumb_items = [("Arrondissements", "/serrurier-paris/"), (f"Paris {z['num']}", z["url"]), (s["court"], None)]
             body = hero(crumb_items, h1, lead, ticks(["Prix annoncé avant déplacement", "Devis signé", "Nuit et week-end"], "ticks light inline"),
-                        kicker=f"{z['cp'][0]} · {z['surnom']}")
+                        kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z))
             body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"{s["court"]} {z["court"]}")}</div></section>'
             body += contact_band(f"{s['court']} {z['a_court']} ?", "Appelez-nous : prix annoncé au téléphone, serrurier en route aussitôt.",
                                  source=path, service=s["court"], arr=z["court"])
@@ -1166,7 +1205,8 @@ def build_static():
     <div class="c-line">{ico("i-pin")}<span><small>Zone d'intervention</small><b>Paris, du 1<sup>er</sup> au 20<sup>e</sup> arrondissement</b></span></div>
   </div>
   {lead_form("/contact/", titre="Écrivez-nous", sous="Devis, rappel, question : réponse rapide, 7j/7.")}
-</div></section>''' + reviews_block("Où nous trouver")
+</div></section>
+<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Notre fiche Google</span><h2>Où nous trouver</h2></div>{map_embed()}</div></section>''' + reviews_block()
     page("/contact/", f"Contact – serrurier Paris 24h/24 | {NOM}",
          f"Contactez {NOM} au {TEL}, 24h/24 et 7j/7, par WhatsApp ou par e-mail. Devis gratuit, intervention rapide dans tout Paris.",
          body, [ld_business(full=True), ld_crumbs([("Contact", "/contact/")])], active="/contact/")
