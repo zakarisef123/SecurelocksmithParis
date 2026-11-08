@@ -997,3 +997,12 @@ body{background:#0d1233!important}
 @media (prefers-reduced-motion:reduce){.sky-scroll i{transition:none}}
 .foot{background:linear-gradient(180deg,rgba(13,18,51,.15) 0%,rgba(13,18,51,.45) 55%,rgba(11,16,48,.8) 100%)!important}
 .ss-horizon{background:radial-gradient(85% 55% at 50% 105%,rgba(246,150,80,.75),transparent 72%),radial-gradient(60% 45% at 88% 85%,rgba(246,179,86,.5),transparent 70%),radial-gradient(55% 45% at 8% 70%,rgba(208,88,122,.5),transparent 70%),radial-gradient(50% 40% at 30% 15%,rgba(125,52,112,.5),transparent 70%),linear-gradient(180deg,#1f1442 0%,#3b1c48 60%,#5a2747 100%)!important}
+
+/* Cartes d'urgence avec photo */
+.urg{display:flex!important;flex-direction:column;padding:0!important;overflow:hidden}
+.urg-img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;transition:transform .35s}
+.urg:hover .urg-img{transform:scale(1.04)}
+.urg-body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;padding:0 18px 18px;flex:1}
+.urg-body .urg-ic{grid-row:span 2;margin-top:-22px;position:relative;z-index:1;box-shadow:0 8px 18px -8px rgba(0,0,0,.6)}
+.urg-body .urg-t{padding-top:12px}
+.urg-body .urg-p{grid-column:2;align-self:end}
