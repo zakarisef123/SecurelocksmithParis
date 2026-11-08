@@ -11,15 +11,42 @@
     });
   }
 
-  // Grille tarifaire : onglet de l'heure actuelle à Paris, changement manuel possible
-  var h;
-  try { h = parseInt(new Intl.DateTimeFormat("fr-FR", {hour:"numeric", hour12:false, timeZone:"Europe/Paris"}).format(new Date()), 10); }
-  catch(e) { h = new Date().getHours(); }
-  if (isNaN(h)) h = new Date().getHours();
+  // Grille tarifaire : tranche de l'heure actuelle à Paris.
+  // Semaine : jour 8h-18h, soir 18h-22h, nuit 22h-8h. Samedi, dimanche et jours fériés : soir 8h-22h, nuit 22h-8h.
+  var h, dow, y, mo, d;
+  try {
+    var parts = {};
+    new Intl.DateTimeFormat("en-GB", {timeZone: "Europe/Paris", weekday: "short", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", hour12: false})
+      .formatToParts(new Date()).forEach(function(p){ parts[p.type] = p.value; });
+    h = parseInt(parts.hour, 10); y = +parts.year; mo = +parts.month; d = +parts.day;
+    dow = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(parts.weekday);
+  } catch(e) {}
+  if (isNaN(h) || dow < 0 || !y) { var n = new Date(); h = n.getHours(); dow = n.getDay(); y = n.getFullYear(); mo = n.getMonth() + 1; d = n.getDate(); }
   h = h % 24;
-  var current = h >= 8 && h < 18 ? "jour" : (h >= 18 && h < 22 ? "soir" : "nuit");
+  function holiday(y, mo, d){
+    var fixed = ["1-1","5-1","5-8","7-14","8-15","11-1","11-11","12-25"];
+    if (fixed.indexOf(mo + "-" + d) > -1) return true;
+    // Pâques (calcul grégorien), puis lundi de Pâques, Ascension, lundi de Pentecôte
+    var a = y % 19, b = Math.floor(y / 100), c = y % 100, k4 = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    var hh = (19 * a + b - Math.floor(b / 4) - g + 15) % 30, l = (32 + 2 * k4 + 2 * Math.floor(c / 4) - hh - c % 4) % 7, m = Math.floor((a + 11 * hh + 22 * l) / 451);
+    var em = Math.floor((hh + l - 7 * m + 114) / 31), ed = (hh + l - 7 * m + 114) % 31 + 1;
+    var easter = Date.UTC(y, em - 1, ed), today = Date.UTC(y, mo - 1, d), diff = Math.round((today - easter) / 864e5);
+    return diff === 1 || diff === 39 || diff === 50;
+  }
+  var isHoliday = holiday(y, mo, d), offDay = dow === 0 || dow === 6 || isHoliday;
+  var current = offDay ? (h >= 8 && h < 22 ? "soir" : "nuit") : (h >= 8 && h < 18 ? "jour" : (h >= 18 && h < 22 ? "soir" : "nuit"));
+  var dayName = isHoliday ? "a public holiday" : ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][dow];
   function fmtH(x){ return (x % 12 || 12) + (x < 12 ? "am" : "pm"); }
-  var labels = {jour:"day (8am – 6pm)", soir:"evening (6pm – 10pm)", nuit:"night (10pm – 8am)"};
+  var labels = offDay
+    ? {jour:"day (weekdays only)", soir:"evening (8am – 10pm on weekends and public holidays)", nuit:"night (10pm – 8am)"}
+    : {jour:"day (8am – 6pm)", soir:"evening (6pm – 10pm)", nuit:"night (10pm – 8am)"};
+  var nowTxt = "It is " + fmtH(h) + " on " + dayName + " in Paris";
+  if (offDay) document.querySelectorAll("small[data-h-we]").forEach(function(sm){
+    sm.textContent = sm.getAttribute("data-h-we");
+    var btn = sm.closest("button"); if (btn && btn.getAttribute("data-slot") === "jour") btn.classList.add("is-off");
+  });
+  // Cartes d'urgence de l'accueil : prix de la tranche actuelle
+  document.querySelectorAll(".urg-p .up[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== current; });
   document.querySelectorAll("[data-tarifs]").forEach(function(card){
     var tabs = card.querySelectorAll(".slot-tabs button"), now = card.querySelector(".slot-now");
     function show(slot){
@@ -31,8 +58,8 @@
       card.querySelectorAll(".pv[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== slot; });
       if (now) {
         now.innerHTML = slot === current
-          ? "<i></i>It is " + fmtH(h) + " in Paris: these are our " + labels[slot] + " prices."
-          : "Prices for " + labels[slot] + ". It is currently " + fmtH(h) + " in Paris.";
+          ? "<i></i>" + nowTxt + ": these are our " + labels[slot] + " prices."
+          : "Prices for " + labels[slot] + ". " + nowTxt + ".";
         now.hidden = false;
       }
     }
@@ -87,9 +114,11 @@
     var data = {};
     try { data = JSON.parse(document.getElementById("guide-data").textContent); } catch(e) {}
     var sit = null, slot = current, idx = {jour:0, soir:1, nuit:2};
-    var slotNames = {jour:"Daytime rate (8am–6pm)", soir:"Evening rate (6pm–10pm)", nuit:"Night rate (10pm–8am)"};
+    var slotNames = offDay
+      ? {jour:"Daytime rate (weekdays only)", soir:"Weekend & holiday rate (8am–10pm)", nuit:"Night rate (10pm–8am)"}
+      : {jour:"Daytime rate (8am–6pm)", soir:"Evening rate (6pm–10pm)", nuit:"Night rate (10pm–8am)"};
     var auto = g.querySelector(".gd-auto");
-    if (auto) { auto.textContent = "· it is " + fmtH(h) + " in Paris, we selected it for you"; auto.hidden = false; }
+    if (auto) { auto.textContent = "· it is " + fmtH(h) + " on " + dayName + " in Paris, we selected it for you"; auto.hidden = false; }
     function q(n){ return g.querySelector('[data-g="' + n + '"]'); }
     function render(){
       g.querySelectorAll(".gd-opt").forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-sit") === sit ? "true" : "false"); });
