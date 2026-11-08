@@ -1006,3 +1006,10 @@ body{background:#0d1233!important}
 .urg-body .urg-ic{grid-row:span 2;margin-top:-22px;position:relative;z-index:1;box-shadow:0 8px 18px -8px rgba(0,0,0,.6)}
 .urg-body .urg-t{padding-top:12px}
 .urg-body .urg-p{grid-column:2;align-self:end}
+
+/* Tarifs selon l'heure : prix des cartes d'urgence et mention week-end */
+.urg-p .up[hidden]{display:none}
+.tarif-we{display:flex;gap:8px;align-items:flex-start;margin:0 18px 18px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.14);font-size:12.5px;line-height:1.5;color:var(--muted)}
+.tarif-we .ic{width:16px;height:16px;flex:none;margin-top:1px;opacity:.8}
+.slot-tabs button.is-off,.gd-slot.is-off{opacity:.55}
+@media (max-width:620px){.tarif-we{margin:0 12px 14px}}
