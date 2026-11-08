@@ -837,11 +837,13 @@ def svc_rows(lst, tag="h3", link=svc_url):
 
 
 def urgences_block(light=False):
+    keys = ["slammed", "locked", "jammed", "broken", "burglary", "stolen", "smart", "cellar"]
     cards = "".join(f'''<a class="urg" href="{svc_url(SVC_BY_SLUG[slug])}">
-  <span class="urg-ic">{ico(SVC_BY_SLUG[slug]["icon"])}</span>
+  {f'<img class="urg-img" src="/assets/img/urgences/{key}.webp" alt="" width="640" height="360" loading="lazy" decoding="async">' if os.path.exists(os.path.join(ROOT, "assets", "img", "urgences", f"{key}.webp")) else ""}
+  <span class="urg-body"><span class="urg-ic">{ico(SVC_BY_SLUG[slug]["icon"])}</span>
   <span class="urg-t"><b>{E(t)}</b><small>{E(conseil)}</small></span>
-  <span class="urg-p"><small>{"daytime" if prix != "quote" else "price"}</small>{E("free quote" if prix == "quote" else prix)}</span>
-</a>''' for t, slug, prix, conseil in URGENCES)
+  <span class="urg-p"><small>{"daytime" if prix != "quote" else "price"}</small>{E("free quote" if prix == "quote" else prix)}</span></span>
+</a>''' for key, (t, slug, prix, conseil) in zip(keys, URGENCES))
     return f'''<div class="urg-grid{" light" if light else ""}">{cards}</div>'''
 
 
