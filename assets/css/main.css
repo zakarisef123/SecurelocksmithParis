@@ -1014,3 +1014,19 @@ body{background:#0d1233!important}
 .slot-tabs button.is-off,.gd-slot.is-off{opacity:.55}
 @media (max-width:620px){.tarif-we{margin:0 12px 14px}}
 .tarif-we b{color:rgba(255,255,255,.85);font-weight:700}
+
+/* WhatsApp : vert officiel de l'application sur tous les boutons */
+.btn-wa,a.btn[href^="https://wa.me"]{background:#25d366!important;background-image:none!important;border-color:#25d366!important;color:#fff!important;box-shadow:0 10px 22px -12px rgba(37,211,102,.7)}
+.btn-wa:hover,a.btn[href^="https://wa.me"]:hover{background:#1ebe5b!important;border-color:#1ebe5b!important}
+.btn-wa .ic,a.btn[href^="https://wa.me"] .ic{color:#fff!important}
+a.c-line[href^="https://wa.me"] .ic{background:#25d366!important;color:#fff!important}
+a[href^="https://wa.me"]:not(.btn):not(.c-line):not(.wa-float){color:#25d366!important;font-weight:700}
+
+/* Bouton WhatsApp flottant (ordinateur ; sur mobile, la barre du bas le remplace) */
+.wa-float{position:fixed;right:22px;bottom:22px;z-index:75;display:flex;align-items:center;gap:0;height:60px;padding:0 15px;border-radius:999px;background:#25d366;color:#fff;font:700 15px var(--body);text-decoration:none;box-shadow:0 14px 30px -10px rgba(37,211,102,.75),0 4px 12px rgba(0,0,0,.25);transition:gap .2s,padding .2s,background .2s}
+.wa-float .ic{width:30px;height:30px;color:#fff}
+.wa-float span{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .25s}
+.wa-float:hover,.wa-float:focus-visible{background:#1ebe5b;gap:10px;padding:0 20px 0 16px}
+.wa-float:hover span,.wa-float:focus-visible span{max-width:120px}
+@media (max-width:760px){.wa-float{display:none}}
+@media print{.wa-float{display:none}}
