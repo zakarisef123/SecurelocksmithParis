@@ -746,6 +746,7 @@ window.SLP_CONV={conv};
   <a class="btn btn-gold" href="{TEL_HREF}" data-track="call_dock">{ico("i-phone")}<span>Call now · 24/7</span></a>
   <a class="btn btn-wa" href="{WA}" target="_blank" rel="noopener" data-track="wa_dock" aria-label="WhatsApp">{ico("i-wa")}</a>
 </div>
+<a class="wa-float" href="{WA}" target="_blank" rel="noopener" data-track="wa_float" aria-label="WhatsApp">{ico("i-wa")}<span>WhatsApp</span></a>
 <script src="/assets/js/main.js?v={asset_v("assets/js/main.js")}" defer></script>
 </body>
 </html>
