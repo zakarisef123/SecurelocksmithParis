@@ -377,7 +377,7 @@ def side_box(titre="A locksmith available now", texte="Describe your situation o
 SLOTS = [("jour", "i-sun", "Day", "8am – 6pm"), ("soir", "i-sunset", "Evening", "6pm – 10pm"), ("nuit", "i-moon", "Night", "10pm – 8am")]
 # Le week-end et les jours fériés, pas de tarif de jour : tarif du soir de 8h à 22h (le script adapte les horaires affichés)
 SLOTS_WE = {"jour": "weekdays only", "soir": "8am – 10pm", "nuit": "10pm – 8am"}
-WEEKEND_NOTE = "Saturdays, Sundays and public holidays: no daytime rate. The evening rate applies from 8am to 10pm, then the night rate from 10pm to 8am."
+WEEKEND_NOTE = "<b>Weekends and public holidays:</b> on Saturdays, Sundays and public holidays, the minimum rate applied is the Evening (6pm–10pm) rate; if the call-out takes place during the Night slot (10pm–8am), the Night rate applies."
 
 
 def tarif_table():
