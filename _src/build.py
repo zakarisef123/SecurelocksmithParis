@@ -914,11 +914,16 @@ def svc_cards(lst=None):
 
 
 def svc_tiles():
-    """Accueil : grille compacte des 10 services (icône, nom, prix), un clic mène à la page du service."""
+    """Accueil : grille compacte des 10 services (photo, icône, nom, prix), un clic mène à la page du service."""
+    def ph(s):
+        img = photo(s["slug"], "", "", "(max-width: 760px) 50vw, 240px")
+        # sans photo : bande aux couleurs du site avec l'icône en grand (en attendant la vraie photo)
+        return f'<span class="stile-ph">{img}</span>' if img else f'<span class="stile-ph empty">{ico(s["icon"])}</span>'
     tiles = "".join(f'''<a class="stile" href="{svc_url(s)}">
-  <span class="svc-ic">{ico(s["icon"])}</span>
+  {ph(s)}
+  <span class="stile-body"><span class="svc-ic">{ico(s["icon"])}</span>
   <b>{E(s["court"])}</b>
-  <span class="stile-p">{("from " + eur(s["prix_num"])) if s["prix_num"] else "Free quote"}</span>
+  <span class="stile-p">{("from " + eur(s["prix_num"])) if s["prix_num"] else "Free quote"}</span></span>
   {'<span class="stile-tag">24/7</span>' if s["cat"] == "urgence" else ""}
 </a>''' for s in SERVICES)
     return f'<div class="stiles">{tiles}</div><p class="stiles-more"><a class="text-link" href="/services/">All services, prices and details {ico("i-arrow", "ic sm")}</a></p>'
