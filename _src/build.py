@@ -1431,8 +1431,8 @@ def ld_tarifs():
 
 def build_static():
     # Prices
-    body = hero([("Prices", None)], "Our prices, <em>in black and white</em>",
-                "Prices per service and per time of day. Everything is given before we travel and nothing is added on the way.", kicker="Transparency")
+    body = hero([("Prices", None)], "Fully <em>transparent</em> prices",
+                "Prices per service and per time of day. Everything is given before we travel and nothing is added on the way.", kicker="No hidden fees")
     body += f'''<section class="sec"><div class="wrap">
   {tarif_table()}
   <div class="layout" style="margin-top:56px">
