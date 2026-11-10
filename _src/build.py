@@ -386,22 +386,10 @@ def side_box(titre="A locksmith available now", texte="Describe your situation o
 </aside>'''
 
 
-SLOTS = [("jour", "i-sun", "Day", "8am – 10pm"), ("nuit", "i-moon", "Night", "10pm – 8am")]
-# Le week-end et les jours fériés : tarif de jour + 10 € (le script affiche ces prix et adapte le libellé de l onglet Jour)
-SLOTS_WE = {"jour": "8am – 10pm · +€10", "nuit": "10pm – 8am"}
-WE_PLUS = 10
-
-
-def plus_we(v):
-    """Prix de jour du week-end et des jours fériés : tarif de jour + 10 €."""
-    return re.sub(r"\d[\d,]*", lambda m: f"{int(m.group().replace(',', '')) + WE_PLUS:,}", v, count=1)
-WEEKEND_NOTE = "<b>Weekends and public holidays:</b> on Saturdays, Sundays and public holidays, the Day rate (8am–10pm) is increased by €10; the Night rate (10pm–8am) stays the same."
-
-
-def slot_prices(prix):
-    """(jour, nuit) -> [(jour, …), (jourwe, jour + 10 €), (nuit, …)] ; le script affiche jourwe le week-end et les jours fériés."""
-    jour, nuit = prix
-    return [("jour", jour), ("jourwe", plus_we(jour)), ("nuit", nuit)]
+SLOTS = [("jour", "i-sun", "Day", "8am – 6pm"), ("soir", "i-sunset", "Evening", "6pm – 10pm"), ("nuit", "i-moon", "Night", "10pm – 8am")]
+# Le week-end et les jours fériés, pas de tarif de jour : tarif du soir de 8h à 22h (le script adapte les horaires affichés)
+SLOTS_WE = {"jour": "weekdays only", "soir": "8am – 10pm", "nuit": "10pm – 8am"}
+WEEKEND_NOTE = "<b>Weekends and public holidays:</b> on Saturdays, Sundays and public holidays, the minimum rate applied is the Evening (6pm–10pm) rate; if the call-out takes place during the Night slot (10pm–8am), the Night rate applies."
 
 
 def tarif_table():
@@ -415,7 +403,7 @@ def tarif_table():
     tabs = "".join(f'<button type="button" role="tab" data-slot="{k}" aria-selected="{"true" if k == "jour" else "false"}">{ico(i)}<span><b>{l}</b><small data-h="{h}" data-h-we="{SLOTS_WE[k]}">{h}</small></span></button>'
                    for k, i, l, h in SLOTS)
     rows = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price">'
-                   + "".join(f'<span class="pv" data-slot="{k}"{"" if k == "jour" else " hidden"}>{prix_html(v)}</span>' for k, v in slot_prices(prix))
+                   + "".join(f'<span class="pv" data-slot="{k}"{"" if k == "jour" else " hidden"}>{prix_html(v)}</span>' for (k, _, _, _), v in zip(SLOTS, prix))
                    + "</span></li>" for p, *prix in urg)
     trv = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price"><span class="pv">{prix_html(j)}</span></span></li>' for p, j, *_ in trav)
     return f'''<div class="tarifs">
@@ -854,7 +842,7 @@ def hero_card(prix="from €110 incl. VAT", label="Door opening"):
 # Home
 # ---------------------------------------------------------------------------
 HOME_FAQ = [
-    ("How much does it cost to open a door in Paris?", "A slammed door is opened for €110 incl. VAT during the day (8am–10pm), €120 during the day on weekends and public holidays, and €220 at night. The price is given on the phone, then confirmed in a written quote before any work."),
+    ("How much does it cost to open a door in Paris?", "A slammed door is opened for €110 incl. VAT on weekdays (8am–6pm), €160 in the evening and on weekends and €220 at night. The price is given on the phone, then confirmed in a written quote before any work."),
     ("Do you cover the whole of Paris?", "Yes, all 20 arrondissements, from the 1st to the 20th, 24/7, public holidays included. Our locksmiths are spread across the city so they can get to you quickly."),
     ("How quickly can you get here?", "About 30 minutes on average within Paris. The exact time depends on traffic and is given on the phone before the locksmith sets off."),
     ("Is the quote free?", "Yes, free and with no obligation. Nothing is done without your signature, and you remain free to say no."),
@@ -883,9 +871,9 @@ def urg_prix(prix):
     # Prix des cartes d'urgence : un prix par tranche horaire, le script affiche celui de l'heure actuelle à Paris
     if prix == "quote":
         return '<small>price</small>free quote'
-    noms = {"jour": "day", "jourwe": "weekend", "nuit": "night"}
+    noms = {"jour": "daytime", "soir": "evening", "nuit": "night"}
     return "".join(f'<span class="up" data-slot="{k}"{"" if k == "jour" else " hidden"}><small>{noms[k]}</small>{E(v)}</span>'
-                   for k, v in slot_prices(prix))
+                   for (k, *_), v in zip(SLOTS, prix))
 
 
 def urgences_block(light=False):
@@ -911,7 +899,7 @@ def urgence_section():
       <a class="urg-call" href="{TEL_HREF}" data-track="call_urgence"><span class="ring">{ico("i-phone")}</span><span><small>Direct line</small><b>{TEL}</b></span></a>
     </div>
     {urgences_block()}
-    <p class="urg-foot">Prices shown for the current time in Paris: day 8am–10pm, night 10pm–8am. Weekends and public holidays: day rate +€10. <a href="/prices/">Full price list</a> · <a href="/emergency/">What to do in an emergency</a></p>
+    <p class="urg-foot">Prices shown for the current time in Paris. Weekends and public holidays: evening rate from 8am to 10pm, night rate from 10pm to 8am. <a href="/prices/">Full price list</a> · <a href="/emergency/">What to do in an emergency</a></p>
   </div>
 </section>'''
 
@@ -1153,7 +1141,7 @@ def build_services():
   <p class="intro">{s["intro"]}</p>
   {ph}
   {before_after(s)}
-  <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}. The exact price is given on the phone and confirmed in a written quote before any work. <a href="/prices/">Day and night prices</a></p></div>
+  <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}. The exact price is given on the phone and confirmed in a written quote before any work. <a href="/prices/">Day, evening and night prices</a></p></div>
   {secs}
   <h2>{E(s["court"])}: choose your arrondissement</h2>
   {arr_grid(link=lambda z: f"{z['url']}#{s['slug']}", cls="arr-grid compact")}
@@ -1191,7 +1179,7 @@ ARR_INTROS = [
 
 def arr_faq(z):
     return [
-        (f"How much does a locksmith cost {z['a_court']}?", f"Opening a slammed door {z['a']} costs €110 incl. VAT during the day, €120 during the day on weekends and €220 at night. A cylinder replacement starts at €160. The price is always given before we travel and confirmed in writing."),
+        (f"How much does a locksmith cost {z['a_court']}?", f"Opening a slammed door {z['a']} costs €110 incl. VAT on weekdays, €160 in the evening and on weekends and €220 at night. A cylinder replacement starts at €160. The price is always given before we travel and confirmed in writing."),
         (f"How quickly can you get here {z['a']}?", "About 30 minutes on average. The exact time depends on Paris traffic and is given on the phone before the locksmith sets off."),
         (f"Do you work at night {z['a_court']}?", "Yes, 24/7, including Sundays and public holidays, with a night rate given in advance."),
         ("Will my invoice be reimbursed?", "Our detailed invoice is accepted by French home insurers. Reimbursement depends on your policy (break-in, theft or loss of keys)."),
@@ -1423,7 +1411,7 @@ def build_static():
       <h2>What the price includes</h2>
       <ul><li>The locksmith's labor.</li><li>Travel within Paris, free if work is carried out.</li><li>VAT: all our prices include VAT.</li><li>A detailed invoice suitable for your insurer.</li></ul>
       <h2>Our commitments</h2>
-      <ul><li><strong>Price given</strong> before the locksmith sets off.</li><li><strong>Written, signed quote</strong> before any work.</li><li><strong>No surprise surcharge</strong>: the night or weekend rate is given on the phone.</li><li><strong>Certified equipment</strong> from recognized brands.</li></ul>
+      <ul><li><strong>Price given</strong> before the locksmith sets off.</li><li><strong>Written, signed quote</strong> before any work.</li><li><strong>No surprise surcharge</strong>: the evening or night rate is given on the phone.</li><li><strong>Certified equipment</strong> from recognized brands.</li></ul>
       <h2>Broken keys, smart locks, break-ins</h2>
       <p>These jobs depend heavily on the situation: they come with a <strong>free quote</strong>, given on the phone and then confirmed in writing.</p>
       <h2>Payment</h2><p>Card, cash or bank transfer.</p>
@@ -1431,8 +1419,8 @@ def build_static():
     {side_box("Your price on the phone", "Describe the situation: you know the exact price before we set off.")}
   </div>
 </div></section>''' + assureurs_strip() + contact_band(source="/prices/")
-    page("/prices/", f"Locksmith prices Paris – day and night | {NOM}",
-         "Locksmith prices in Paris: slammed door opening €110 incl. VAT during the day, locked door from €180, cylinder replacement from €160. Day and night rates shown.",
+    page("/prices/", f"Locksmith prices Paris – day, evening, night | {NOM}",
+         "Locksmith prices in Paris: slammed door opening €110 incl. VAT during the day, locked door from €180, cylinder replacement from €160. Evening and night rates shown.",
          body, [ld_business(), ld_crumbs([("Prices", "/prices/")]), ld_tarifs()], active="/prices/")
 
     # Insurance
@@ -1520,7 +1508,7 @@ def build_static():
 URG_FAQ = [
     ("Do you really come at night and on Sundays?", "Yes, 24/7, public holidays included. The night rate (10pm–8am) is given on the phone before the locksmith sets off."),
     ("How quickly can you get here?", "About 30 minutes on average within Paris. The exact time depends on traffic and is given on the phone."),
-    ("How much does an emergency door opening cost?", "€110 incl. VAT during the day, €120 during the day on weekends, €220 at night for a slammed door. A locked door starts at €180 during the day."),
+    ("How much does an emergency door opening cost?", "€110 incl. VAT on weekdays, €160 in the evening and on weekends, €220 at night for a slammed door. A locked door starts at €180 during the day."),
     ("What should I have ready when the locksmith arrives?", "If possible, an ID or proof of address: the locksmith must make sure you are the occupant. If your documents are inside, a neighbor, the caretaker or your host can vouch for you."),
     ("Can I refuse the quote on site?", "Yes. The quote is free and with no obligation: if you refuse it, nothing is done."),
 ]
@@ -1528,17 +1516,17 @@ URG_FAQ = [
 
 # Guide d'urgence : situation -> prix par tranche horaire (None = sur devis), service lié, conseil
 GUIDE = [
-    ("slammed", "Door slammed shut, keys inside", "door-opening", (110, 220), False,
+    ("slammed", "Door slammed shut, keys inside", "door-opening", (110, 160, 220), False,
      "Don't try a credit card or screwdriver on the latch: you would damage the strike plate. Most slammed doors open in minutes with no damage."),
-    ("locked", "Door locked with a key, keys lost", "door-opening", (180, 280), True,
+    ("locked", "Door locked with a key, keys lost", "door-opening", (180, 250, 280), True,
      "Ask the caretaker (gardien) or a neighbor whether they keep a spare. Opening without damage is still possible in many cases."),
-    ("jammed", "Lock jammed, key won't turn", "jammed-lock", (180, 280), False,
+    ("jammed", "Lock jammed, key won't turn", "jammed-lock", (180, 250, 280), False,
      "Stop forcing the key: you could snap it inside the cylinder. Don't spray oil into the lock."),
     ("broken", "Key broken in the lock", "broken-key", None, False,
      "Don't push the piece further in and never use glue. If it sticks out, pull it straight out with fine pliers."),
     ("burglary", "Burglary, door forced open", "break-in-repair", None, False,
      "Don't go in if someone may still be inside: call the police (17). Don't touch anything before they come."),
-    ("stolen", "Keys stolen, change the cylinder", "lock-replacement", (160, 230), True,
+    ("stolen", "Keys stolen, change the cylinder", "lock-replacement", (160, 210, 230), True,
      "If your ID or address was stolen with the keys, have the cylinder changed today."),
     ("smart", "Smart lock not responding", "smart-lock", None, False,
      "Look for your mechanical backup key and check whether the app shows a low battery."),
@@ -1598,7 +1586,7 @@ def build_urgence():
   <h2>What to do in an emergency</h2>
   <ol class="urg-steps">{steps}</ol>
   <h2>Our emergency prices</h2>
-  <p>Our prices depend on the time of day: day (8am–10pm) and night (10pm–8am). On Saturdays, Sundays and public holidays, the day rate is increased by €10. The current time slot is selected automatically.</p>
+  <p>Our prices depend on the time of day: day (weekdays 8am–6pm), evening (weekdays 6pm–10pm) and night (10pm–8am). On Saturdays, Sundays and public holidays there is no daytime rate: the evening rate applies from 8am to 10pm. The current time slot is selected automatically.</p>
 </article>{side_box("Emergency: call now", "A locksmith answers directly and gives you the price before setting off.")}</div>
 <div class="wrap" style="margin-top:28px">{tarif_table()}</div></section>
 <section class="sec"><div class="wrap faq-wrap"><div class="sec-head"><span class="eyebrow">Questions</span><h2>Emergencies: your questions</h2></div>{faq_html(URG_FAQ)}</div></section>'''
@@ -1745,7 +1733,7 @@ def build_seo():
     write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /_src/\nDisallow: /thank-you/\n\nSitemap: {URL}/sitemap.xml\n")
 
     svc = "\n".join(f"- [{s['nom']}]({URL}{svc_url(s)}): {s['prix']}. {s['resume']}" for s in SERVICES)
-    grille = "\n".join(f"- {t[0]}: day {t[1]}, weekend/holiday day {plus_we(t[1])}, night {t[2]}" if t[2] else f"- {t[0]}: {t[1]}" for t in TARIFS)
+    grille = "\n".join(f"- {t[0]}: " + " / ".join(v or "quote" for v in t[1:]) for t in TARIFS)
     arr = "\n".join(f"- [Locksmith {z['court']}]({URL}{z['url']}) – {z['cp'][0]}" for z in ARR)
     note = f"- Google rating: {CONFIG['avis_note']}/5 ({CONFIG['avis_nombre']} reviews)\n" if CONFIG["avis_note"] else ""
     write("llms.txt", f"""# {NOM}
@@ -1766,7 +1754,7 @@ def build_seo():
 ## Services
 {svc}
 
-## Prices incl. VAT (day 8am–10pm / night 10pm–8am; weekends and public holidays: day rate +€10)
+## Prices incl. VAT (day: weekdays 8am–6pm / evening: weekdays 6pm–10pm, weekends and public holidays 8am–10pm / night 10pm–8am)
 {grille}
 
 ## Arrondissements
