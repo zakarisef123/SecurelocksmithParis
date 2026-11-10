@@ -225,47 +225,6 @@
     });
   }
 
-  // « Watch our work » : les vidéos de chantier en plein écran, l'une après l'autre
-  var stv = document.getElementById("stories"), stData = [];
-  try { stData = JSON.parse(document.getElementById("stories-data").textContent); } catch(e) {}
-  if (stv && stData.length) {
-    var sv = stv.querySelector("video"), si = 0, sraf, lastFocus = null;
-    var bars = stv.querySelectorAll(".stv-prog b"), sSnd = stv.querySelector(".stv-snd");
-    function sq(n){ return stv.querySelector('[data-st="' + n + '"]'); }
-    function sTick(){ if (sv.duration) bars[si].style.width = (sv.currentTime / sv.duration * 100) + "%"; sraf = requestAnimationFrame(sTick); }
-    function sShow(){
-      var d = stData[si];
-      bars.forEach(function(b, j){ b.style.width = j < si ? "100%" : "0"; });
-      sv.src = d.src; sv.poster = d.poster;
-      sq("title").textContent = d.title; sq("sub").textContent = d.sub;
-      sq("more").setAttribute("href", d.url);
-      sq("wa").setAttribute("href", sq("wa").getAttribute("href").split("?")[0] + "?text=" + encodeURIComponent("Hello, I saw your video (" + d.title + "). I need a locksmith in Paris for: " + d.service + "."));
-      var pr = sv.play();
-      if (pr && pr.catch) pr.catch(function(){ sv.muted = true; sSnd.classList.remove("on"); sv.play().catch(function(){}); });
-    }
-    function sGo(d){ si += d; if (si < 0) si = 0; if (si >= stData.length) return sClose(); sShow(); }
-    function sOpen(){
-      lastFocus = document.activeElement; si = 0; stv.hidden = false; document.body.classList.add("qm-lock");
-      sv.muted = false; sSnd.classList.add("on"); sShow(); cancelAnimationFrame(sraf); sTick();
-      stv.querySelector(".stv-x").focus();
-      push("ouverture_videos", {});
-    }
-    function sClose(){ sv.pause(); cancelAnimationFrame(sraf); stv.hidden = true; document.body.classList.remove("qm-lock"); if (lastFocus) lastFocus.focus(); }
-    document.querySelectorAll("[data-stories-open]").forEach(function(b){ b.addEventListener("click", sOpen); });
-    stv.querySelector("[data-stories-close]").addEventListener("click", sClose);
-    stv.querySelector(".stv-prev").addEventListener("click", function(){ sGo(-1); });
-    stv.querySelector(".stv-next").addEventListener("click", function(){ sGo(1); });
-    sv.addEventListener("ended", function(){ sGo(1); });
-    sSnd.addEventListener("click", function(){ sv.muted = !sv.muted; sSnd.classList.toggle("on", !sv.muted); sSnd.setAttribute("aria-label", sv.muted ? "Turn sound on" : "Turn sound off"); });
-    stv.addEventListener("click", function(e){ if (e.target === stv) sClose(); });
-    document.addEventListener("keydown", function(e){
-      if (stv.hidden) return;
-      if (e.key === "Escape") sClose();
-      if (e.key === "ArrowRight") sGo(1);
-      if (e.key === "ArrowLeft") sGo(-1);
-    });
-  }
-
   // Bandeau cookies (choix conservé 6 mois)
   var box = document.getElementById("cookies");
   if (box) {
