@@ -1020,7 +1020,7 @@ body{background:#0d1233!important}
 .btn-wa:hover,a.btn[href^="https://wa.me"]:hover{background:#1ebe5b!important;border-color:#1ebe5b!important}
 .btn-wa .ic,a.btn[href^="https://wa.me"] .ic{color:#fff!important}
 a.c-line[href^="https://wa.me"] .ic{background:#25d366!important;color:#fff!important}
-a[href^="https://wa.me"]:not(.btn):not(.c-line):not(.wa-float){color:#25d366!important;font-weight:700}
+a[href^="https://wa.me"]:not(.btn):not(.c-line):not(.wa-float):not(.btn-q-wa){color:#25d366!important;font-weight:700}
 
 /* Bouton WhatsApp flottant (ordinateur ; sur mobile, la barre du bas le remplace) */
 .wa-float{position:fixed;right:22px;bottom:22px;z-index:75;display:flex;align-items:center;gap:0;height:60px;padding:0 15px;border-radius:999px;background:#25d366;color:#fff;font:700 15px var(--body);text-decoration:none;box-shadow:0 14px 30px -10px rgba(37,211,102,.75),0 4px 12px rgba(0,0,0,.25);transition:gap .2s,padding .2s,background .2s}
@@ -1068,3 +1068,8 @@ a[href^="https://wa.me"]:not(.btn):not(.c-line):not(.wa-float){color:#25d366!imp
   .svc-row:has(.svc-thumb) .svc-thumb .svc-ic{width:40px!important;height:40px!important;left:10px;bottom:10px}
   .svc-row:has(.svc-thumb) .svc-prix,.svc-row:has(.svc-thumb) .btn-q{grid-column:1!important}
 }
+
+/* Petits boutons WhatsApp des services (remplacent « Quote ») */
+a.btn-q-wa{background:#25d366!important;border-color:#25d366!important;color:#fff!important;text-decoration:none}
+a.btn-q-wa .ic{color:#fff!important}
+a.btn-q-wa:hover{background:#1ebe5b!important;border-color:#1ebe5b!important}

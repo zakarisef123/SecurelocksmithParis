@@ -137,7 +137,7 @@
         q("note").textContent = "The price depends on your lock: we give it on the phone before we travel.";
       }
       q("tip").textContent = d.tip;
-      q("quote").setAttribute("data-quote", d.service);
+      q("wa").setAttribute("href", q("wa").getAttribute("href").split("?")[0] + "?text=" + encodeURIComponent("Hello, I need a locksmith in Paris: " + d.label + "."));
       q("more").setAttribute("href", d.url);
       push("guide_urgence", {situation: sit, creneau: slot});
     }
