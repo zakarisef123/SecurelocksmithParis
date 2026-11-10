@@ -28,7 +28,7 @@ SERVICES = [
              "Think of the building caretaker (gardien), a trusted neighbor or your letting agency: someone may have a spare key. Avoid the credit-card trick and screwdrivers: they damage the seal, the strike plate or the edge of the door, and make the job longer. If a child is inside or something is cooking on the stove, tell us on the phone and we will treat your call as a priority."),
         ],
         "faq": [
-            ("How much does it cost to open a slammed door in Paris?", "€110 incl. VAT on weekdays (8am–6pm), €160 in the evening (6pm–10pm, and 8am–10pm on weekends and public holidays) and €220 at night (10pm–8am). For a door locked with a key, prices start at €180 during the day. The price is given on the phone, then confirmed in a written quote before we start."),
+            ("How much does it cost to open a slammed door in Paris?", "€110 incl. VAT during the day (8am–10pm), €120 during the day on weekends and public holidays, and €220 at night (10pm–8am). For a door locked with a key, prices start at €180 during the day. The price is given on the phone, then confirmed in a written quote before we start."),
             ("Will my lock be damaged?", "In the vast majority of cases, no: a slammed door opens without leaving a mark. If drilling became necessary, the locksmith would explain why and give you the price beforehand, and you would remain free to say no."),
             ("How long does it take?", "Often less than ten minutes for a slammed door. An armored door or a door locked with a key can take longer."),
         ],
@@ -103,7 +103,7 @@ SERVICES = [
              "The locksmith shows you several ranges, from standard to certified high security, with an all-inclusive price (part and fitting). You choose, he installs it, then hands you the invoice, the new keys and the ownership card."),
         ],
         "faq": [
-            ("How much does a cylinder replacement cost?", "From €160 incl. VAT on weekdays (8am–6pm), €210 in the evening (6pm–10pm, and 8am–10pm on weekends and public holidays) and €230 at night (10pm–8am). A complete lock starts at €250. The final price depends on the brand and security level you choose: a detailed quote is given beforehand."),
+            ("How much does a cylinder replacement cost?", "From €160 incl. VAT during the day (8am–10pm), €170 during the day on weekends and public holidays, and €230 at night (10pm–8am). A complete lock starts at €250. The final price depends on the brand and security level you choose: a detailed quote is given beforehand."),
             ("Should I change my lock after my keys are stolen?", "Yes, especially if documents showing your address were taken at the same time. Depending on your policy, your insurer may cover the replacement."),
             ("Tenant or landlord: who pays?", "Lost keys are usually the tenant's responsibility; replacing a worn-out lock is usually the landlord's. Your lease is the reference."),
         ],
@@ -264,12 +264,12 @@ SERVICES = [
 # 24/7 emergencies: (situation, linked service, displayed price, what to do meanwhile)
 # ---------------------------------------------------------------------------
 URGENCES = [
-    ("Door slammed shut, keys inside", "door-opening", ("€110", "€160", "€220"), "Don't use a credit card or screwdriver: you would damage the strike plate."),
-    ("Door locked, keys lost", "door-opening", ("from €180", "from €250", "from €280"), "Ask the caretaker or a neighbor whether they keep a spare."),
-    ("Jammed lock, key won't turn", "jammed-lock", ("€180", "€250", "€280"), "Don't force it: you could snap the key inside the cylinder."),
+    ("Door slammed shut, keys inside", "door-opening", ("€110", "€220"), "Don't use a credit card or screwdriver: you would damage the strike plate."),
+    ("Door locked, keys lost", "door-opening", ("from €180", "from €280"), "Ask the caretaker or a neighbor whether they keep a spare."),
+    ("Jammed lock, key won't turn", "jammed-lock", ("€180", "€280"), "Don't force it: you could snap the key inside the cylinder."),
     ("Key broken in the lock", "broken-key", "quote", "Don't push the piece in further and never use glue."),
     ("Burglary, door forced open", "break-in-repair", "quote", "Call the police (17) and don't touch anything before they come."),
-    ("Keys stolen: change the cylinder", "lock-replacement", ("from €160", "from €210", "from €230"), "If your ID was stolen too, have the cylinder changed today."),
+    ("Keys stolen: change the cylinder", "lock-replacement", ("from €160", "from €230"), "If your ID was stolen too, have the cylinder changed today."),
     ("Smart lock not responding", "smart-lock", "quote", "Look for your mechanical backup key before calling."),
     ("Cellar broken into", "cellar-door", "quote", "Tell the building manager: other cellars may have been hit too."),
 ]
@@ -342,19 +342,19 @@ ARRONDISSEMENTS = {
 }
 
 # ---------------------------------------------------------------------------
-# Price list (incl. VAT): service, day (weekdays 8am–6pm), evening (weekdays 6pm–10pm; weekends and public holidays 8am–10pm), night 10pm–8am
+# Price list (incl. VAT): service, day 8am–10pm, night 10pm–8am (weekends and public holidays: day rate +€10)
 # None = quote only for that time slot. "From …" = starting price.
 # ---------------------------------------------------------------------------
 TARIFS = [
-    ("Slammed door opening", "€110", "€160", "€220"),
-    ("Locked door opening", "From €180", "From €250", "From €280"),
-    ("Jammed lock, key won't turn", "€180", "€250", "€280"),
-    ("Cylinder replacement", "From €160", "From €210", "From €230"),
-    ("Lock replacement", "From €250", None, None),
-    ("Door armoring", "From €2,300", None, None),
-    ("Complete armored door set", "From €3,350", None, None),
-    ("Cellar door set", "From €1,550", None, None),
-    ("Mailbox lock (standard model)", "€110", None, None),
+    ("Slammed door opening", "€110", "€220"),
+    ("Locked door opening", "From €180", "From €280"),
+    ("Jammed lock, key won't turn", "€180", "€280"),
+    ("Cylinder replacement", "From €160", "From €230"),
+    ("Lock replacement", "From €250", None),
+    ("Door armoring", "From €2,300", None),
+    ("Complete armored door set", "From €3,350", None),
+    ("Cellar door set", "From €1,550", None),
+    ("Mailbox lock (standard model)", "€110", None),
 ]
 
 # Insurers (name, logo file in assets/img/assureurs/ or None) – mentioned for information only, no partnership
