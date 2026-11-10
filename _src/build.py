@@ -337,6 +337,11 @@ def lead_form(source, service=None, titre="Request a free quote", sous="We call 
 </form>'''
 
 
+def btn_wa_svc(s, label="WhatsApp"):
+    """Petit bouton WhatsApp d'un service, avec un message déjà rempli (remplace les anciens boutons « Quote »)."""
+    return btn_wa(f"Hello, I need a locksmith in Paris for: {s['nom']}.", label, "btn-q btn-q-wa", "wa_svc")
+
+
 def btn_quote(service, label="Get a free quote", cls="btn btn-quote"):
     return f'<button type="button" class="{cls}" data-quote="{E(service)}">{ico("i-mail")}<span>{E(label)}</span></button>'
 
@@ -374,7 +379,6 @@ def side_box(titre="A locksmith available now", texte="Describe your situation o
   <div class="side-body">
     <p>{E(texte)}</p>
     {btn_call(cls="btn btn-gold btn-block btn-lg", track="call_side")}
-    {btn_quote(quote, "Free quote: " + quote, "btn btn-navy btn-block") if quote else ""}
     {btn_wa(label="Send a photo", cls="btn btn-outline btn-block", track="wa_side")}
     {ticks(["Free quote, no obligation", "Damage-free opening in most cases", "Invoice accepted by insurers"], "ticks small")}
     {google_badge("g-badge compact")}
@@ -769,7 +773,6 @@ window.SLP_CONV={conv};
 {body}
 </main>
 {footer()}
-{quote_modal()}
 <div class="cookies" id="cookies" role="dialog" aria-label="Cookies" hidden>
   <p><strong>Your privacy</strong> With your consent, we measure website traffic (Google Analytics, Google Tag Manager) to improve it. Nothing is loaded without your consent. <a href="/privacy/#cookies">Learn more</a></p>
   <div><button type="button" class="btn btn-outline btn-sm" data-cookies="denied">Decline</button><button type="button" class="btn btn-navy btn-sm" data-cookies="granted">Accept</button></div>
@@ -828,7 +831,7 @@ def hero(crumb_items, h1, lead, extra="", kicker=None, card=None, bg=None, quote
       {k}
       <h1>{h1}</h1>
       <p class="lead">{lead}</p>
-      <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_hero")}{btn_quote(quote, cls="btn btn-quote btn-lg") if quote else btn_wa(cls="btn btn-outline-light btn-lg", track="wa_hero")}</div>
+      <div class="cta-row">{btn_call(cls="btn btn-gold btn-lg", track="call_hero")}{btn_wa(cls="btn btn-wa btn-lg", track="wa_hero")}</div>
       {extra}
     </div>
     {card}
@@ -873,7 +876,7 @@ def svc_rows(lst, tag="h3", link=svc_url):
         t = thumb(s["slug"])
         return f'<span class="svc-thumb">{t}<span class="svc-ic">{ico(s["icon"])}</span></span>' if t else f'<span class="svc-ic">{ico(s["icon"])}</span>'
     return '<div class="svc-rows">' + "".join(f'''<div class="svc-row">{lead(s)}
-  <div><{tag}><a class="svc-link" href="{link(s)}">{E(s["nom"])}</a></{tag}><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span>{btn_quote(s["court"], "Quote", "btn-q")}</div>''' for s in lst) + "</div>"
+  <div><{tag}><a class="svc-link" href="{link(s)}">{E(s["nom"])}</a></{tag}><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span>{btn_wa_svc(s)}</div>''' for s in lst) + "</div>"
 
 
 def urg_prix(prix):
@@ -924,7 +927,7 @@ def svc_cards(lst=None):
     <span class="svc-ic">{ico(s["icon"])}</span>
     <h3><a class="svc-link" href="{svc_url(s)}">{E(s["nom"])}</a></h3>
     <p>{E(s["resume"])}</p>
-    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-acts">{btn_quote(s["court"], "Quote", "btn-q")}<a class="svc-go" href="{svc_url(s)}">Details {ico("i-arrow", "ic sm")}</a></span></div>
+    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-acts">{btn_wa_svc(s)}<a class="svc-go" href="{svc_url(s)}">Details {ico("i-arrow", "ic sm")}</a></span></div>
   </div>
 </article>''')
     if len(out) % 3:
@@ -988,7 +991,7 @@ def build_home():
       <span class="eyebrow light">Locksmith in Paris · all 20 arrondissements</span>
       <h1>Locksmith in Paris,<br><span class="gold">24/7</span></h1>
       <p class="lead">Locked out, jammed lock, broken key, break-in: a qualified, English-speaking locksmith comes to you in about 30 minutes on average. The price is given on the phone and the quote is signed before any work.</p>
-      <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}<a class="btn btn-outline-light btn-xl" href="#quote">{ico("i-mail")}<span>Free quote</span></a></div>
+      <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}{btn_wa(cls="btn btn-wa btn-xl", track="wa_hero")}</div>
       <div class="hero-proof">
         {google_badge("g-badge dark")}
         <ul class="proof-list"><li>{ico("i-check")}Door opening from €110</li><li>{ico("i-check")}No hidden fees</li><li>{ico("i-check")}Invoice for your insurer</li></ul>
@@ -1208,7 +1211,7 @@ def local_services(z, i, lst):
   <div class="sl-head"><span class="svc-ic">{ico(s["icon"])}</span><div><h3>{E(s["nom"])}</h3><span class="sl-price">{prix}</span></div></div>
   <p>{intro}</p>
   <p class="sl-tip"><strong>Tip:</strong> {E(loc["conseil"])}</p>
-  <div class="sl-acts">{btn_quote(s["court"], "Get a quote", "btn-q")}<a class="text-link" href="{svc_url(s)}">How we work {ico("i-arrow", "ic sm")}</a></div>
+  <div class="sl-acts">{btn_wa_svc(s)}<a class="text-link" href="{svc_url(s)}">How we work {ico("i-arrow", "ic sm")}</a></div>
 </article>''')
     return '<div class="sl-grid">' + "".join(cards) + "</div>"
 
@@ -1566,7 +1569,7 @@ def guide_block():
     <div class="gd-out" hidden>
       <div class="gd-price"><small data-g="slotlabel"></small><b data-g="price"></b><span data-g="note"></span></div>
       <div class="gd-tip">{ico("i-award")}<p><strong>What to do now:</strong> <span data-g="tip"></span></p></div>
-      <div class="gd-acts">{btn_call("Call now · " + TEL, cls="btn btn-gold btn-lg", track="call_guide")}<button type="button" class="btn btn-navy btn-lg" data-quote="" data-g="quote">{ico("i-mail")}<span>Call me back</span></button><a class="btn btn-outline btn-lg" data-g="more" href="/services/">{ico("i-file")}<span>How we handle it</span></a></div>
+      <div class="gd-acts">{btn_call("Call now · " + TEL, cls="btn btn-gold btn-lg", track="call_guide")}<a class="btn btn-wa btn-lg" data-g="wa" href="{E(WA)}" target="_blank" rel="noopener" data-track="wa_guide">{ico("i-wa")}<span>WhatsApp</span></a><a class="btn btn-outline btn-lg" data-g="more" href="/services/">{ico("i-file")}<span>How we handle it</span></a></div>
     </div>
   </div>
   <script type="application/json" id="guide-data">{json.dumps(data, ensure_ascii=False)}</script>
