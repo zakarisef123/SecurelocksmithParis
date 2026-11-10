@@ -652,7 +652,7 @@ def logo_html(cls="brand"):
 
 def footer():
     svc = "".join(f'<li><a href="{svc_url(s)}">{E(s["nom"])}</a></li>' for s in SERVICES)
-    arr = "".join(f'<a href="{z["url"]}">{z["n"]}<sup>{z["suf"]}</sup></a>' for z in ARR)
+    arr = "".join(f'<a href="{z["url"]}" title="Locksmith {E(z["court"])}"><img src="/assets/img/arr/{z["n"]}.webp" alt="" width="176" height="176" loading="lazy" decoding="async"><span>{z["n"]}<sup>{z["suf"]}</sup></span></a>' for z in ARR)
     siret = f"<br>SIRET {siret_fmt()}" if CONFIG["siret"] else ""
     return f'''<footer class="foot">
   <div class="wrap">
@@ -1241,10 +1241,13 @@ def build_arr_pages():
   <div><small>Average arrival</small><b>≈ 30 min</b></div>
 </div>'''
         nav_arr = ""
+        def pn(o, sens):
+            return (f'<a class="pn pn-{sens}" href="{o["url"]}"><img src="/assets/img/arr/{o["n"]}.webp" alt="" width="176" height="176" loading="lazy" decoding="async">'
+                    f'<span><small>{"← Previous" if sens == "prev" else "Next →"}</small><b>Locksmith {E(o["court"])}</b></span></a>')
         if z["prev"]:
-            nav_arr += f'<a href="{z["prev"]["url"]}">← Locksmith {E(z["prev"]["court"])}</a>'
+            nav_arr += pn(z["prev"], "prev")
         if z["next"]:
-            nav_arr += f'<a href="{z["next"]["url"]}">Locksmith {E(z["next"]["court"])} →</a>'
+            nav_arr += pn(z["next"], "next")
         faq = arr_faq(z)
         content = f'''<article class="prose">
   <p class="intro">{intro}</p>
