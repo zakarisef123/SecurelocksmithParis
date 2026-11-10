@@ -936,7 +936,7 @@ def engagements():
 def build_home():
     visual = photo("home", f"{NOM}, locksmith in Paris", "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
     if not visual and os.path.exists(os.path.join(ROOT, "assets", "img", "photos", "hero-round.webp")):
-        visual = '<picture class="emblem photo-round"><img src="/assets/img/photos/hero-round.webp" width="440" height="440" alt="Locksmith opening a front door in Paris" fetchpriority="high"></picture>'
+        visual = '<picture class="emblem photo-round"><img src="/assets/img/photos/hero-round.webp" width="440" height="440" alt="Secure Lock locksmith wearing the company work vest" fetchpriority="high"></picture>'
     if not visual:
         visual = '<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="Secure Locksmith Paris logo" fetchpriority="high"></picture>'
     equipe = photo("team", "Locksmith advising customers at their front door", "about-photo")
