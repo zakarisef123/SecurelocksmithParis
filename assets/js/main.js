@@ -12,7 +12,7 @@
   }
 
   // Grille tarifaire : tranche de l'heure actuelle à Paris.
-  // Jour 8h-22h, nuit 22h-8h. Samedi, dimanche et jours fériés : tarif de jour + 10 € (prix « jourwe »).
+  // Semaine : jour 8h-18h, soir 18h-22h, nuit 22h-8h. Samedi, dimanche et jours fériés : soir 8h-22h, nuit 22h-8h.
   var h, dow, y, mo, d;
   try {
     var parts = {};
@@ -34,20 +34,19 @@
     return diff === 1 || diff === 39 || diff === 50;
   }
   var isHoliday = holiday(y, mo, d), offDay = dow === 0 || dow === 6 || isHoliday;
-  var current = h >= 8 && h < 22 ? "jour" : "nuit";
-  // prix affichés : le week-end et les jours fériés, la colonne de jour prend les prix « jourwe » (+10 €)
-  function priceKey(slot){ return slot === "jour" && offDay ? "jourwe" : slot; }
+  var current = offDay ? (h >= 8 && h < 22 ? "soir" : "nuit") : (h >= 8 && h < 18 ? "jour" : (h >= 18 && h < 22 ? "soir" : "nuit"));
   var dayName = isHoliday ? "a public holiday" : ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][dow];
   function fmtH(x){ return (x % 12 || 12) + (x < 12 ? "am" : "pm"); }
   var labels = offDay
-    ? {jour:"weekend day (+€10)", nuit:"night (10pm – 8am)"}
-    : {jour:"day (8am – 10pm)", nuit:"night (10pm – 8am)"};
+    ? {jour:"day (weekdays only)", soir:"evening (8am – 10pm on weekends and public holidays)", nuit:"night (10pm – 8am)"}
+    : {jour:"day (8am – 6pm)", soir:"evening (6pm – 10pm)", nuit:"night (10pm – 8am)"};
   var nowTxt = "It is " + fmtH(h) + " on " + dayName + " in Paris";
   if (offDay) document.querySelectorAll("small[data-h-we]").forEach(function(sm){
     sm.textContent = sm.getAttribute("data-h-we");
+    var btn = sm.closest("button"); if (btn && btn.getAttribute("data-slot") === "jour") btn.classList.add("is-off");
   });
   // Cartes d'urgence de l'accueil : prix de la tranche actuelle
-  document.querySelectorAll(".urg-p .up[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== priceKey(current); });
+  document.querySelectorAll(".urg-p .up[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== current; });
   document.querySelectorAll("[data-tarifs]").forEach(function(card){
     var tabs = card.querySelectorAll(".slot-tabs button"), now = card.querySelector(".slot-now");
     function show(slot){
@@ -56,7 +55,7 @@
         t.setAttribute("aria-selected", on ? "true" : "false");
         t.classList.toggle("is-now", t.getAttribute("data-slot") === current);
       });
-      card.querySelectorAll(".pv[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== priceKey(slot); });
+      card.querySelectorAll(".pv[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== slot; });
       if (now) {
         now.innerHTML = slot === current
           ? "<i></i>" + nowTxt + ": these are our " + labels[slot] + " prices."
@@ -114,10 +113,10 @@
   document.querySelectorAll("[data-guide]").forEach(function(g){
     var data = {};
     try { data = JSON.parse(document.getElementById("guide-data").textContent); } catch(e) {}
-    var sit = null, slot = current, idx = {jour:0, nuit:1};
+    var sit = null, slot = current, idx = {jour:0, soir:1, nuit:2};
     var slotNames = offDay
-      ? {jour:"Weekend & holiday day rate (8am–10pm, +€10)", nuit:"Night rate (10pm–8am)"}
-      : {jour:"Day rate (8am–10pm)", nuit:"Night rate (10pm–8am)"};
+      ? {jour:"Daytime rate (weekdays only)", soir:"Weekend & holiday rate (8am–10pm)", nuit:"Night rate (10pm–8am)"}
+      : {jour:"Daytime rate (8am–6pm)", soir:"Evening rate (6pm–10pm)", nuit:"Night rate (10pm–8am)"};
     var auto = g.querySelector(".gd-auto");
     if (auto) { auto.textContent = "· it is " + fmtH(h) + " on " + dayName + " in Paris, we selected it for you"; auto.hidden = false; }
     function q(n){ return g.querySelector('[data-g="' + n + '"]'); }
@@ -130,7 +129,7 @@
       g.querySelector(".gd-out").hidden = false;
       q("slotlabel").textContent = d.label;
       if (d.prices) {
-        q("price").textContent = (d.from ? "from " : "") + "€" + (d.prices[idx[slot]] + (slot === "jour" && offDay ? 10 : 0));
+        q("price").textContent = (d.from ? "from " : "") + "€" + d.prices[idx[slot]];
         q("note").textContent = "incl. VAT · " + slotNames[slot] + " · confirmed on the phone";
       } else {
         q("price").textContent = "Free quote";
