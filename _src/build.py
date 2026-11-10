@@ -611,6 +611,18 @@ NAV = [("Emergency", "/emergency/"), ("Services", "/services/"), ("Prices", "/pr
 SITEMAP = []
 
 
+IMG_RE = re.compile(r"""(/assets/img/[^"'?\s)]+\.(?:webp|jpe?g|png|svg|gif))(?![?\w])""")
+
+
+def bust_images(html_doc):
+    # Les images sont gardées 7 jours par les navigateurs : on ajoute ?v=<empreinte du fichier>
+    # pour qu'une photo remplacée (même nom de fichier) s'affiche tout de suite.
+    def sub(m):
+        rel = m.group(1).lstrip("/")
+        return f"{m.group(1)}?v={asset_v(rel)}" if os.path.exists(os.path.join(ROOT, rel)) else m.group(1)
+    return IMG_RE.sub(sub, html_doc)
+
+
 def asset_v(rel):
     import hashlib
     try:
@@ -754,7 +766,7 @@ window.SLP_CONV={conv};
     out = os.path.join(ROOT, path.lstrip("/"), "index.html") if path.endswith("/") else os.path.join(ROOT, path.lstrip("/"))
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
-        f.write(doc)
+        f.write(bust_images(doc))
     if robots.startswith("index"):
         SITEMAP.append(path)
 
