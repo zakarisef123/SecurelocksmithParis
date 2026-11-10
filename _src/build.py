@@ -172,6 +172,14 @@ def photo(name, alt, cls="", sizes="(max-width: 760px) 100vw, 600px", eager=Fals
 # ---------------------------------------------------------------------------
 # Arrondissements
 # ---------------------------------------------------------------------------
+def thumb(slug, cls="", alt=""):
+    """Vignette légère (assets/img/thumbs/, créée par _src/make_thumbs.py), sinon la photo, sinon rien."""
+    for folder in ("thumbs", "photos"):
+        if os.path.exists(os.path.join(ROOT, "assets", "img", folder, f"{slug}.webp")):
+            return f'<img class="{cls}" src="/assets/img/{folder}/{slug}.webp" alt="{E(alt)}" width="480" height="300" loading="lazy" decoding="async">'
+    return ""
+
+
 def ordinal(n):
     return "st" if n % 10 == 1 and n != 11 else "nd" if n % 10 == 2 and n != 12 else "rd" if n % 10 == 3 and n != 13 else "th"
 
@@ -861,7 +869,10 @@ def fr_date(iso):
 
 
 def svc_rows(lst, tag="h3", link=svc_url):
-    return '<div class="svc-rows">' + "".join(f'''<div class="svc-row"><span class="svc-ic">{ico(s["icon"])}</span>
+    def lead(s):
+        t = thumb(s["slug"])
+        return f'<span class="svc-thumb">{t}<span class="svc-ic">{ico(s["icon"])}</span></span>' if t else f'<span class="svc-ic">{ico(s["icon"])}</span>'
+    return '<div class="svc-rows">' + "".join(f'''<div class="svc-row">{lead(s)}
   <div><{tag}><a class="svc-link" href="{link(s)}">{E(s["nom"])}</a></{tag}><p>{E(s["resume"])}</p></div><span class="svc-prix">{E(s["prix"])}{ico("i-chev", "ic go")}</span>{btn_quote(s["court"], "Quote", "btn-q")}</div>''' for s in lst) + "</div>"
 
 
@@ -928,7 +939,7 @@ def svc_cards(lst=None):
 def svc_tiles():
     """Accueil : grille compacte des 10 services (photo, icône, nom, prix), un clic mène à la page du service."""
     def ph(s):
-        img = photo(s["slug"], "", "", "(max-width: 760px) 50vw, 240px")
+        img = thumb(s["slug"])
         # sans photo : bande aux couleurs du site avec l'icône en grand (en attendant la vraie photo)
         return f'<span class="stile-ph">{img}</span>' if img else f'<span class="stile-ph empty">{ico(s["icon"])}</span>'
     tiles = "".join(f'''<a class="stile" href="{svc_url(s)}">
@@ -1133,7 +1144,7 @@ def build_services():
     for s in SERVICES:
         path = svc_url(s)
         secs = "".join(f"<h2>{E(t)}</h2><p>{c}</p>" for t, c in s["sections"])
-        others = "".join(f'<a class="chip" href="{svc_url(o)}">{ico(o["icon"])}{E(o["court"])}</a>' for o in SERVICES if o is not s)
+        others = "".join(f'<a class="chip chip-ph" href="{svc_url(o)}">{thumb(o["slug"], "chip-img") or ico(o["icon"])}{E(o["court"])}</a>' for o in SERVICES if o is not s)
         ph = photo(s["slug"], s["nom"], "prose-photo", "(max-width: 1100px) 100vw, 760px")
         content = f'''<article class="prose">
   <p class="intro">{s["intro"]}</p>
@@ -1191,7 +1202,9 @@ def local_services(z, i, lst):
         loc = SVC_LOCAL[s["slug"]]
         intro = loc["intros"][k % 3].format(a=z["a"], nom=E(NOM))
         prix = f'from <b>{eur(s["prix_num"])}</b>' if s["prix_num"] else "<b>free quote</b>"
-        cards.append(f'''<article class="svc-local" id="{s["slug"]}">
+        ph = photo(s["slug"], "", "sl-photo", "(max-width: 760px) 100vw, 540px")
+        cards.append(f'''<article class="svc-local{" has-photo" if ph else ""}" id="{s["slug"]}">
+  {ph}
   <div class="sl-head"><span class="svc-ic">{ico(s["icon"])}</span><div><h3>{E(s["nom"])}</h3><span class="sl-price">{prix}</span></div></div>
   <p>{intro}</p>
   <p class="sl-tip"><strong>Tip:</strong> {E(loc["conseil"])}</p>
@@ -1531,7 +1544,11 @@ GUIDE = [
 def guide_block():
     data = {k: {"label": l, "url": svc_url(SVC_BY_SLUG[slug]), "service": SVC_BY_SLUG[slug]["court"], "prices": p, "from": f, "tip": t}
             for k, l, slug, p, f, t in GUIDE}
-    opts = "".join(f'<button type="button" class="gd-opt" data-sit="{k}" aria-pressed="false">{ico(SVC_BY_SLUG[slug]["icon"])}<span>{E(l)}</span></button>'
+    def gd_img(k, slug):
+        if os.path.exists(os.path.join(ROOT, "assets", "img", "urgences", f"{k}.webp")):
+            return f'<img class="gd-img" src="/assets/img/urgences/{k}.webp" alt="" width="640" height="360" loading="lazy" decoding="async">'
+        return ico(SVC_BY_SLUG[slug]["icon"])
+    opts = "".join(f'<button type="button" class="gd-opt" data-sit="{k}" aria-pressed="false">{gd_img(k, slug)}<span>{E(l)}</span></button>'
                    for k, l, slug, *_ in GUIDE)
     slots = "".join(f'<button type="button" class="gd-slot" data-slot="{k}" aria-pressed="{"true" if k == "jour" else "false"}">{ico(i)}<span><b>{l}</b><small data-h="{h}" data-h-we="{SLOTS_WE[k]}">{h}</small></span></button>'
                     for k, i, l, h in SLOTS)

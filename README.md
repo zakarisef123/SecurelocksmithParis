@@ -23,6 +23,7 @@ Sur Netlify, la génération est faite automatiquement à chaque déploiement (`
 
 ## Photos
 Déposez les vraies photos dans `assets/img/photos/` (JPG ou WebP, ~1600 px) avec ces noms : `home.jpg` (accueil), `team.jpg`, et une par service : `door-opening`, `jammed-lock`, `broken-key`, `lock-replacement`, `smart-lock`, `break-in-repair`, `door-armoring`, `armored-door`, `cellar-door`, `mailbox-lock`.
+Après avoir changé une photo de service, lancez `python3 _src/make_thumbs.py` (Pillow requis) : il recrée les vignettes légères de `assets/img/thumbs/`, utilisées sur l'accueil, la page Services, les liens « autres services » et le guide d'urgence.
 
 ## Avant / après et interventions récentes
 - **Avant / après** (pages services) : déposez les photos dans `assets/img/realisations/` et déclarez-les dans `REALISATIONS` de `_src/data.py`. Le bloc n'apparaît que s'il y a de vraies photos.
