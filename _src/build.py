@@ -1631,7 +1631,7 @@ def build_charte():
                 "Eight concrete commitments, applied to every job, day and night. Feel free to remind us of them at any time.",
                 kicker="Transparency")
     body += f'''<section class="sec"><div class="wrap layout"><article class="prose">
-  <p class="intro">Emergency locksmiths suffer from a bad reputation: misleading teaser prices, inflated invoices, locks replaced for no reason. We built {E(NOM)} on the opposite principle. Here, in black and white, is what we commit to for every customer.</p>
+  <p class="intro">Emergency locksmiths suffer from a bad reputation: misleading teaser prices, inflated invoices, locks replaced for no reason. We built {E(NOM)} on the opposite principle. Here is exactly what we commit to, for every customer.</p>
   <div class="charte">{items}</div>
   <h2>What you will never see from us</h2>
   {comparatif_block()}
