@@ -1062,14 +1062,37 @@ a[href^="https://wa.me"]:not(.btn):not(.c-line):not(.wa-float):not(.btn-q-wa){co
 .chip-img{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;margin-left:-6px}
 /* Guide d'urgence : vignette de la situation */
 .gd-img{width:58px;height:40px;border-radius:8px;object-fit:cover;flex:none}
-@media (max-width:760px){
-  .svc-row:has(.svc-thumb){grid-template-columns:minmax(0,1fr)!important;gap:12px;padding:14px}
-  .svc-row:has(.svc-thumb) .svc-thumb{width:100%}
-  .svc-row:has(.svc-thumb) .svc-thumb .svc-ic{width:40px!important;height:40px!important;left:10px;bottom:10px}
-  .svc-row:has(.svc-thumb) .svc-prix,.svc-row:has(.svc-thumb) .btn-q{grid-column:1!important}
-}
 
 /* Petits boutons WhatsApp des services (remplacent « Quote ») */
 a.btn-q-wa{background:#25d366!important;border-color:#25d366!important;color:#fff!important;text-decoration:none}
 a.btn-q-wa .ic{color:#fff!important}
 a.btn-q-wa:hover{background:#1ebe5b!important;border-color:#1ebe5b!important}
+
+/* Mobile : photos en miniature à gauche, texte à droite (cartes plus courtes) */
+@media (max-width:760px){
+  /* Cartes d'urgence de l'accueil */
+  .urg{flex-direction:row!important;align-items:stretch}
+  .urg-img{width:96px;height:96px;aspect-ratio:1;flex:none;margin:12px 0 12px 12px;border-radius:12px}
+  .urg-body{grid-template-columns:minmax(0,1fr)!important;padding:12px 14px!important;gap:2px!important}
+  .urg-body .urg-ic{display:none!important}
+  .urg-body .urg-t{padding-top:0!important}
+  .urg-body .urg-t b{font-size:15px;line-height:1.3}
+  .urg-body .urg-t small{font-size:12.5px;line-height:1.4}
+  .urg-body .urg-p{grid-column:1!important;margin-top:6px;padding-top:6px;font-size:16px}
+  .urg:hover .urg-img{transform:none}
+  /* Page Services */
+  .svc-row:has(.svc-thumb){grid-template-columns:88px minmax(0,1fr)!important;gap:6px 12px;padding:12px;align-items:start}
+  .svc-row:has(.svc-thumb) .svc-thumb{width:88px;height:88px;aspect-ratio:1;grid-row:span 3}
+  .svc-row:has(.svc-thumb) .svc-thumb .svc-ic{display:none}
+  .svc-row:has(.svc-thumb) h2,.svc-row:has(.svc-thumb) h3{font-size:16px!important}
+  .svc-row:has(.svc-thumb) p{font-size:13.5px}
+  .svc-row:has(.svc-thumb) .svc-prix,.svc-row:has(.svc-thumb) .btn-q{grid-column:2!important;justify-self:start;margin:0}
+  /* Pages d'arrondissement */
+  .svc-local.has-photo{display:grid;grid-template-columns:76px minmax(0,1fr);column-gap:12px;padding-top:16px}
+  .svc-local.has-photo>*{grid-column:1/-1}
+  .svc-local.has-photo .sl-photo{grid-column:1;grid-row:1;width:76px;height:76px;aspect-ratio:1;margin:0;border-radius:10px}
+  .svc-local.has-photo .sl-head{grid-column:2;grid-row:1;align-self:center}
+  .svc-local.has-photo .sl-head .svc-ic{display:none}
+  .svc-local.has-photo .sl-head>div{padding-top:0}
+}
+picture.ph{display:contents}

@@ -1206,6 +1206,9 @@ def local_services(z, i, lst):
         intro = loc["intros"][k % 3].format(a=z["a"], nom=E(NOM))
         prix = f'from <b>{eur(s["prix_num"])}</b>' if s["prix_num"] else "<b>free quote</b>"
         ph = photo(s["slug"], "", "sl-photo", "(max-width: 760px) 100vw, 540px")
+        if ph and os.path.exists(os.path.join(ROOT, "assets", "img", "thumbs", f'{s["slug"]}.webp')):
+            # sur téléphone, la miniature légère (11 Ko) au lieu de la grande photo
+            ph = f'<picture class="ph"><source media="(max-width: 760px)" srcset="/assets/img/thumbs/{s["slug"]}.webp">{ph}</picture>'
         cards.append(f'''<article class="svc-local{" has-photo" if ph else ""}" id="{s["slug"]}">
   {ph}
   <div class="sl-head"><span class="svc-ic">{ico(s["icon"])}</span><div><h3>{E(s["nom"])}</h3><span class="sl-price">{prix}</span></div></div>
