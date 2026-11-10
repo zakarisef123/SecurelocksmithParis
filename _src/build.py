@@ -18,7 +18,7 @@ import os
 import re
 
 from data import (ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF, INCLUS, INTERVENTIONS, MARQUES, REALISATIONS,
-                  SERVICES, TARIFS, URGENCES)
+                  SERVICES, TARIFS, URGENCES, VIDEOS)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -140,6 +140,10 @@ ICONS = {
 SPRITE = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + "".join(ICONS.values()) + "</defs></svg>"
 
 ICONS.update({
+    "i-sound-off": f'<symbol id="i-sound-off" viewBox="0 0 24 24" {_S}><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></symbol>',
+    "i-sound-on": f'<symbol id="i-sound-on" viewBox="0 0 24 24" {_S}><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></symbol>',
+})
+ICONS.update({
     "i-building": f'<symbol id="i-building" viewBox="0 0 24 24" {_S}><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M10 21v-3h4v3"/></symbol>',
     "i-card": f'<symbol id="i-card" viewBox="0 0 24 24" {_S}><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></symbol>',
     "i-badge": f'<symbol id="i-badge" viewBox="0 0 24 24" {_S}><path d="m12 2.5 2.4 1.8 3 .1.9 2.9 2.4 1.8-.9 2.9.9 2.9-2.4 1.8-.9 2.9-3 .1L12 21.5l-2.4-1.8-3-.1-.9-2.9L3.3 15l.9-2.9-.9-2.9 2.4-1.8.9-2.9 3-.1z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>',
@@ -178,6 +182,25 @@ def thumb(slug, cls="", alt=""):
         if os.path.exists(os.path.join(ROOT, "assets", "img", folder, f"{slug}.webp")):
             return f'<img class="{cls}" src="/assets/img/{folder}/{slug}.webp" alt="{E(alt)}" width="480" height="300" loading="lazy" decoding="async">'
     return ""
+
+
+def video_card(slug, where):
+    """Vidéo de chantier d'un service ; where = "side" (colonne, ordinateur) ou "inline" (après l'intro, téléphone)."""
+    if slug not in VIDEOS:
+        return ""
+    f, titre, legende, *_ = VIDEOS[slug]
+    return f'''<figure class="vcard vcard-{where}">
+  <div class="vbox"><video src="/assets/video/{f}.mp4" poster="/assets/video/{f}.jpg" muted loop playsinline preload="none" data-auto aria-label="{E(titre)}"></video>
+  <button type="button" class="v-snd" aria-label="Turn sound on">{ico("i-sound-off")}{ico("i-sound-on")}</button></div>
+  <figcaption><b>{E(titre)}</b><small>{E(legende)}</small></figcaption>
+</figure>'''
+
+
+def ld_video(slug, path):
+    f, titre, legende, desc, date = VIDEOS[slug]
+    return {"@context": "https://schema.org", "@type": "VideoObject", "name": titre, "description": desc,
+            "thumbnailUrl": f"{URL}/assets/video/{f}.jpg", "contentUrl": f"{URL}/assets/video/{f}.mp4",
+            "uploadDate": date, "embedUrl": URL + path, "publisher": {"@id": BID}}
 
 
 def ordinal(n):
@@ -623,7 +646,7 @@ NAV = [("Emergency", "/emergency/"), ("Services", "/services/"), ("Prices", "/pr
 SITEMAP = []
 
 
-IMG_RE = re.compile(r"""(/assets/img/[^"'?\s)]+\.(?:webp|jpe?g|png|svg|gif))(?![?\w])""")
+IMG_RE = re.compile(r"""(/assets/(?:img|video)/[^"'?\s)]+\.(?:webp|jpe?g|png|svg|gif|mp4))(?![?\w])""")
 
 
 def bust_images(html_doc):
@@ -1139,6 +1162,7 @@ def build_services():
         ph = photo(s["slug"], s["nom"], "prose-photo", "(max-width: 1100px) 100vw, 760px")
         content = f'''<article class="prose">
   <p class="intro">{s["intro"]}</p>
+  {video_card(s["slug"], "inline")}
   {ph}
   {before_after(s)}
   <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}. The exact price is given on the phone and confirmed in a written quote before any work. <a href="/prices/">Day, evening and night prices</a></p></div>
@@ -1156,12 +1180,14 @@ def build_services():
         body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} in Paris',
                     f'{E(s["resume"])} Anywhere in Paris, 24/7.',
                     ticks(["Price given before we travel", "Signed quote before any work", "Invoice for your insurer"], "ticks light inline"), kicker="Service", card=card, quote=s["court"])
-        body += f'<section class="sec"><div class="wrap layout">{content}{side_box(quote=s["court"])}</div></section>'
+        body += f'<section class="sec"><div class="wrap layout">{content}<div class="side-col">{video_card(s["slug"], "side")}{side_box(quote=s["court"])}</div></div></section>'
         body += assureurs_strip() + reviews_block() + contact_band(f"{s['court']}? We'll be there fast.", "Call us or leave your details: we call you back with a clear price.", source=path, service=s["court"])
         ld = [ld_business(), ld_crumbs([("Services", "/services/"), (s["court"], path)]), ld_faq(s["faq"]),
               {"@context": "https://schema.org", "@type": "Service", "name": s["nom"], "serviceType": s["nom"], "url": URL + path,
                "provider": {"@id": BID}, "areaServed": {"@type": "City", "name": "Paris"},
                **({"offers": {"@type": "Offer", "priceSpecification": {"@type": "PriceSpecification", "minPrice": s["prix_num"], "priceCurrency": "EUR"}}} if s["prix_num"] else {})}]
+        if s["slug"] in VIDEOS:
+            ld.append(ld_video(s["slug"], path))
         page(path, f'{s["nom"]} Paris 24/7 – {s["prix"]} | {NOM}',
              f'{s["nom"]} in Paris, 24/7. {s["resume"]} Price given before we travel. ☎ {TEL}', body, ld, active="/services/")
 
