@@ -200,6 +200,31 @@
   window.addEventListener("resize", sky);
   sky();
 
+  // Vidéos de chantier : lecture muette en boucle seulement quand elles sont à l'écran ; bouton pour le son
+  var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var vids = document.querySelectorAll("video[data-auto]");
+  if (vids.length) {
+    var vio = "IntersectionObserver" in window ? new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        var v = e.target;
+        if (e.isIntersecting && !reduceMotion) { var pr = v.play(); if (pr && pr.catch) pr.catch(function(){}); }
+        else if (!e.isIntersecting) v.pause();
+      });
+    }, {threshold: .4}) : null;
+    vids.forEach(function(v){
+      if (vio) vio.observe(v);
+      if (reduceMotion) v.controls = true;
+      var b = v.parentNode.querySelector(".v-snd");
+      if (b) b.addEventListener("click", function(){
+        v.muted = !v.muted;
+        b.classList.toggle("on", !v.muted);
+        b.setAttribute("aria-label", v.muted ? "Turn sound on" : "Turn sound off");
+        if (v.paused) v.play().catch(function(){});
+        push("video_son", {video: v.getAttribute("src").split("/").pop().split("?")[0], son: v.muted ? "off" : "on"});
+      });
+    });
+  }
+
   // Bandeau cookies (choix conservé 6 mois)
   var box = document.getElementById("cookies");
   if (box) {

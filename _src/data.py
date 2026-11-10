@@ -537,3 +537,14 @@ REALISATIONS = {}
 # Format : 11: [("Nov 2026", "Rue de la Roquette", "Slammed door opened without damage in 8 min")]
 # ---------------------------------------------------------------------------
 INTERVENTIONS = {}
+
+# Vidéos de chantier (assets/video/<fichier>.mp4 + .jpg), affichées sur la page du service :
+# service -> (fichier, titre, légende, description pour Google, date)
+VIDEOS = {
+    "smart-lock": ("smart-lock", "A smart lock we fitted", "Opened from the owner's phone",
+                   "A smart lock fitted by Secure Locksmith Paris, opened from the owner's phone.", "2026-11-10"),
+    "door-armoring": ("lock-3-points", "A 3-point lock we fitted", "Key turned, all three bolts lock",
+                      "A 3-point surface lock fitted on a Paris apartment door: the key turns and the three bolts lock.", "2026-11-10"),
+    "lock-replacement": ("new-keys", "A multi-point lock we serviced", "Tested, then new keys handed over",
+                         "A multi-point lock serviced in Paris, tested with the key, then new keys handed over to the customer.", "2026-11-10"),
+}
