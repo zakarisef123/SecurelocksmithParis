@@ -140,6 +140,7 @@ ICONS = {
 SPRITE = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + "".join(ICONS.values()) + "</defs></svg>"
 
 ICONS.update({
+    "i-play": '<symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></symbol>',
     "i-sound-off": f'<symbol id="i-sound-off" viewBox="0 0 24 24" {_S}><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></symbol>',
     "i-sound-on": f'<symbol id="i-sound-on" viewBox="0 0 24 24" {_S}><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></symbol>',
 })
@@ -194,6 +195,34 @@ def video_card(slug, where):
   <button type="button" class="v-snd" aria-label="Turn sound on">{ico("i-sound-off")}{ico("i-sound-on")}</button></div>
   <figcaption><b>{E(titre)}</b><small>{E(legende)}</small></figcaption>
 </figure>'''
+
+
+def btn_watch():
+    if not VIDEOS:
+        return ""
+    total = 30
+    return (f'<button type="button" class="btn btn-watch btn-xl" data-stories-open data-track="watch_hero">'
+            f'<span class="pl">{ico("i-play")}</span><span>Watch our work <small>· {total} s</small></span></button>')
+
+
+def stories_viewer():
+    """Lecteur plein écran des vidéos de chantier (ouvert par le bouton « Watch our work »)."""
+    if not VIDEOS:
+        return ""
+    items = [{"src": f"/assets/video/{v[0]}.mp4", "poster": f"/assets/video/{v[0]}.jpg", "title": v[1], "sub": v[2],
+              "url": svc_url(SVC_BY_SLUG[slug]), "service": SVC_BY_SLUG[slug]["court"]} for slug, v in VIDEOS.items()]
+    return (f'''<div class="stv" id="stories" hidden role="dialog" aria-modal="true" aria-label="Our work on video">
+  <div class="stv-in">
+    <div class="stv-prog">{"".join("<i><b></b></i>" for _ in items)}</div>
+    <button type="button" class="stv-x" data-stories-close aria-label="Close">×</button>
+    <button type="button" class="stv-snd v-snd on" aria-label="Turn sound off">{ico("i-sound-off")}{ico("i-sound-on")}</button>
+    <video playsinline preload="none"></video>
+    <button type="button" class="stv-prev" aria-label="Previous video"></button><button type="button" class="stv-next" aria-label="Next video"></button>
+    <div class="stv-foot"><b data-st="title"></b><small data-st="sub"></small>
+      <div class="stv-acts"><a class="btn btn-wa" data-st="wa" href="{E(WA)}" target="_blank" rel="noopener" data-track="wa_stories">{ico("i-wa")}<span>WhatsApp</span></a><a class="btn btn-outline-light" data-st="more" href="/services/">{ico("i-arrow")}<span>See the service</span></a></div></div>
+  </div>
+</div>
+<script type="application/json" id="stories-data">{json.dumps(items)}</script>''')
 
 
 def ld_video(slug, path):
@@ -953,6 +982,10 @@ def svc_cards(lst=None):
 def svc_tiles():
     """Accueil : grille compacte des 10 services (photo, icône, nom, prix), un clic mène à la page du service."""
     def ph(s):
+        if s["slug"] in VIDEOS:
+            f = VIDEOS[s["slug"]][0]
+            return (f'<span class="stile-ph has-video"><video src="/assets/video/{f}.mp4" poster="/assets/video/{f}.jpg" muted loop playsinline preload="none" data-auto aria-hidden="true"></video>'
+                    f'<span class="stile-vb"><i></i>Video</span></span>')
         img = thumb(s["slug"])
         # sans photo : bande aux couleurs du site avec l'icône en grand (en attendant la vraie photo)
         return f'<span class="stile-ph">{img}</span>' if img else f'<span class="stile-ph empty">{ico(s["icon"])}</span>'
@@ -1002,7 +1035,7 @@ def build_home():
       <span class="eyebrow light">Locksmith in Paris · all 20 arrondissements</span>
       <h1>Locksmith in Paris,<br><span class="gold">24/7</span></h1>
       <p class="lead">Locked out, jammed lock, broken key, break-in: a qualified, English-speaking locksmith comes to you in about 30 minutes on average. The price is given on the phone and the quote is signed before any work.</p>
-      <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}{btn_wa(cls="btn btn-wa btn-xl", track="wa_hero")}</div>
+      <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}{btn_wa(cls="btn btn-wa btn-xl", track="wa_hero")}{btn_watch()}</div>
       <div class="hero-proof">
         {google_badge("g-badge dark")}
         <ul class="proof-list"><li>{ico("i-check")}Door opening from €110</li><li>{ico("i-check")}No hidden fees</li><li>{ico("i-check")}Invoice for your insurer</li></ul>
@@ -1110,7 +1143,8 @@ def build_home():
     {articles_cards(ARTICLES[:4])}
   </div>
 </section>
-{contact_band()}'''
+{contact_band()}
+{stories_viewer()}'''
     ld = [ld_business(full=True), ld_faq(HOME_FAQ),
           {"@context": "https://schema.org", "@type": "WebSite", "name": NOM, "url": URL + "/", "inLanguage": "en", "publisher": {"@id": BID}}]
     page("/", f"Locksmith Paris 24/7 – English-speaking – {TEL} | {NOM}",
