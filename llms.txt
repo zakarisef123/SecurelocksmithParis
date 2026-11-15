@@ -7,7 +7,7 @@
 - Phone: +33 6 67 96 96 20, 24/7
 - WhatsApp: https://wa.me/33667969620
 - Email: securelockserrurerie@gmail.com
-- Website: https://securelockserrurerie.com/
+- Website: https://securelockserrurerie.com/ (English) and https://securelockserrurerie.com/fr/ (French)
 - Area: Paris only, 1st to 20th arrondissement
 - Average arrival: about 30 minutes
 - Languages: English, French
@@ -60,3 +60,13 @@
 - [Locksmith Paris 20th](https://securelockserrurerie.com/locksmith-paris-20th/) – 75020
 
 Each arrondissement page lists every service with its price and local details (e.g. https://securelockserrurerie.com/locksmith-paris-15th/#door-opening).
+
+## Version française (French version)
+Every page also exists in French, under /fr/ (e.g. https://securelockserrurerie.com/fr/serrurier-paris-15e/).
+- [Accueil](https://securelockserrurerie.com/fr/)
+- [Urgence 24h/24](https://securelockserrurerie.com/fr/urgence/)
+- [Services](https://securelockserrurerie.com/fr/services/)
+- [Tarifs](https://securelockserrurerie.com/fr/tarifs/)
+- [Arrondissements](https://securelockserrurerie.com/fr/serrurier-paris/)
+- [Nos engagements](https://securelockserrurerie.com/fr/nos-engagements/)
+- [Contact](https://securelockserrurerie.com/fr/contact/)

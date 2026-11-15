@@ -17,13 +17,32 @@ import json
 import os
 import re
 
+import data as DATA_EN
+import data_fr as DATA_FR
 from data import (ARRONDISSEMENTS, ARTICLES, ASSUREURS, AVIS, CHARTE, COMPARATIF, INCLUS, INTERVENTIONS, MARQUES, REALISATIONS,
                   SERVICES, TARIFS, URGENCES, VIDEOS)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Emergency services first, then works & installation
-SERVICES = [s for s in SERVICES if s["cat"] == "urgence"] + [s for s in SERVICES if s["cat"] != "urgence"]
+# ---------------------------------------------------------------------------
+# Langues : le site est généré deux fois, en anglais (racine) puis en français (/fr/).
+# Dans le code, les liens internes s'écrivent toujours avec l'adresse anglaise ;
+# en français, page() les remplace par l'adresse française (voir FR_PATHS plus bas).
+# ---------------------------------------------------------------------------
+LANG = "en"
+
+
+def t(en, fr):
+    """Texte selon la langue en cours de génération."""
+    return fr if LANG == "fr" else en
+
+
+def sort_services(lst):
+    # Emergency services first, then works & installation
+    return [s for s in lst if s["cat"] == "urgence"] + [s for s in lst if s["cat"] != "urgence"]
+
+
+SERVICES = sort_services(SERVICES)
 SVC_URG = [s for s in SERVICES if s["cat"] == "urgence"]
 SVC_TRAV = [s for s in SERVICES if s["cat"] != "urgence"]
 SVC_BY_SLUG = {s["slug"]: s for s in SERVICES}
@@ -89,12 +108,19 @@ def wa_link(text):
     return WA + "?text=" + quote(text)
 
 
+NBSP = " "
+
+
 def fmt_int(n):
-    return f"{n:,}"
+    return f"{n:,}".replace(",", NBSP) if LANG == "fr" else f"{n:,}"
 
 
 def eur(n):
-    return f"€{n:,}"
+    return f"{fmt_int(n)}{NBSP}€" if LANG == "fr" else f"€{n:,}"
+
+
+def slogan():
+    return t(CONFIG["slogan"], "Votre serrurier de confiance")
 
 
 def siret_fmt():
@@ -191,7 +217,7 @@ def video_card(slug, where):
     f, titre, legende, *_ = VIDEOS[slug]
     return f'''<figure class="vcard vcard-{where}">
   <div class="vbox"><video src="/assets/video/{f}.mp4" poster="/assets/video/{f}.jpg" muted loop playsinline preload="none" data-auto aria-label="{E(titre)}"></video>
-  <button type="button" class="v-snd" aria-label="Turn sound on">{ico("i-sound-off")}{ico("i-sound-on")}</button></div>
+  <button type="button" class="v-snd" aria-label="{t("Turn sound on", "Activer le son")}">{ico("i-sound-off")}{ico("i-sound-on")}</button></div>
   <figcaption><b>{E(titre)}</b><small>{E(legende)}</small></figcaption>
 </figure>'''
 
@@ -207,17 +233,21 @@ def ordinal(n):
     return "st" if n % 10 == 1 and n != 11 else "nd" if n % 10 == 2 and n != 12 else "rd" if n % 10 == 3 and n != 13 else "th"
 
 
-def build_arr():
+def build_arr(arrs=None, lang="en"):
     out = []
-    for n, (surnom, pop, cps, quartiers, reperes, metros, habitat) in ARRONDISSEMENTS.items():
-        suf = ordinal(n)
-        out.append({
-            "n": n, "suf": suf, "num": f"{n}{suf}", "slug": f"locksmith-paris-{n}{suf}",
+    for n, (surnom, pop, cps, quartiers, reperes, metros, habitat) in (arrs or ARRONDISSEMENTS).items():
+        suf_en = ordinal(n)
+        suf = ("er" if n == 1 else "e") if lang == "fr" else suf_en
+        z = {
+            "n": n, "suf": suf, "num": f"{n}{suf}", "slug": f"locksmith-paris-{n}{suf_en}",
             "fr_slug": f"serrurier-paris-{n}{'er' if n == 1 else 'e'}",
             "court": f"Paris {n}{suf}", "nom": f"Paris {n}{suf} arrondissement", "surnom": surnom,
             "a": f"in the {n}{suf} arrondissement", "a_court": f"in Paris {n}{suf}",
             "pop": pop, "cp": cps, "quartiers": quartiers, "reperes": reperes, "metros": metros, "habitat": habitat,
-        })
+        }
+        if lang == "fr":
+            z.update({"nom": f"Paris {n}{suf} arrondissement", "a": f"dans le {n}{suf} arrondissement", "a_court": f"à Paris {n}{suf}"})
+        out.append(z)
     for i, z in enumerate(out):
         z["url"] = f"/{z['slug']}/"
         z["prev"] = out[i - 1] if i > 0 else None
@@ -229,7 +259,7 @@ ARR = build_arr()
 
 
 def et(lst):
-    return lst[0] if len(lst) == 1 else ", ".join(lst[:-1]) + " and " + lst[-1]
+    return lst[0] if len(lst) == 1 else ", ".join(lst[:-1]) + t(" and ", " et ") + lst[-1]
 
 
 def svc_url(s):
@@ -242,9 +272,11 @@ def combo_url(s, z):
 
 def prix_txt(s, strong=False):
     if not s["prix_num"]:
-        return "<strong>free quote</strong>" if strong else "free quote"
-    p = eur(s["prix_num"])
-    return f"from <strong>{p} incl. VAT</strong>" if strong else f"from {p} incl. VAT"
+        q = t("free quote", "sur devis gratuit")
+        return f"<strong>{q}</strong>" if strong else q
+    p = eur(s["prix_num"]) + t(" incl. VAT", f"{NBSP}TTC")
+    frm = t("from", "dès")
+    return f"{frm} <strong>{p}</strong>" if strong else f"{frm} {p}"
 
 
 # ---------------------------------------------------------------------------
@@ -254,8 +286,8 @@ def btn_call(label=None, cls="btn btn-gold", track="call"):
     return f'<a class="{cls}" href="{TEL_HREF}" data-track="{track}">{ico("i-phone")}<span>{E(label or TEL)}</span></a>'
 
 
-def btn_wa(text=WA_MSG, label="WhatsApp", cls="btn btn-outline-light", track="wa"):
-    return f'<a class="{cls}" href="{E(wa_link(text))}" target="_blank" rel="noopener" data-track="{track}">{ico("i-wa")}<span>{E(label)}</span></a>'
+def btn_wa(text=None, label="WhatsApp", cls="btn btn-outline-light", track="wa"):
+    return f'<a class="{cls}" href="{E(wa_link(text or WA_MSG))}" target="_blank" rel="noopener" data-track="{track}">{ico("i-wa")}<span>{E(label)}</span></a>'
 
 
 def ticks(items, cls="ticks"):
@@ -263,7 +295,7 @@ def ticks(items, cls="ticks"):
 
 
 def crumbs(items):
-    parts = ['<a href="/">Home</a>']
+    parts = [f'<a href="/">{t("Home", "Accueil")}</a>']
     for label, url in items:
         parts.append(f'<a href="{url}">{E(label)}</a>' if url else f'<span aria-current="page">{E(label)}</span>')
     return '<nav class="crumbs" aria-label="Breadcrumb">' + ico("i-chev", "sep").join(parts) + "</nav>"
@@ -283,7 +315,11 @@ def google_badge(cls="g-badge"):
     if not CONFIG["avis_note"]:
         return ""
     return (f'<a class="{cls}" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}'
-            f'<span><b>{CONFIG["avis_note"]}</b>{stars()}<small>{CONFIG["avis_nombre"]} Google reviews</small></span></a>')
+            f'<span><b>{avis_note()}</b>{stars()}<small>{CONFIG["avis_nombre"]} {t("Google reviews", "avis Google")}</small></span></a>')
+
+
+def avis_note():
+    return CONFIG["avis_note"].replace(".", ",") if LANG == "fr" else CONFIG["avis_note"]
 
 
 def faq_html(faq):
@@ -298,7 +334,7 @@ def ld_faq(faq):
 
 
 def ld_crumbs(items):
-    lst = [{"@type": "ListItem", "position": 1, "name": "Home", "item": URL + "/"}]
+    lst = [{"@type": "ListItem", "position": 1, "name": t("Home", "Accueil"), "item": URL + "/"}]
     for i, (label, url) in enumerate(items, start=2):
         lst.append({"@type": "ListItem", "position": i, "name": label, "item": URL + url})
     return {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": lst}
@@ -308,10 +344,11 @@ def ld_business(full=False):
     a = CONFIG["adresse"]
     d = {
         "@context": "https://schema.org", "@type": "Locksmith", "@id": BID, "name": NOM,
-        "alternateName": CONFIG["raison_sociale"], "slogan": CONFIG["slogan"],
+        "alternateName": CONFIG["raison_sociale"], "slogan": slogan(),
         "url": URL + "/", "telephone": CONFIG["tel_intl"], "email": CONFIG["email"],
         "image": URL + "/assets/img/og.jpg", "logo": URL + "/assets/img/icon-512.png",
-        "priceRange": "€€", "currenciesAccepted": "EUR", "paymentAccepted": "Credit card, Cash, Bank transfer",
+        "priceRange": "€€", "currenciesAccepted": "EUR",
+        "paymentAccepted": t("Credit card, Cash, Bank transfer", "Carte bancaire, Espèces, Virement"),
         "knowsLanguage": ["en", "fr"],
         "address": {"@type": "PostalAddress", "streetAddress": a["rue"], "postalCode": a["cp"], "addressLocality": a["ville"],
                     "addressRegion": "Île-de-France", "addressCountry": "FR"},
@@ -326,7 +363,7 @@ def ld_business(full=False):
         d["identifier"] = {"@type": "PropertyValue", "propertyID": "SIRET", "value": CONFIG["siret"]}
     if full:
         d["areaServed"] += [{"@type": "AdministrativeArea", "name": z["nom"]} for z in ARR]
-        d["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": "Locksmith services in Paris", "itemListElement": [
+        d["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": t("Locksmith services in Paris", "Services de serrurerie à Paris"), "itemListElement": [
             {"@type": "Offer", "itemOffered": {"@type": "Service", "name": s["nom"], "url": URL + svc_url(s)},
              **({"priceSpecification": {"@type": "PriceSpecification", "minPrice": s["prix_num"], "priceCurrency": "EUR"}} if s["prix_num"] else {})}
             for s in SERVICES]}
@@ -336,74 +373,85 @@ def ld_business(full=False):
 FORM_N = [0]
 
 
-def lead_form(source, service=None, titre="Request a free quote", sous="We call you back quickly, 7 days a week.", arr="", hid=""):
+def lead_form(source, service=None, titre=None, sous=None, arr="", hid=""):
     FORM_N[0] += 1
     n = FORM_N[0]
+    titre = titre or t("Request a free quote", "Demandez un devis gratuit")
+    sous = sous or t("We call you back quickly, 7 days a week.", "Nous vous rappelons rapidement, 7 jours sur 7.")
     opts = "".join(f'<option{" selected" if service == s["court"] else ""}>{E(s["court"])}</option>' for s in SERVICES)
     arr_opts = "".join(f'<option{" selected" if arr == z["court"] else ""}>{E(z["court"])}</option>' for z in ARR)
     return f'''<form class="lead-form" name="quote" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field">
   <input type="hidden" name="form-name" value="quote"><input type="hidden" name="page" value="{E(source)}">
-  <p hidden><label>Leave empty <input name="bot-field"></label></p>
+  <p hidden><label>{t("Leave empty", "Laisser vide")} <input name="bot-field"></label></p>
   <div class="form-head"><h3{f' id="{hid}"' if hid else ""}>{E(titre)}</h3><p>{E(sous)}</p></div>
   <div class="grid2">
-    <label for="n{n}">Name<input id="n{n}" name="name" autocomplete="name" required placeholder="Your name"></label>
-    <label for="t{n}">Phone<input id="t{n}" name="phone" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9+ .()-]{{8,}}" placeholder="+33 6 00 00 00 00"></label>
+    <label for="n{n}">{t("Name", "Nom")}<input id="n{n}" name="name" autocomplete="name" required placeholder="{t("Your name", "Votre nom")}"></label>
+    <label for="t{n}">{t("Phone", "Téléphone")}<input id="t{n}" name="phone" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9+ .()-]{{8,}}" placeholder="{t("+33 6 00 00 00 00", "06 00 00 00 00")}"></label>
   </div>
   <div class="grid2">
-    <label for="s{n}">What do you need?<select id="s{n}" name="service">{opts}<option{" selected" if not service else ""}>Other request</option></select></label>
-    <label for="a{n}">Arrondissement<select id="a{n}" name="arrondissement"><option value="">Choose…</option>{arr_opts}</select></label>
+    <label for="s{n}">{t("What do you need?", "Votre besoin")}<select id="s{n}" name="service">{opts}<option{" selected" if not service else ""}>{t("Other request", "Autre demande")}</option></select></label>
+    <label for="a{n}">Arrondissement<select id="a{n}" name="arrondissement"><option value="">{t("Choose…", "Choisir…")}</option>{arr_opts}</select></label>
   </div>
-  <label for="m{n}">Message<textarea id="m{n}" name="message" rows="3" placeholder="Type of door, situation, preferred time…"></textarea></label>
-  <button class="btn btn-navy btn-block btn-lg" type="submit">{ico("i-mail")}<span>Send my request</span></button>
-  <p class="form-legal">{ico("i-lock", "ic xs")}Your details are only used to reply to you. <a href="/privacy/">Privacy</a></p>
-  <div class="form-ok" role="status" hidden>{ico("i-check")}<div><strong>Request received.</strong> We will call you back very soon. Emergency: <a href="{TEL_HREF}">{TEL}</a></div></div>
+  <label for="m{n}">Message<textarea id="m{n}" name="message" rows="3" placeholder="{t("Type of door, situation, preferred time…", "Type de porte, situation, horaire souhaité…")}"></textarea></label>
+  <button class="btn btn-navy btn-block btn-lg" type="submit">{ico("i-mail")}<span>{t("Send my request", "Envoyer ma demande")}</span></button>
+  <p class="form-legal">{ico("i-lock", "ic xs")}{t("Your details are only used to reply to you.", "Vos coordonnées servent uniquement à vous répondre.")} <a href="/privacy/">{t("Privacy", "Confidentialité")}</a></p>
+  <div class="form-ok" role="status" hidden>{ico("i-check")}<div>{t("<strong>Request received.</strong> We will call you back very soon. Emergency:", "<strong>Demande bien reçue.</strong> Nous vous rappelons très vite. Urgence :")} <a href="{TEL_HREF}">{TEL}</a></div></div>
 </form>'''
 
 
 def btn_wa_svc(s, label="WhatsApp"):
     """Petit bouton WhatsApp d'un service, avec un message déjà rempli (remplace les anciens boutons « Quote »)."""
-    return btn_wa(f"Hello, I need a locksmith in Paris for: {s['nom']}.", label, "btn-q btn-q-wa", "wa_svc")
+    return btn_wa(t(f"Hello, I need a locksmith in Paris for: {s['nom']}.", f"Bonjour, j'ai besoin d'un serrurier à Paris pour : {s['nom']}."),
+                  label, "btn-q btn-q-wa", "wa_svc")
 
 
-def btn_quote(service, label="Get a free quote", cls="btn btn-quote"):
+def btn_quote(service, label=None, cls="btn btn-quote"):
+    label = label or t("Get a free quote", "Devis gratuit")
     return f'<button type="button" class="{cls}" data-quote="{E(service)}">{ico("i-mail")}<span>{E(label)}</span></button>'
 
 
 def quote_modal():
     """Fenêtre de devis, présente une fois par page ; ouverte par n'importe quel bouton [data-quote]."""
     return f'''<dialog class="qm" id="quote-modal" aria-labelledby="qm-title">
-  <button type="button" class="qm-close" data-qm-close aria-label="Close">×</button>
-  <div class="qm-side"><span class="live"><i></i>Available 24/7</span><p class="qm-svc" data-qm-service></p>
-    <ul class="ticks small light"><li>{ico("i-check")}<span>Free quote, no obligation</span></li><li>{ico("i-check")}<span>Price confirmed before any work</span></li><li>{ico("i-check")}<span>English spoken</span></li></ul>
-    <a class="qm-call" href="{TEL_HREF}" data-track="call_modal">{ico("i-phone")}<span><small>In a hurry? Call</small><b>{TEL}</b></span></a></div>
-  {lead_form("popup", titre="Get your free quote", sous="Leave your number: we call you back within minutes, 24/7.", hid="qm-title")}
+  <button type="button" class="qm-close" data-qm-close aria-label="{t("Close", "Fermer")}">×</button>
+  <div class="qm-side"><span class="live"><i></i>{t("Available 24/7", "Disponible 24h/24")}</span><p class="qm-svc" data-qm-service></p>
+    <ul class="ticks small light"><li>{ico("i-check")}<span>{t("Free quote, no obligation", "Devis gratuit, sans engagement")}</span></li><li>{ico("i-check")}<span>{t("Price confirmed before any work", "Prix confirmé avant toute intervention")}</span></li><li>{ico("i-check")}<span>{t("English spoken", "On parle anglais")}</span></li></ul>
+    <a class="qm-call" href="{TEL_HREF}" data-track="call_modal">{ico("i-phone")}<span><small>{t("In a hurry? Call", "Pressé ? Appelez")}</small><b>{TEL}</b></span></a></div>
+  {lead_form("popup", titre=t("Get your free quote", "Votre devis gratuit"), sous=t("Leave your number: we call you back within minutes, 24/7.", "Laissez votre numéro : nous vous rappelons en quelques minutes, 24h/24."), hid="qm-title")}
 </dialog>'''
 
 
-def contact_band(titre="Need a locksmith in Paris?", texte="Call us: a locksmith answers directly and gives you the price before travelling.",
-                 source="/", service=None, arr=""):
+def contact_band(titre=None, texte=None, source="/", service=None, arr=""):
+    titre = titre or t("Need a locksmith in Paris?", "Besoin d'un serrurier à Paris ?")
+    texte = texte or t("Call us: a locksmith answers directly and gives you the price before travelling.",
+                       "Appelez-nous : un serrurier vous répond directement et vous annonce le prix avant de se déplacer.")
     return f'''<section class="band" id="quote">
   <div class="wrap band-grid">
     <div class="band-text">
-      <span class="eyebrow light">Immediate answer · 24/7</span>
+      <span class="eyebrow light">{t("Immediate answer · 24/7", "Réponse immédiate · 24h/24")}</span>
       <h2>{E(titre)}</h2>
       <p>{E(texte)}</p>
-      <a class="band-phone" href="{TEL_HREF}" data-track="call_band"><span class="ring">{ico("i-phone")}</span><span><small>Direct line, no call center</small><b>{TEL}</b></span></a>
-      {ticks(["Price given before we travel", "Written quote signed before any work", "Detailed invoice for your insurer", "Card, cash or bank transfer"], "ticks light")}
+      <a class="band-phone" href="{TEL_HREF}" data-track="call_band"><span class="ring">{ico("i-phone")}</span><span><small>{t("Direct line, no call center", "Ligne directe, sans centre d'appels")}</small><b>{TEL}</b></span></a>
+      {ticks(t(["Price given before we travel", "Written quote signed before any work", "Detailed invoice for your insurer", "Card, cash or bank transfer"],
+               ["Prix annoncé avant le déplacement", "Devis écrit signé avant toute intervention", "Facture détaillée pour votre assureur", "Carte, espèces ou virement"]), "ticks light")}
     </div>
     {lead_form(source, service, arr=arr)}
   </div>
 </section>'''
 
 
-def side_box(titre="A locksmith available now", texte="Describe your situation on the phone: you get the price before anyone travels.", quote=None):
+def side_box(titre=None, texte=None, quote=None):
+    titre = titre or t("A locksmith available now", "Un serrurier disponible maintenant")
+    texte = texte or t("Describe your situation on the phone: you get the price before anyone travels.",
+                       "Décrivez votre situation au téléphone : vous connaissez le prix avant tout déplacement.")
     return f'''<aside class="side-box">
-  <div class="side-head"><span class="live"><i></i>Available 24/7</span><h3>{E(titre)}</h3></div>
+  <div class="side-head"><span class="live"><i></i>{t("Available 24/7", "Disponible 24h/24")}</span><h3>{E(titre)}</h3></div>
   <div class="side-body">
     <p>{E(texte)}</p>
     {btn_call(cls="btn btn-gold btn-block btn-lg", track="call_side")}
-    {btn_wa(label="Send a photo", cls="btn btn-outline btn-block", track="wa_side")}
-    {ticks(["Free quote, no obligation", "Damage-free opening in most cases", "Invoice accepted by insurers"], "ticks small")}
+    {btn_wa(label=t("Send a photo", "Envoyer une photo"), cls="btn btn-outline btn-block", track="wa_side")}
+    {ticks(t(["Free quote, no obligation", "Damage-free opening in most cases", "Invoice accepted by insurers"],
+             ["Devis gratuit, sans engagement", "Ouverture sans casse dans la plupart des cas", "Facture acceptée par les assureurs"]), "ticks small")}
     {google_badge("g-badge compact")}
   </div>
 </aside>'''
@@ -420,9 +468,9 @@ def tarif_table():
     trav = [t for t in TARIFS if not all(t[1:])]
 
     def prix_html(v):
-        apd = v.startswith("From ")
-        m = v[5:] if apd else v
-        return f'<span class="pv-from">{"from" if apd else ""}</span><b class="pv-num">{E(m)}</b>'
+        pre = next((p for p in ("From ", "À partir de ") if v.startswith(p)), "")
+        m = v[len(pre):]
+        return f'<span class="pv-from">{t("from", "dès") if pre else ""}</span><b class="pv-num">{E(m)}</b>'
     tabs = "".join(f'<button type="button" role="tab" data-slot="{k}" aria-selected="{"true" if k == "jour" else "false"}">{ico(i)}<span><b>{l}</b><small data-h="{h}" data-h-we="{SLOTS_WE[k]}">{h}</small></span></button>'
                    for k, i, l, h in SLOTS)
     rows = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price">'
@@ -431,19 +479,19 @@ def tarif_table():
     trv = "".join(f'<li><span class="pl-name">{E(p)}</span><span class="pl-price"><span class="pv">{prix_html(j)}</span></span></li>' for p, j, *_ in trav)
     return f'''<div class="tarifs">
   <div class="tarif-card main" data-tarifs>
-    <div class="tc-head"><div><span class="eyebrow light">24/7 emergency call-outs</span><h3>Prices depend on the time of day</h3></div><span class="tc-ttc">Incl. VAT</span></div>
-    <div class="slot-tabs" role="tablist" aria-label="Time of call-out">{tabs}</div>
+    <div class="tc-head"><div><span class="eyebrow light">{t("24/7 emergency call-outs", "Dépannage d'urgence 24h/24")}</span><h3>{t("Prices depend on the time of day", "Les prix dépendent de l'heure")}</h3></div><span class="tc-ttc">{t("Incl. VAT", "TTC")}</span></div>
+    <div class="slot-tabs" role="tablist" aria-label="{t("Time of call-out", "Heure d'intervention")}">{tabs}</div>
     <p class="slot-now" hidden></p>
     <ul class="price-list">{rows}</ul>
     <p class="tarif-we">{ico("i-clock")}<span>{WEEKEND_NOTE}</span></p>
   </div>
   <div class="tarif-card">
-    <div class="tc-head light"><div><span class="eyebrow">By appointment</span><h3>Works &amp; installation</h3></div></div>
+    <div class="tc-head light"><div><span class="eyebrow">{t("By appointment", "Sur rendez-vous")}</span><h3>{t("Works &amp; installation", "Travaux et installation")}</h3></div></div>
     <ul class="price-list">{trv}</ul>
-    <p class="tarif-foot">Daytime starting prices. Free detailed quote after a visit.</p>
+    <p class="tarif-foot">{t("Daytime starting prices. Free detailed quote after a visit.", "Prix de départ en journée. Devis détaillé gratuit après visite.")}</p>
   </div>
 </div>
-<p class="tarif-note">{ico("i-file")}<span>Prices include VAT and labor. The exact price depends on your door and lock: it is given on the phone, then confirmed by a written, signed quote before any work, as required by French regulations (decree of 24 January 2017).</span></p>'''
+<p class="tarif-note">{ico("i-file")}<span>{t("Prices include VAT and labor. The exact price depends on your door and lock: it is given on the phone, then confirmed by a written, signed quote before any work, as required by French regulations (decree of 24 January 2017).", "Prix TTC, main-d'œuvre comprise. Le prix exact dépend de votre porte et de votre serrure : il vous est annoncé au téléphone, puis confirmé par un devis écrit et signé avant toute intervention, comme l'exige la réglementation (arrêté du 24 janvier 2017).")}</span></p>'''
 
 
 def logo_tile(nom, slug, folder):
@@ -474,11 +522,12 @@ def assureurs_strip(titre=True):
     for i, part in enumerate((ASSUREURS[:half], ASSUREURS[half:])):
         items = "".join(insurer_item(n, s) for n, s in part) + "".join(insurer_item(n, s, True) for n, s in part)
         rows += f'<div class="ins-row{" rev" if i else ""}" style="--n:{len(part)}"><ul class="ins-track">{items}</ul></div>'
-    head = f'''<div class="strip-head"><p><b>Invoices recognized by French home insurers</b><span>Reimbursement depends on your policy · <a href="/insurance/">learn more</a></span></p></div>''' if titre else ""
+    head = (f'''<div class="strip-head"><p><b>{t("Invoices recognized by French home insurers", "Factures reconnues par les assureurs habitation")}</b>'''
+            f'''<span>{t("Reimbursement depends on your policy", "Le remboursement dépend de votre contrat")} · <a href="/insurance/">{t("learn more", "en savoir plus")}</a></span></p></div>''') if titre else ""
     return f'''<section class="strip">
   <div class="wrap">{head}</div>
-  <div class="ins-marquee" aria-label="Home insurers">{rows}</div>
-  <div class="wrap"><p class="fine">{E(NOM)} is an independent company with no partnership with these insurers; names and logos belong to their respective owners.</p></div>
+  <div class="ins-marquee" aria-label="{t("Home insurers", "Assureurs habitation")}">{rows}</div>
+  <div class="wrap"><p class="fine">{E(NOM)} {t("is an independent company with no partnership with these insurers; names and logos belong to their respective owners.", "est une entreprise indépendante, sans partenariat avec ces assureurs ; les noms et logos appartiennent à leurs propriétaires respectifs.")}</p></div>
 </section>'''
 
 
@@ -496,9 +545,9 @@ def marques_block():
     cats = {}
     for n, _, c in MARQUES:
         cats.setdefault(c, []).append(n)
-    txt = " · ".join(f"<b>{E(c)}</b>: {E(', '.join(l))}" for c, l in cats.items())
+    txt = " · ".join(f"<b>{E(c)}</b>{t(':', ' :')} {E(', '.join(l))}" for c, l in cats.items())
     return f'''<div class="brands">
-  <div class="ins-marquee brands-marquee" aria-label="Lock and door brands">{rows}</div>
+  <div class="ins-marquee brands-marquee" aria-label="{t("Lock and door brands", "Marques de serrures et de portes")}">{rows}</div>
   <p class="fine">{txt}.</p>
 </div>'''
 
@@ -525,7 +574,7 @@ REVIEWS = load_reviews()
 
 
 def review_card(r, hidden=False):
-    auteur = r.get("auteur") or r.get("author") or "Google user"
+    auteur = r.get("auteur") or r.get("author") or t("Google user", "Utilisateur Google")
     texte = r.get("texte") or r.get("text") or ""
     note = int(r.get("note") or r.get("rating") or 5)
     meta = " · ".join(x for x in (r.get("date", ""), r.get("arr", "")) if x)
@@ -544,24 +593,26 @@ def review_cards():
         cards = "".join(review_card(r) for r in row)
         dup = "".join(review_card(r, True) for r in row)
         out += f'<div class="rv-row{" rev" if i else ""}" style="--n:{len(row)}"><div class="rv-track">{cards}{dup}</div></div>'
-    return f'<div class="rv-marquee" aria-label="Google reviews">{out}</div>'
+    return f'<div class="rv-marquee" aria-label="{t("Google reviews", "Avis Google")}">{out}</div>'
 
 
-def reviews_block(titre="What our customers say"):
+def reviews_block(titre=None):
+    titre = titre or t("What our customers say", "Ce que disent nos clients")
+    eyebrow = t("Customer reviews", "Avis clients")
     note = ""
     if CONFIG["avis_note"]:
         note = f'''<div class="score-card">
-  <div class="score-top">{G_LOGO}<span>Google reviews</span></div>
-  <div class="score"><b>{CONFIG["avis_note"]}</b><span>/5</span></div>
+  <div class="score-top">{G_LOGO}<span>{t("Google reviews", "Avis Google")}</span></div>
+  <div class="score"><b>{avis_note()}</b><span>/5</span></div>
   {stars(5, "st lg")}
-  <p>Average rating from <b>{CONFIG["avis_nombre"]} reviews</b> posted by our customers</p>
-  <a class="btn btn-navy btn-block" href="{E(MAPS)}" target="_blank" rel="noopener">Read our Google reviews</a>
-  <a class="btn btn-outline btn-block" href="{E(AVIS_URL)}" target="_blank" rel="noopener">Leave a review</a>
+  <p>{t(f"Average rating from <b>{CONFIG['avis_nombre']} reviews</b> posted by our customers", f"Note moyenne sur <b>{CONFIG['avis_nombre']} avis</b> publiés par nos clients")}</p>
+  <a class="btn btn-navy btn-block" href="{E(MAPS)}" target="_blank" rel="noopener">{t("Read our Google reviews", "Lire nos avis Google")}</a>
+  <a class="btn btn-outline btn-block" href="{E(AVIS_URL)}" target="_blank" rel="noopener">{t("Leave a review", "Laisser un avis")}</a>
 </div>'''
     if CONFIG["reviews_widget"]:
         return f'''<section class="sec soft" id="reviews">
   <div class="wrap">
-    <div class="sec-head"><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
+    <div class="sec-head"><span class="eyebrow">{eyebrow}</span><h2>{E(titre)}</h2></div>
     <div class="reviews-widget">{CONFIG["reviews_widget"]}</div>
   </div>
 </section>'''
@@ -569,23 +620,23 @@ def reviews_block(titre="What our customers say"):
     if cards:
         return f'''<section class="sec soft" id="reviews">
   <div class="wrap">
-    <div class="sec-head split"><div><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
+    <div class="sec-head split"><div><span class="eyebrow">{eyebrow}</span><h2>{E(titre)}</h2></div>
     <div class="rv-summary">{note}</div></div>
   </div>
   {cards}
 </section>'''
     side = f'''<div class="review-promise">
-  <h3>Public, verifiable reviews</h3>
-  <p>We don't publish anonymous testimonials on our website: our reviews are posted by customers directly on our Google Business Profile. They are public and dated, and we can neither edit nor delete them.</p>
+  <h3>{t("Public, verifiable reviews", "Des avis publics et vérifiables")}</h3>
+  <p>{t("We don't publish anonymous testimonials on our website: our reviews are posted by customers directly on our Google Business Profile. They are public and dated, and we can neither edit nor delete them.", "Nous ne publions pas de témoignages anonymes sur notre site : nos avis sont déposés par nos clients directement sur notre fiche Google. Ils sont publics et datés, et nous ne pouvons ni les modifier ni les supprimer.")}</p>
   <ul class="ticks">
-    <li>{ico("i-check")}<span>Posted directly by our customers on Google</span></li>
-    <li>{ico("i-check")}<span>Available to read before you even call us</span></li>
-    <li>{ico("i-check")}<span>Price, speed, tidiness: judge for yourself before calling</span></li>
+    <li>{ico("i-check")}<span>{t("Posted directly by our customers on Google", "Publiés directement par nos clients sur Google")}</span></li>
+    <li>{ico("i-check")}<span>{t("Available to read before you even call us", "Consultables avant même de nous appeler")}</span></li>
+    <li>{ico("i-check")}<span>{t("Price, speed, tidiness: judge for yourself before calling", "Prix, rapidité, propreté : jugez par vous-même avant d'appeler")}</span></li>
   </ul>
 </div>'''
     return f'''<section class="sec soft" id="reviews">
   <div class="wrap">
-    <div class="sec-head"><span class="eyebrow">Customer reviews</span><h2>{E(titre)}</h2></div>
+    <div class="sec-head"><span class="eyebrow">{eyebrow}</span><h2>{E(titre)}</h2></div>
     <div class="reviews">{note}{side}</div>
   </div>
 </section>'''
@@ -594,47 +645,48 @@ def reviews_block(titre="What our customers say"):
 def map_embed():
     from urllib.parse import quote
     q = quote(f"Secure Lock Serrurerie @{CONFIG['lat']},{CONFIG['lng']}")
-    return (f'<div class="map"><iframe title="{E(NOM)} on Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
-            f'src="https://maps.google.com/maps?q={q}&amp;z=14&amp;hl=en&amp;output=embed"></iframe>'
-            f'<a class="map-link" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}See our Google profile</a></div>')
+    return (f'<div class="map"><iframe title="{E(NOM)} {t("on Google Maps", "sur Google Maps")}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
+            f'src="https://maps.google.com/maps?q={q}&amp;z=14&amp;hl={LANG}&amp;output=embed"></iframe>'
+            f'<a class="map-link" href="{E(MAPS)}" target="_blank" rel="noopener">{G_LOGO}{t("See our Google profile", "Voir notre fiche Google")}</a></div>')
 
 
 def comparatif_block():
     rows = "".join(f'<li><div class="cmp-bad"><span class="cmp-ic">×</span><p>{E(b)}</p></div><div class="cmp-good">{ico("i-check")}<p>{E(g)}</p></div></li>'
                    for b, g in COMPARATIF)
     return f'''<div class="cmp">
-  <div class="cmp-head"><span>Abusive practices to avoid</span><span>At {E(NOM)}</span></div>
+  <div class="cmp-head"><span>{t("Abusive practices to avoid", "Les pratiques abusives à éviter")}</span><span>{t("At", "Chez")} {E(NOM)}</span></div>
   <ul>{rows}</ul>
 </div>'''
 
 
-def inclus_block(titre="What the price includes"):
+def inclus_block(titre=None):
+    titre = titre or t("What the price includes", "Ce que comprend le prix")
     lis = "".join(f"<li>{ico('i-check')}<span>{E(i)}</span></li>" for i in INCLUS)
     return f'<div class="inclus"><h3>{E(titre)}</h3><ul>{lis}</ul></div>'
 
 
 def engagements_short():
-    lis = "".join(f'<li>{ico(i)}<span><b>{E(t.split(". ", 1)[1])}</b></span></li>' for i, t, _ in CHARTE[:6])
-    return f'''<div class="eng-short"><h3>Our commitments, in writing</h3><ul>{lis}</ul>
-  <a class="text-link" href="/our-commitments/">Read our trust charter {ico("i-arrow", "ic sm")}</a></div>'''
+    lis = "".join(f'<li>{ico(i)}<span><b>{E(tt.split(". ", 1)[1])}</b></span></li>' for i, tt, _ in CHARTE[:6])
+    return f'''<div class="eng-short"><h3>{t("Our commitments, in writing", "Nos engagements, par écrit")}</h3><ul>{lis}</ul>
+  <a class="text-link" href="/our-commitments/">{t("Read our trust charter", "Lire notre charte de confiance")} {ico("i-arrow", "ic sm")}</a></div>'''
 
 
 def company_card():
-    rows = [("i-building", "Company", f"{E(CONFIG['raison_sociale'])}")]
+    rows = [("i-building", t("Company", "Entreprise"), f"{E(CONFIG['raison_sociale'])}")]
     if CONFIG["siret"]:
-        rows.append(("i-file", "SIRET (company no.)", siret_fmt()))
-    rows += [("i-pin", "Registered office", E(adresse_txt())), ("i-phone", "Phone", f'<a href="{TEL_HREF}">{TEL}</a>'),
+        rows.append(("i-file", t("SIRET (company no.)", "SIRET"), siret_fmt()))
+    rows += [("i-pin", t("Registered office", "Siège social"), E(adresse_txt())), ("i-phone", t("Phone", "Téléphone"), f'<a href="{TEL_HREF}">{TEL}</a>'),
              ("i-mail", "Email", f'<a href="mailto:{CONFIG["email"]}">{CONFIG["email"]}</a>'),
-             ("i-card", "Payment", "Card, cash, bank transfer")]
+             ("i-card", t("Payment", "Paiement"), t("Card, cash, bank transfer", "Carte, espèces, virement"))]
     if CONFIG["experience"]:
-        rows.insert(1, ("i-award", "Experience", E(CONFIG["experience"])))
+        rows.insert(1, ("i-award", t("Experience", "Expérience"), E(CONFIG["experience"])))
     if CONFIG["assurance_rc"]:
-        rows.append(("i-shield", "Insurance", E(CONFIG["assurance_rc"])))
+        rows.append(("i-shield", t("Insurance", "Assurance"), E(CONFIG["assurance_rc"])))
     lis = "".join(f'<li>{ico(i)}<span><small>{l}</small>{v}</span></li>' for i, l, v in rows)
     return f'''<div class="company">
-  <div class="company-head"><img src="/assets/img/logo-112.webp" width="56" height="56" alt=""><div><b>{E(NOM)}</b><small>Company details</small></div></div>
+  <div class="company-head"><img src="/assets/img/logo-112.webp" width="56" height="56" alt=""><div><b>{E(NOM)}</b><small>{t("Company details", "Informations sur l'entreprise")}</small></div></div>
   <ul>{lis}</ul>
-  <a class="company-link" href="/legal-notice/">Full legal notice {ico("i-arrow", "ic sm")}</a>
+  <a class="company-link" href="/legal-notice/">{t("Full legal notice", "Mentions légales complètes")} {ico("i-arrow", "ic sm")}</a>
 </div>'''
 
 
@@ -668,38 +720,84 @@ def asset_v(rel):
 
 
 def logo_html(cls="brand"):
-    return (f'<a href="/" class="{cls}" aria-label="{E(NOM)} – home"><picture><source type="image/webp" srcset="/assets/img/logo-112.webp">'
+    return (f'<a href="/" class="{cls}" aria-label="{E(NOM)} – {t("home", "accueil")}"><picture><source type="image/webp" srcset="/assets/img/logo-112.webp">'
             f'<img src="/assets/img/logo-112.png" width="52" height="52" alt=""></picture>'
-            f'<span class="wordmark"><b>Secure Locksmith</b><small>Locksmith · Paris</small></span></a>')
+            f'<span class="wordmark"><b>Secure Locksmith</b><small>{t("Locksmith · Paris", "Serrurier · Paris")}</small></span></a>')
 
 
 def footer():
     svc = "".join(f'<li><a href="{svc_url(s)}">{E(s["nom"])}</a></li>' for s in SERVICES)
-    arr = "".join(f'<a href="{z["url"]}" title="Locksmith {E(z["court"])}"><img src="/assets/img/arr/{z["n"]}.webp" alt="" width="176" height="176" loading="lazy" decoding="async"><span>{z["n"]}<sup>{z["suf"]}</sup></span></a>' for z in ARR)
+    arr = "".join(f'<a href="{z["url"]}" title="{t("Locksmith", "Serrurier")} {E(z["court"])}"><img src="/assets/img/arr/{z["n"]}.webp" alt="" width="176" height="176" loading="lazy" decoding="async"><span>{z["n"]}<sup>{z["suf"]}</sup></span></a>' for z in ARR)
     siret = f"<br>SIRET {siret_fmt()}" if CONFIG["siret"] else ""
+    info = t([("Our commitments", "/our-commitments/"), ("Prices", "/prices/"), ("Insurance &amp; reimbursement", "/insurance/"), ("Customer reviews", "/reviews/"),
+              ("FAQ", "/faq/"), ("Advice", "/advice/"), ("Contact", "/contact/")],
+             [("Nos engagements", "/our-commitments/"), ("Tarifs", "/prices/"), ("Assurance et remboursement", "/insurance/"), ("Avis clients", "/reviews/"),
+              ("Questions fréquentes", "/faq/"), ("Conseils", "/advice/"), ("Contact", "/contact/")])
+    info = "".join(f'<li><a href="{u}">{l}</a></li>' for l, u in info)
     return f'''<footer class="foot">
   <div class="wrap">
     <div class="foot-cta">
-      <div><b>An emergency? A locksmith answers right away.</b><span>24/7 · Sundays and public holidays included</span></div>
+      <div><b>{t("An emergency? A locksmith answers right away.", "Une urgence ? Un serrurier vous répond tout de suite.")}</b><span>{t("24/7 · Sundays and public holidays included", "24h/24, 7j/7 · dimanches et jours fériés compris")}</span></div>
       {btn_call(cls="btn btn-gold btn-lg", track="call_footer_cta")}
     </div>
     <div class="foot-grid">
       <div class="foot-brand">
         {logo_html("brand brand-foot")}
-        <p>Locksmith in Paris, across all 20 arrondissements. 24/7 call-outs, price given before we travel, signed quote before any work, invoice for your insurer. English-speaking service.</p>
+        <p>{t("Locksmith in Paris, across all 20 arrondissements. 24/7 call-outs, price given before we travel, signed quote before any work, invoice for your insurer. English-speaking service.", "Serrurier à Paris, dans les 20 arrondissements. Dépannage 24h/24, prix annoncé avant le déplacement, devis signé avant toute intervention, facture pour votre assurance. Service en français et en anglais.")}</p>
         <p class="foot-id">{E(CONFIG["raison_sociale"])}<br>{E(adresse_txt())}{siret}</p>
       </div>
       <div><h4>Services</h4><ul>{svc}</ul></div>
-      <div><h4>Information</h4><ul><li><a href="/our-commitments/">Our commitments</a></li><li><a href="/prices/">Prices</a></li><li><a href="/insurance/">Insurance &amp; reimbursement</a></li><li><a href="/reviews/">Customer reviews</a></li><li><a href="/faq/">FAQ</a></li><li><a href="/advice/">Advice</a></li><li><a href="/contact/">Contact</a></li></ul></div>
+      <div><h4>{t("Information", "Informations")}</h4><ul>{info}</ul></div>
       <div><h4>Contact</h4><ul class="foot-contact"><li><a href="{TEL_HREF}" data-track="call_footer">{ico("i-phone", "ic sm")}{TEL}</a></li><li><a href="mailto:{CONFIG["email"]}">{ico("i-mail", "ic sm")}{CONFIG["email"]}</a></li><li><a href="{CONFIG["instagram"]}" target="_blank" rel="noopener me">{ico("i-insta", "ic sm")}Instagram</a></li></ul>
         <h4 class="mt">Arrondissements</h4><div class="arr-mini">{arr}</div></div>
     </div>
     <div class="foot-bottom">
       <span>© {TODAY[:4]} {E(NOM)} – {E(CONFIG["raison_sociale"])}</span>
-      <nav><a href="/legal-notice/">Legal notice</a><a href="/privacy/">Privacy</a><a href="/site-map/">Site map</a><button type="button" class="linklike" data-open-consent>Cookies</button></nav>
+      <nav><a href="/legal-notice/">{t("Legal notice", "Mentions légales")}</a><a href="/privacy/">{t("Privacy", "Confidentialité")}</a><a href="/site-map/">{t("Site map", "Plan du site")}</a><button type="button" class="linklike" data-open-consent>Cookies</button><!--LANGFOOT--></nav>
     </div>
   </div>
 </footer>'''
+
+
+# Adresse affichée pour chaque langue : les pages anglaises sont à la racine, les françaises dans /fr/
+def fr_path(path):
+    """Adresse française d'une adresse anglaise (None si la page n'existe pas en français)."""
+    return FR_PATHS.get(path)
+
+
+def loc(path):
+    return fr_path(path) or path if LANG == "fr" else path
+
+
+_LINK_RE = re.compile(r'''(["'(])(https://securelockserrurerie\.com)?(/[^"'#?\s<>)]*)''')
+
+
+def localize(doc):
+    """Version française : remplace les liens internes anglais par les adresses françaises."""
+    doc = doc.replace(BID, "%%BID%%")
+
+    def sub(m):
+        p = FR_PATHS.get(m.group(3))
+        return f"{m.group(1)}{m.group(2) or ''}{p}" if p else m.group(0)
+    doc = _LINK_RE.sub(sub, doc)
+    return doc.replace("%%BID%%", BID).replace(" €", NBSP + "€")
+
+
+def lang_switch(path, cls="lang"):
+    fr = fr_path(path) or "/fr/"
+    cur = ' aria-current="true"'
+    return (f'<nav class="{cls}" aria-label="Language / Langue">'
+            f'<a href="{path}" hreflang="en" lang="en"{cur if LANG == "en" else ""} title="English">EN</a>'
+            f'<a href="{fr}" hreflang="fr" lang="fr"{cur if LANG == "fr" else ""} title="Français">FR</a></nav>')
+
+
+def alternates(path):
+    fr = fr_path(path)
+    if not fr:
+        return ""
+    return (f'<link rel="alternate" hreflang="en" href="{URL}{path}">\n'
+            f'<link rel="alternate" hreflang="fr" href="{URL}{fr}">\n'
+            f'<link rel="alternate" hreflang="x-default" href="{URL}{path}">\n')
 
 
 def page(path, title, desc, body, ld=(), active=None, robots="index, follow", og_type="website"):
@@ -709,10 +807,10 @@ def page(path, title, desc, body, ld=(), active=None, robots="index, follow", og
     ads = CONFIG["ads_id"]
     conv = json.dumps({k: f"{ads}/{v}" for k, v in CONFIG["ads_conv"].items() if v}) if ads else "{}"
     ads_js = f"gtag('config','{ads}');" if ads else ""
-    note = (f'<a class="tb-rating" href="{E(MAPS)}" target="_blank" rel="noopener">{stars(5, "st xs")}<b>{CONFIG["avis_note"]}/5</b> on Google ({CONFIG["avis_nombre"]} reviews)</a>'
+    note = (f'<a class="tb-rating" href="{E(MAPS)}" target="_blank" rel="noopener">{stars(5, "st xs")}<b>{avis_note()}/5</b> {t("on Google", "sur Google")} ({CONFIG["avis_nombre"]} {t("reviews", "avis")})</a>'
             if CONFIG["avis_note"] else "")
     doc = f'''<!DOCTYPE html>
-<html lang="en">
+<html lang="{LANG}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -737,13 +835,14 @@ window.SLP_CONV={conv};
 <meta name="description" content="{E(desc)}">
 <meta name="robots" content="{robots}, max-image-preview:large">
 <link rel="canonical" href="{canonical}">
-<meta name="google-site-verification" content="{CONFIG["google_verification"]}">
+<!--ALT--><meta name="google-site-verification" content="{CONFIG["google_verification"]}">
 <meta name="theme-color" content="#0d1233">
 <meta name="geo.region" content="FR-75">
 <meta name="geo.placename" content="Paris">
 <meta name="geo.position" content="48.8566;2.3522">
 <meta property="og:type" content="{og_type}">
-<meta property="og:locale" content="en_GB">
+<meta property="og:locale" content="{t("en_GB", "fr_FR")}">
+<meta property="og:locale:alternate" content="{t("fr_FR", "en_GB")}">
 <meta property="og:site_name" content="{E(NOM)}">
 <meta property="og:title" content="{E(title)}">
 <meta property="og:description" content="{E(desc)}">
@@ -764,32 +863,33 @@ window.SLP_CONV={conv};
 {SPRITE}
 <div class="topbar">
   <div class="wrap tb-in">
-    <span class="tb-live"><i></i>Locksmiths available now in Paris</span>
-    <span class="tb-items"><span>{ico("i-file", "ic xs")}Signed quote before any work</span><span>{ico("i-shield", "ic xs")}Invoices accepted by insurers</span></span>
+    <span class="tb-live"><i></i>{t("Locksmiths available now in Paris", "Serruriers disponibles maintenant à Paris")}</span>
+    <span class="tb-items"><span>{ico("i-file", "ic xs")}{t("Signed quote before any work", "Devis signé avant toute intervention")}</span><span>{ico("i-shield", "ic xs")}{t("Invoices accepted by insurers", "Factures acceptées par les assureurs")}</span></span>
     {note}
   </div>
 </div>
 <header class="top" id="top">
   <div class="wrap top-in">
     {logo_html()}
-    <nav class="menu" aria-label="Main navigation">{nav}</nav>
+    <nav class="menu" aria-label="{t("Main navigation", "Navigation principale")}">{nav}</nav>
     <div class="top-cta">
-      <a class="top-tel" href="{TEL_HREF}" data-track="call_header"><span class="ring">{ico("i-phone")}</span><span><small>24/7 emergency</small><b>{TEL}</b></span></a>
+      <!--LANGSW-->
+      <a class="top-tel" href="{TEL_HREF}" data-track="call_header"><span class="ring">{ico("i-phone")}</span><span><small>{t("24/7 emergency", "Urgence 24h/24")}</small><b>{TEL}</b></span></a>
       <button class="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="drawer"><i></i><i></i><i></i></button>
     </div>
   </div>
-  <nav class="drawer" id="drawer" aria-label="Mobile navigation"><a href="/">Home</a>{nav}<a class="btn btn-gold" href="{TEL_HREF}" data-track="call_drawer">{ico("i-phone")}<span>Call {TEL}</span></a></nav>
+  <nav class="drawer" id="drawer" aria-label="{t("Mobile navigation", "Navigation mobile")}"><a href="/">{t("Home", "Accueil")}</a>{nav}<a class="btn btn-gold" href="{TEL_HREF}" data-track="call_drawer">{ico("i-phone")}<span>{t("Call", "Appeler le")} {TEL}</span></a></nav>
 </header>
 <main>
 {body}
 </main>
 {footer()}
 <div class="cookies" id="cookies" role="dialog" aria-label="Cookies" hidden>
-  <p><strong>Your privacy</strong> With your consent, we measure website traffic (Google Analytics, Google Tag Manager) to improve it. Nothing is loaded without your consent. <a href="/privacy/#cookies">Learn more</a></p>
-  <div><button type="button" class="btn btn-outline btn-sm" data-cookies="denied">Decline</button><button type="button" class="btn btn-navy btn-sm" data-cookies="granted">Accept</button></div>
+  <p>{t('<strong>Your privacy</strong> With your consent, we measure website traffic (Google Analytics, Google Tag Manager) to improve it. Nothing is loaded without your consent. <a href="/privacy/#cookies">Learn more</a>', '<strong>Votre vie privée</strong> Avec votre accord, nous mesurons la fréquentation du site (Google Analytics, Google Tag Manager) pour l\'améliorer. Rien n\'est chargé sans votre accord. <a href="/privacy/#cookies">En savoir plus</a>')}</p>
+  <div><button type="button" class="btn btn-outline btn-sm" data-cookies="denied">{t("Decline", "Refuser")}</button><button type="button" class="btn btn-navy btn-sm" data-cookies="granted">{t("Accept", "Accepter")}</button></div>
 </div>
 <div class="dock">
-  <a class="btn btn-gold" href="{TEL_HREF}" data-track="call_dock">{ico("i-phone")}<span>Call now · 24/7</span></a>
+  <a class="btn btn-gold" href="{TEL_HREF}" data-track="call_dock">{ico("i-phone")}<span>{t("Call now · 24/7", "Appeler · 24h/24")}</span></a>
   <a class="btn btn-wa" href="{WA}" target="_blank" rel="noopener" data-track="wa_dock" aria-label="WhatsApp">{ico("i-wa")}</a>
 </div>
 <a class="wa-float" href="{WA}" target="_blank" rel="noopener" data-track="wa_float" aria-label="WhatsApp">{ico("i-wa")}<span>WhatsApp</span></a>
@@ -797,11 +897,19 @@ window.SLP_CONV={conv};
 </body>
 </html>
 '''
-    out = os.path.join(ROOT, path.lstrip("/"), "index.html") if path.endswith("/") else os.path.join(ROOT, path.lstrip("/"))
+    if LANG == "fr":
+        doc = localize(doc)
+    indexable = robots.startswith("index")
+    doc = (doc.replace("<!--ALT-->", alternates(path) if indexable else "")
+              .replace("<!--LANGSW-->", lang_switch(path))
+              .replace("<!--LANGFOOT-->", lang_switch(path, "lang lang-foot"))
+              .replace("%%EN_SITEMAP%%", "/site-map/"))
+    real = loc(path)
+    out = os.path.join(ROOT, real.lstrip("/"), "index.html") if real.endswith("/") else os.path.join(ROOT, real.lstrip("/"))
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         f.write(bust_images(doc))
-    if robots.startswith("index"):
+    if indexable and LANG == "en":
         SITEMAP.append(path)
 
 
@@ -850,12 +958,14 @@ def hero(crumb_items, h1, lead, extra="", kicker=None, card=None, bg=None, quote
 </section>'''
 
 
-def hero_card(prix="from €110 incl. VAT", label="Door opening"):
+def hero_card(prix=None, label=None):
+    prix = prix or prix_txt(SERVICES[0])
+    label = label or SERVICES[0]["court"]
     return f'''<aside class="hcard">
   <ul>
     <li>{ico("i-euro")}<span><small>{E(label)}</small><b>{E(prix)}</b></span></li>
-    <li>{ico("i-clock")}<span><small>Average arrival time in Paris</small><b>≈ 30 minutes</b></span></li>
-    <li>{ico("i-file")}<span><small>Quote</small><b>Free, signed before any work</b></span></li>
+    <li>{ico("i-clock")}<span><small>{t("Average arrival time in Paris", "Délai moyen d'arrivée dans Paris")}</small><b>≈ 30 minutes</b></span></li>
+    <li>{ico("i-file")}<span><small>{t("Quote", "Devis")}</small><b>{t("Free, signed before any work", "Gratuit, signé avant toute intervention")}</b></span></li>
   </ul>
   {google_badge("g-badge compact")}
 </aside>'''
@@ -893,8 +1003,8 @@ def svc_rows(lst, tag="h3", link=svc_url):
 def urg_prix(prix):
     # Prix des cartes d'urgence : un prix par tranche horaire, le script affiche celui de l'heure actuelle à Paris
     if prix == "quote":
-        return '<small>price</small>free quote'
-    noms = {"jour": "daytime", "soir": "evening", "nuit": "night"}
+        return t('<small>price</small>free quote', '<small>prix</small>sur devis gratuit')
+    noms = t({"jour": "daytime", "soir": "evening", "nuit": "night"}, {"jour": "journée", "soir": "soirée", "nuit": "nuit"})
     return "".join(f'<span class="up" data-slot="{k}"{"" if k == "jour" else " hidden"}><small>{noms[k]}</small>{E(v)}</span>'
                    for (k, *_), v in zip(SLOTS, prix))
 
@@ -915,14 +1025,14 @@ def urgence_section():
   <div class="wrap">
     <div class="urg-head">
       <div>
-        <span class="urg-badge"><i></i>Emergency 24/7</span>
-        <h2>An emergency? A locksmith at your door in about 30 minutes</h2>
-        <p>Night, weekend, public holiday: a locksmith answers and sets off right away. The price is given on the phone, before anyone travels.</p>
+        <span class="urg-badge"><i></i>{t("Emergency 24/7", "Urgence 24h/24")}</span>
+        <h2>{t("An emergency? A locksmith at your door in about 30 minutes", "Une urgence ? Un serrurier devant votre porte en 30 minutes environ")}</h2>
+        <p>{t("Night, weekend, public holiday: a locksmith answers and sets off right away. The price is given on the phone, before anyone travels.", "Nuit, week-end, jour férié : un serrurier vous répond et part tout de suite. Le prix est annoncé au téléphone, avant tout déplacement.")}</p>
       </div>
-      <a class="urg-call" href="{TEL_HREF}" data-track="call_urgence"><span class="ring">{ico("i-phone")}</span><span><small>Direct line</small><b>{TEL}</b></span></a>
+      <a class="urg-call" href="{TEL_HREF}" data-track="call_urgence"><span class="ring">{ico("i-phone")}</span><span><small>{t("Direct line", "Ligne directe")}</small><b>{TEL}</b></span></a>
     </div>
     {urgences_block()}
-    <p class="urg-foot">Prices shown for the current time in Paris. Weekends and public holidays: evening rate from 8am to 10pm, night rate from 10pm to 8am. <a href="/prices/">Full price list</a> · <a href="/emergency/">What to do in an emergency</a></p>
+    <p class="urg-foot">{t('Prices shown for the current time in Paris. Weekends and public holidays: evening rate from 8am to 10pm, night rate from 10pm to 8am. <a href="/prices/">Full price list</a> · <a href="/emergency/">What to do in an emergency</a>', 'Prix affichés pour l\'heure actuelle à Paris. Week-ends et jours fériés : tarif de soirée de 8h à 22h, tarif de nuit de 22h à 8h. <a href="/prices/">Tous nos tarifs</a> · <a href="/emergency/">Que faire en cas d\'urgence</a>')}</p>
   </div>
 </section>'''
 
@@ -930,7 +1040,8 @@ def urgence_section():
 def svc_cards(lst=None):
     out = []
     for s in (lst if lst is not None else SVC_URG):
-        prix = f'<small>from (incl. VAT)</small><b>{eur(s["prix_num"])}</b>' if s["prix_num"] else "<small>price</small><b>Free quote</b>"
+        prix = (f'<small>{t("from (incl. VAT)", "dès (TTC)")}</small><b>{eur(s["prix_num"])}</b>' if s["prix_num"]
+                else t("<small>price</small><b>Free quote</b>", "<small>prix</small><b>Devis gratuit</b>"))
         ph = photo(s["slug"], s["nom"], "svc-photo", "(max-width: 760px) 100vw, 380px")
         out.append(f'''<article class="svc{" has-photo" if ph else ""}">
   {ph}
@@ -938,14 +1049,14 @@ def svc_cards(lst=None):
     <span class="svc-ic">{ico(s["icon"])}</span>
     <h3><a class="svc-link" href="{svc_url(s)}">{E(s["nom"])}</a></h3>
     <p>{E(s["resume"])}</p>
-    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-acts">{btn_wa_svc(s)}<a class="svc-go" href="{svc_url(s)}">Details {ico("i-arrow", "ic sm")}</a></span></div>
+    <div class="svc-foot"><span class="svc-prix">{prix}</span><span class="svc-acts">{btn_wa_svc(s)}<a class="svc-go" href="{svc_url(s)}">{t("Details", "Détails")} {ico("i-arrow", "ic sm")}</a></span></div>
   </div>
 </article>''')
     if len(out) % 3:
         out.append(f'''<a class="svc svc-cta" href="{TEL_HREF}" data-track="call_svc_grid">
-  <div class="svc-body"><span class="svc-ic">{ico("i-phone")}</span><h3>Another emergency?</h3>
-  <p>Garage door, shop, old lock… Describe the situation and we'll tell you straight away whether we can help, and at what price.</p>
-  <div class="svc-foot"><span class="svc-prix"><small>direct line 24/7</small><b>{TEL}</b></span><span class="svc-go">Call {ico("i-arrow", "ic sm")}</span></div></div>
+  <div class="svc-body"><span class="svc-ic">{ico("i-phone")}</span><h3>{t("Another emergency?", "Une autre urgence ?")}</h3>
+  <p>{t("Garage door, shop, old lock… Describe the situation and we'll tell you straight away whether we can help, and at what price.", "Porte de garage, commerce, serrure ancienne… Décrivez la situation : nous vous disons tout de suite si nous pouvons intervenir, et à quel prix.")}</p>
+  <div class="svc-foot"><span class="svc-prix"><small>{t("direct line 24/7", "ligne directe 24h/24")}</small><b>{TEL}</b></span><span class="svc-go">{t("Call", "Appeler")} {ico("i-arrow", "ic sm")}</span></div></div>
 </a>''')
     return '<div class="svc-grid">' + "".join(out) + "</div>"
 
@@ -960,10 +1071,10 @@ def svc_tiles():
   {ph(s)}
   <span class="stile-body"><span class="svc-ic">{ico(s["icon"])}</span>
   <b>{E(s["court"])}</b>
-  <span class="stile-p">{("from " + eur(s["prix_num"])) if s["prix_num"] else "Free quote"}</span></span>
+  <span class="stile-p">{(t("from ", "dès ") + eur(s["prix_num"])) if s["prix_num"] else t("Free quote", "Devis gratuit")}</span></span>
   {'<span class="stile-tag">24/7</span>' if s["cat"] == "urgence" else ""}
 </a>''' for s in SERVICES)
-    return f'<div class="stiles">{tiles}</div><p class="stiles-more"><a class="text-link" href="/services/">All services, prices and details {ico("i-arrow", "ic sm")}</a></p>'
+    return f'<div class="stiles">{tiles}</div><p class="stiles-more"><a class="text-link" href="/services/">{t("All services, prices and details", "Tous les services, prix et détails")} {ico("i-arrow", "ic sm")}</a></p>'
 
 
 def articles_cards(lst):
@@ -971,47 +1082,54 @@ def articles_cards(lst):
   <div class="post-top"><span class="post-ic">{ico(a["icon"])}</span><span class="post-cat">{E(a["cat"])}</span></div>
   <h3><a href="/advice/{a["slug"]}/">{E(a["court"])}</a></h3>
   <p>{E(a["desc"])}</p>
-  <span class="post-more"><time datetime="{a["date"]}">{fr_date(a["date"])}</time><span>Read {ico("i-arrow", "ic sm")}</span></span>
+  <span class="post-more"><time datetime="{a["date"]}">{fr_date(a["date"])}</time><span>{t("Read", "Lire")} {ico("i-arrow", "ic sm")}</span></span>
 </article>''' for a in lst) + "</div>"
 
 
 def engagements():
-    items = [
+    items = t([
         ("i-euro", "Price given before we travel", "You describe the situation and we give you the price including VAT. It doesn't change on the way."),
         ("i-file", "Signed quote before any work", "As required by French regulations: nothing starts without your written agreement."),
         ("i-door", "Damage-free opening first", "Shims, picking, cylinder bypass: we preserve your lock whenever possible."),
         ("i-shield", "Leading brands", "Cylinders and locks from recognized manufacturers, A2P-certified models on request."),
         ("i-card", "Transparent payment", "Card, cash or bank transfer, with a detailed invoice every time."),
         ("i-phone", "A locksmith on the line", "No call center: a professional answers, day and night, in English or French."),
-    ]
-    return '<div class="engage">' + "".join(f'<div>{ico(i)}<h3>{E(t)}</h3><p>{E(d)}</p></div>' for i, t, d in items) + "</div>"
+    ], [
+        ("i-euro", "Prix annoncé avant le déplacement", "Vous décrivez la situation, nous vous annonçons le prix TTC. Il ne change pas en route."),
+        ("i-file", "Devis signé avant toute intervention", "Comme l'exige la réglementation : rien ne commence sans votre accord écrit."),
+        ("i-door", "Ouverture sans casse en priorité", "Lames, crochetage, contournement du cylindre : nous préservons votre serrure chaque fois que c'est possible."),
+        ("i-shield", "Grandes marques", "Cylindres et serrures de fabricants reconnus, modèles certifiés A2P sur demande."),
+        ("i-card", "Paiement transparent", "Carte, espèces ou virement, avec une facture détaillée à chaque fois."),
+        ("i-phone", "Un serrurier au bout du fil", "Pas de centre d'appels : un professionnel vous répond, de jour comme de nuit, en français ou en anglais."),
+    ])
+    return '<div class="engage">' + "".join(f'<div>{ico(i)}<h3>{E(tt)}</h3><p>{E(d)}</p></div>' for i, tt, d in items) + "</div>"
 
 
 def build_home():
-    visual = photo("home", f"{NOM}, locksmith in Paris", "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
+    visual = photo("home", t(f"{NOM}, locksmith in Paris", f"{NOM}, serrurier à Paris"), "hero-photo", "(max-width: 1100px) 100vw, 560px", eager=True)
     if not visual and os.path.exists(os.path.join(ROOT, "assets", "img", "photos", "hero-round.webp")):
-        visual = '<picture class="emblem photo-round"><img src="/assets/img/photos/hero-round.webp" width="440" height="440" alt="Secure Lock locksmith in his work vest, seen from behind" fetchpriority="high"></picture>'
+        visual = f'<picture class="emblem photo-round"><img src="/assets/img/photos/hero-round.webp" width="440" height="440" alt="{t("Secure Lock locksmith in his work vest, seen from behind", "Serrurier Secure Lock dans son gilet de travail, vu de dos")}" fetchpriority="high"></picture>'
     if not visual:
-        visual = '<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="Secure Locksmith Paris logo" fetchpriority="high"></picture>'
-    equipe = photo("team", "Locksmith advising customers at their front door", "about-photo")
+        visual = f'<picture class="emblem"><source type="image/webp" srcset="/assets/img/logo-512.webp"><img src="/assets/img/icon-512.png" width="440" height="440" alt="{t("Secure Locksmith Paris logo", "Logo Secure Locksmith Paris")}" fetchpriority="high"></picture>'
+    equipe = photo("team", t("Locksmith advising customers at their front door", "Serrurier conseillant des clients devant leur porte d'entrée"), "about-photo")
     about_visual = equipe or company_card()
     body = f'''<section class="hero has-bg">
   {bg_img("tour-eiffel")}
   <div class="wrap hero-grid">
     <div class="hero-text">
-      <span class="eyebrow light">Locksmith in Paris · all 20 arrondissements</span>
-      <h1>English Speaking Locksmith in Paris,<br><span class="gold">24/7</span></h1>
-      <p class="lead">Locked out, jammed lock, broken key, break-in: a qualified, English-speaking locksmith comes to you in about 30 minutes on average. The price is given on the phone and the quote is signed before any work.</p>
+      <span class="eyebrow light">{t("Locksmith in Paris · all 20 arrondissements", "Serrurier à Paris · les 20 arrondissements")}</span>
+      <h1>{t("English Speaking Locksmith in Paris,", "Serrurier à Paris,")}<br><span class="gold">{t("24/7", "24h/24")}</span></h1>
+      <p class="lead">{t("Locked out, jammed lock, broken key, break-in: a qualified, English-speaking locksmith comes to you in about 30 minutes on average. The price is given on the phone and the quote is signed before any work.", "Porte claquée, serrure bloquée, clé cassée, effraction : un serrurier qualifié arrive chez vous en 30 minutes environ en moyenne. Le prix est annoncé au téléphone et le devis est signé avant toute intervention.")}</p>
       <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}{btn_wa(cls="btn btn-wa btn-xl", track="wa_hero")}</div>
       <div class="hero-proof">
         {google_badge("g-badge dark")}
-        <ul class="proof-list"><li>{ico("i-check")}Door opening from €110</li><li>{ico("i-check")}No hidden fees</li><li>{ico("i-check")}Invoice for your insurer</li></ul>
+        <ul class="proof-list"><li>{ico("i-check")}{t("Door opening from €110", "Ouverture de porte dès 110 €")}</li><li>{ico("i-check")}{t("No hidden fees", "Aucun frais caché")}</li><li>{ico("i-check")}{t("Invoice for your insurer", "Facture pour votre assurance")}</li></ul>
       </div>
     </div>
     <div class="hero-visual">
       {visual}
-      <div class="float f1"><span class="live"><i></i>Available now</span><b>Arrival ≈ 30 min</b></div>
-      <div class="float f2">{ico("i-shield")}<span><b>Signed quote</b><small>before every job</small></span></div>
+      <div class="float f1"><span class="live"><i></i>{t("Available now", "Disponible maintenant")}</span><b>{t("Arrival ≈ 30 min", "Arrivée ≈ 30 min")}</b></div>
+      <div class="float f2">{ico("i-shield")}<span><b>{t("Signed quote", "Devis signé")}</b><small>{t("before every job", "avant chaque intervention")}</small></span></div>
     </div>
   </div>
 </section>
@@ -1020,8 +1138,8 @@ def build_home():
 <section class="sec" id="services">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Our services</span><h2>Every locksmith service, everywhere in Paris</h2></div>
-      <p>Apartment, townhouse, shop, cellar or storage room: we work on every type of door and lock, from old Parisian landing doors to multi-point armored doors.</p>
+      <div><span class="eyebrow">{t("Our services", "Nos services")}</span><h2>{t("Every locksmith service, everywhere in Paris", "Tous les services de serrurerie, partout dans Paris")}</h2></div>
+      <p>{t("Apartment, townhouse, shop, cellar or storage room: we work on every type of door and lock, from old Parisian landing doors to multi-point armored doors.", "Appartement, maison, commerce, cave ou local : nous intervenons sur tous les types de portes et de serrures, des vieilles portes palières parisiennes aux portes blindées multipoints.")}</p>
     </div>
     {svc_tiles()}
   </div>
@@ -1029,13 +1147,13 @@ def build_home():
 <section class="sec soft">
   <div class="wrap about">
     <div class="about-text">
-      <span class="eyebrow">Why trust us</span>
-      <h2>An identified Paris locksmith who commits in writing</h2>
-      <p class="lead-dark">Emergency locksmiths have a bad reputation, often for good reason. At {E(NOM)}, we have chosen the opposite approach: an identified company, published prices and commitments you can check.</p>
-      <p class="about-p">When you are stuck outside your door, often late at night, you have neither the time nor the energy to compare offers. That is exactly when nasty surprises happen, especially if you don't speak French. Our answer is simple: you know the price before the locksmith sets off, you sign a quote before he starts, and you receive a detailed invoice at the end. No "extra charges" discovered on site, no lock replaced for no reason.</p>
-      <p class="about-p">We work only in Paris. That focus lets us arrive quickly and know Parisian doors well: landing doors in Haussmann buildings, multi-point armored doors, old locks and modern badge-access residences.</p>
+      <span class="eyebrow">{t("Why trust us", "Pourquoi nous faire confiance")}</span>
+      <h2>{t("An identified Paris locksmith who commits in writing", "Un serrurier parisien identifié, qui s'engage par écrit")}</h2>
+      <p class="lead-dark">{t(f"Emergency locksmiths have a bad reputation, often for good reason. At {E(NOM)}, we have chosen the opposite approach: an identified company, published prices and commitments you can check.", f"Le dépannage en serrurerie a mauvaise réputation, souvent à juste titre. Chez {E(NOM)}, nous avons choisi l'inverse : une entreprise identifiée, des tarifs publiés et des engagements que vous pouvez vérifier.")}</p>
+      <p class="about-p">{t('When you are stuck outside your door, often late at night, you have neither the time nor the energy to compare offers. That is exactly when nasty surprises happen, especially if you don\'t speak French. Our answer is simple: you know the price before the locksmith sets off, you sign a quote before he starts, and you receive a detailed invoice at the end. No "extra charges" discovered on site, no lock replaced for no reason.', "Quand vous êtes bloqué devant votre porte, souvent tard le soir, vous n'avez ni le temps ni l'énergie de comparer les offres. C'est précisément là que surviennent les mauvaises surprises. Notre réponse est simple : vous connaissez le prix avant le départ du serrurier, vous signez un devis avant qu'il commence, et vous recevez une facture détaillée à la fin. Pas de « frais supplémentaires » découverts sur place, pas de serrure changée sans raison.")}</p>
+      <p class="about-p">{t("We work only in Paris. That focus lets us arrive quickly and know Parisian doors well: landing doors in Haussmann buildings, multi-point armored doors, old locks and modern badge-access residences.", "Nous travaillons uniquement à Paris. Cela nous permet d'arriver vite et de bien connaître les portes parisiennes : portes palières des immeubles haussmanniens, portes blindées multipoints, serrures anciennes et résidences modernes à badge.")}</p>
       {engagements()}
-      <a class="btn btn-navy" style="margin-top:34px" href="/our-commitments/">{ico("i-file")}<span>Read our trust charter</span></a>
+      <a class="btn btn-navy" style="margin-top:34px" href="/our-commitments/">{ico("i-file")}<span>{t("Read our trust charter", "Lire notre charte de confiance")}</span></a>
     </div>
     <div class="about-side">{about_visual}{company_card() if equipe else ""}</div>
   </div>
@@ -1043,40 +1161,44 @@ def build_home():
 <section class="sec">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Locksmith scams</span><h2>What you will never see from us</h2></div>
-      <p>Emergency locksmith services are among the sectors generating the most complaints to the French consumer protection authority (DGCCRF). Here, point by point, are the most common abusive practices and how we work instead.</p>
+      <div><span class="eyebrow">{t("Locksmith scams", "Arnaques au serrurier")}</span><h2>{t("What you will never see from us", "Ce que vous ne verrez jamais chez nous")}</h2></div>
+      <p>{t("Emergency locksmith services are among the sectors generating the most complaints to the French consumer protection authority (DGCCRF). Here, point by point, are the most common abusive practices and how we work instead.", "Le dépannage en serrurerie fait partie des secteurs qui génèrent le plus de plaintes auprès de la DGCCRF. Voici, point par point, les pratiques abusives les plus courantes et notre façon de travailler à la place.")}</p>
     </div>
     {comparatif_block()}
-    <p class="cmp-foot">Unsure about a locksmith? Read our guide <a href="/advice/spot-an-honest-locksmith/">How to spot an honest locksmith</a>.</p>
+    <p class="cmp-foot">{t('Unsure about a locksmith? Read our guide <a href="/advice/spot-an-honest-locksmith/">How to spot an honest locksmith</a>.', 'Un doute sur un serrurier ? Lisez notre guide <a href="/advice/spot-an-honest-locksmith/">Comment reconnaître un serrurier honnête</a>.')}</p>
   </div>
 </section>
 <section class="sec" id="prices">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Prices</span><h2>Clear prices, published before any work</h2></div>
-      <p>Our prices depend on the time of the call-out. They are shown here, given on the phone and confirmed in writing: you know what you will pay before the locksmith sets off.</p>
+      <div><span class="eyebrow">{t("Prices", "Tarifs")}</span><h2>{t("Clear prices, published before any work", "Des prix clairs, publiés avant toute intervention")}</h2></div>
+      <p>{t("Our prices depend on the time of the call-out. They are shown here, given on the phone and confirmed in writing: you know what you will pay before the locksmith sets off.", "Nos prix dépendent de l'heure d'intervention. Ils sont affichés ici, annoncés au téléphone et confirmés par écrit : vous savez ce que vous allez payer avant le départ du serrurier.")}</p>
     </div>
     {tarif_table()}
   </div>
 </section>
 <section class="sec navy">
   <div class="wrap">
-    <div class="sec-head center"><span class="eyebrow light">How it works</span><h2>What happens when you call us</h2></div>
+    <div class="sec-head center"><span class="eyebrow light">{t("How it works", "Comment ça se passe")}</span><h2>{t("What happens when you call us", "Ce qui se passe quand vous nous appelez")}</h2></div>
     <ol class="steps">
-      <li><b>1</b><h3>You call</h3><p>You describe the door and the situation, or send a photo on WhatsApp.</p></li>
+      {t('''<li><b>1</b><h3>You call</h3><p>You describe the door and the situation, or send a photo on WhatsApp.</p></li>
       <li><b>2</b><h3>Price given</h3><p>You get the price including VAT straight away, before the locksmith sets off.</p></li>
       <li><b>3</b><h3>Signed quote</h3><p>On site, the price is confirmed in writing. Nothing starts without your signature.</p></li>
-      <li><b>4</b><h3>Work &amp; invoice</h3><p>Careful work and a detailed invoice to send to your insurer.</p></li>
+      <li><b>4</b><h3>Work &amp; invoice</h3><p>Careful work and a detailed invoice to send to your insurer.</p></li>''',
+      '''<li><b>1</b><h3>Vous appelez</h3><p>Vous décrivez la porte et la situation, ou vous envoyez une photo sur WhatsApp.</p></li>
+      <li><b>2</b><h3>Prix annoncé</h3><p>Vous connaissez tout de suite le prix TTC, avant le départ du serrurier.</p></li>
+      <li><b>3</b><h3>Devis signé</h3><p>Sur place, le prix est confirmé par écrit. Rien ne commence sans votre signature.</p></li>
+      <li><b>4</b><h3>Intervention et facture</h3><p>Un travail soigné et une facture détaillée à transmettre à votre assureur.</p></li>''')}
     </ol>
-    <div class="steps-cta">{btn_call("Call a locksmith", cls="btn btn-gold btn-lg", track="call_steps")}<span>or send a photo on <a href="{E(wa_link(WA_MSG))}" target="_blank" rel="noopener" data-track="wa_steps">WhatsApp</a></span></div>
+    <div class="steps-cta">{btn_call(t("Call a locksmith", "Appeler un serrurier"), cls="btn btn-gold btn-lg", track="call_steps")}<span>{t("or send a photo on", "ou envoyez une photo sur")} <a href="{E(wa_link(WA_MSG))}" target="_blank" rel="noopener" data-track="wa_steps">WhatsApp</a></span></div>
   </div>
 </section>
 {reviews_block()}
 <section class="sec">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Brands</span><h2>We work on all the major brands</h2></div>
-      <p>Locks, cylinders, armored doors and smart locks: our locksmiths know the main manufacturers and carry common parts in their van.</p>
+      <div><span class="eyebrow">{t("Brands", "Marques")}</span><h2>{t("We work on all the major brands", "Nous intervenons sur toutes les grandes marques")}</h2></div>
+      <p>{t("Locks, cylinders, armored doors and smart locks: our locksmiths know the main manufacturers and carry common parts in their van.", "Serrures, cylindres, portes blindées et serrures connectées : nos serruriers connaissent les principaux fabricants et ont les pièces courantes dans leur véhicule.")}</p>
     </div>
     {marques_block()}
   </div>
@@ -1084,8 +1206,8 @@ def build_home():
 <section class="sec soft" id="arrondissements">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Service area</span><h2>A locksmith in every Paris arrondissement</h2></div>
-      <p>We work exclusively within Paris. Choose your arrondissement to see the neighborhoods we cover and our services near you.</p>
+      <div><span class="eyebrow">{t("Service area", "Zone d'intervention")}</span><h2>{t("A locksmith in every Paris arrondissement", "Un serrurier dans chaque arrondissement de Paris")}</h2></div>
+      <p>{t("We work exclusively within Paris. Choose your arrondissement to see the neighborhoods we cover and our services near you.", "Nous intervenons exclusivement dans Paris. Choisissez votre arrondissement pour voir les quartiers couverts et nos services près de chez vous.")}</p>
     </div>
     {arr_grid()}
   </div>
@@ -1094,9 +1216,9 @@ def build_home():
   <div class="wrap faq-wrap">
     <div class="sec-head">
       <span class="eyebrow">FAQ</span>
-      <h2>Your questions, our answers</h2>
-      <p>Another question? Call us, we answer 24/7.</p>
-      <a class="btn btn-outline" href="/faq/">All questions</a>
+      <h2>{t("Your questions, our answers", "Vos questions, nos réponses")}</h2>
+      <p>{t("Another question? Call us, we answer 24/7.", "Une autre question ? Appelez-nous, nous répondons 24h/24.")}</p>
+      <a class="btn btn-outline" href="/faq/">{t("All questions", "Toutes les questions")}</a>
     </div>
     {faq_html(HOME_FAQ)}
   </div>
@@ -1104,17 +1226,18 @@ def build_home():
 <section class="sec soft">
   <div class="wrap">
     <div class="sec-head split">
-      <div><span class="eyebrow">Advice</span><h2>Practical guides from our locksmiths</h2></div>
-      <p><a class="text-link" href="/advice/">See all our advice {ico("i-arrow", "ic sm")}</a></p>
+      <div><span class="eyebrow">{t("Advice", "Conseils")}</span><h2>{t("Practical guides from our locksmiths", "Les guides pratiques de nos serruriers")}</h2></div>
+      <p><a class="text-link" href="/advice/">{t("See all our advice", "Voir tous nos conseils")} {ico("i-arrow", "ic sm")}</a></p>
     </div>
     {articles_cards(ARTICLES[:4])}
   </div>
 </section>
 {contact_band()}'''
     ld = [ld_business(full=True), ld_faq(HOME_FAQ),
-          {"@context": "https://schema.org", "@type": "WebSite", "name": NOM, "url": URL + "/", "inLanguage": "en", "publisher": {"@id": BID}}]
-    page("/", f"Locksmith Paris 24/7 – English-speaking – {TEL} | {NOM}",
-         f"English-speaking locksmith in Paris, 24/7 across all 20 arrondissements. Door opening from €110 incl. VAT, price given before we travel, signed quote, invoice for your insurer. ☎ {TEL}",
+          {"@context": "https://schema.org", "@type": "WebSite", "name": NOM, "url": URL + "/", "inLanguage": LANG, "publisher": {"@id": BID}}]
+    page("/", t(f"Locksmith Paris 24/7 – English-speaking – {TEL} | {NOM}", f"Serrurier Paris 24h/24 – Dépannage rapide – {TEL} | {NOM}"),
+         t(f"English-speaking locksmith in Paris, 24/7 across all 20 arrondissements. Door opening from €110 incl. VAT, price given before we travel, signed quote, invoice for your insurer. ☎ {TEL}",
+           f"Serrurier à Paris 24h/24 dans les 20 arrondissements. Ouverture de porte dès 110 € TTC, prix annoncé avant le déplacement, devis signé, facture pour votre assurance. ☎ {TEL}"),
          body, ld)
 
 
@@ -1130,34 +1253,39 @@ def before_after(s):
             continue
         items.append(f'''<figure class="ba">
   <div class="ba-frame" style="--pos:50%">
-    <img src="{a}" alt="After: {E(r.get("caption", s["nom"]))}" loading="lazy" decoding="async">
-    <div class="ba-before"><img src="{b}" alt="Before" loading="lazy" decoding="async"></div>
-    <span class="ba-tag l">Before</span><span class="ba-tag r">After</span>
+    <img src="{a}" alt="{t("After", "Après")} : {E(r.get("caption", s["nom"]))}" loading="lazy" decoding="async">
+    <div class="ba-before"><img src="{b}" alt="{t("Before", "Avant")}" loading="lazy" decoding="async"></div>
+    <span class="ba-tag l">{t("Before", "Avant")}</span><span class="ba-tag r">{t("After", "Après")}</span>
     <span class="ba-handle" aria-hidden="true"></span>
-    <input class="ba-range" type="range" min="0" max="100" value="50" aria-label="Compare before and after">
+    <input class="ba-range" type="range" min="0" max="100" value="50" aria-label="{t("Compare before and after", "Comparer avant et après")}">
   </div>
   <figcaption>{E(r.get("caption", ""))}</figcaption>
 </figure>''')
     if not items:
         return ""
-    return f'<h2>Before &amp; after: our recent work</h2><p>Slide to compare. These are real jobs carried out by our team in Paris.</p><div class="ba-grid">{"".join(items)}</div>'
+    return (t("<h2>Before &amp; after: our recent work</h2><p>Slide to compare. These are real jobs carried out by our team in Paris.</p>",
+              "<h2>Avant / après : nos dernières réalisations</h2><p>Faites glisser pour comparer. Ce sont de vrais chantiers réalisés par notre équipe à Paris.</p>")
+            + f'<div class="ba-grid">{"".join(items)}</div>')
 
 
 def build_services():
-    items = (f'<h2 class="group-title">{ico("i-clock")}Emergency call-outs <small>24/7</small></h2>' + svc_rows(SVC_URG, "h3")
-             + f'<h2 class="group-title">{ico("i-shield")}Works, armored doors &amp; installation <small>by appointment</small></h2>' + svc_rows(SVC_TRAV, "h3"))
-    body = hero([("Services", None)], "Our locksmith services in Paris",
-                "24/7 emergency call-outs (lockouts, jammed locks, broken keys, break-ins) and works by appointment (door armoring, armored doors, cellar doors, smart locks, mailbox locks), with their starting prices.",
-                kicker="24/7")
+    items = (f'<h2 class="group-title">{ico("i-clock")}{t("Emergency call-outs <small>24/7</small>", "Dépannage d\'urgence <small>24h/24</small>")}</h2>' + svc_rows(SVC_URG, "h3")
+             + f'<h2 class="group-title">{ico("i-shield")}{t("Works, armored doors &amp; installation <small>by appointment</small>", "Travaux, portes blindées et installation <small>sur rendez-vous</small>")}</h2>' + svc_rows(SVC_TRAV, "h3"))
+    body = hero([("Services", None)], t("Our locksmith services in Paris", "Nos services de serrurerie à Paris"),
+                t("24/7 emergency call-outs (lockouts, jammed locks, broken keys, break-ins) and works by appointment (door armoring, armored doors, cellar doors, smart locks, mailbox locks), with their starting prices.",
+                  "Dépannage d'urgence 24h/24 (portes claquées, serrures bloquées, clés cassées, effractions) et travaux sur rendez-vous (blindage, portes blindées, portes de cave, serrures connectées, boîtes aux lettres), avec leurs prix de départ."),
+                kicker=t("24/7", "24h/24"))
     body += f'<section class="sec"><div class="wrap layout"><div>{items}</div>{side_box()}</div></section>'
-    body += assureurs_strip() + f'<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Brands</span><h2>All the major brands</h2></div>{marques_block()}</div></section>' + contact_band(source="/services/")
-    page("/services/", f"Locksmith services in Paris 24/7 | {NOM}",
-         "All our locksmith services in Paris: door opening from €110, jammed locks, broken keys, lock replacement, smart locks, break-in repair, armored doors.",
+    body += (assureurs_strip() + f'<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">{t("Brands", "Marques")}</span><h2>{t("All the major brands", "Toutes les grandes marques")}</h2></div>{marques_block()}</div></section>'
+             + contact_band(source="/services/"))
+    page("/services/", t(f"Locksmith services in Paris 24/7 | {NOM}", f"Services de serrurerie à Paris 24h/24 | {NOM}"),
+         t("All our locksmith services in Paris: door opening from €110, jammed locks, broken keys, lock replacement, smart locks, break-in repair, armored doors.",
+           "Tous nos services de serrurier à Paris : ouverture de porte dès 110 €, serrure bloquée, clé cassée, changement de serrure, serrure connectée, sécurisation après effraction, portes blindées."),
          body, [ld_business(), ld_crumbs([("Services", "/services/")])], active="/services/")
 
     for s in SERVICES:
         path = svc_url(s)
-        secs = "".join(f"<h2>{E(t)}</h2><p>{c}</p>" for t, c in s["sections"])
+        secs = "".join(f"<h2>{E(h)}</h2><p>{c}</p>" for h, c in s["sections"])
         others = "".join(f'<a class="chip chip-ph" href="{svc_url(o)}">{thumb(o["slug"], "chip-img") or ico(o["icon"])}{E(o["court"])}</a>' for o in SERVICES if o is not s)
         ph = photo(s["slug"], s["nom"], "prose-photo", "(max-width: 1100px) 100vw, 760px")
         content = f'''<article class="prose">
@@ -1165,31 +1293,36 @@ def build_services():
   {video_card(s["slug"], "inline")}
   {ph}
   {before_after(s)}
-  <div class="note-box">{ico("i-euro")}<p>Price: {prix_txt(s, True)}. The exact price is given on the phone and confirmed in a written quote before any work. <a href="/prices/">Day, evening and night prices</a></p></div>
+  <div class="note-box">{ico("i-euro")}<p>{t("Price:", "Prix :")} {prix_txt(s, True)}. {t('The exact price is given on the phone and confirmed in a written quote before any work. <a href="/prices/">Day, evening and night prices</a>', 'Le prix exact est annoncé au téléphone et confirmé par un devis écrit avant toute intervention. <a href="/prices/">Tarifs de jour, de soirée et de nuit</a>')}</p></div>
   {secs}
-  <h2>{E(s["court"])}: choose your arrondissement</h2>
+  <h2>{E(s["court"])}{t(": choose your arrondissement", " : choisissez votre arrondissement")}</h2>
   {arr_grid(link=lambda z: f"{z['url']}#{s['slug']}", cls="arr-grid compact")}
-  <h2>A clear, all-inclusive price</h2>
-  <p>The price you are given on the phone includes VAT and labor. It is confirmed in a written quote before any work: if the situation on site turns out to be different from what you described, the locksmith explains why and offers a new quote, which you are free to refuse.</p>
+  <h2>{t("A clear, all-inclusive price", "Un prix clair, tout compris")}</h2>
+  <p>{t("The price you are given on the phone includes VAT and labor. It is confirmed in a written quote before any work: if the situation on site turns out to be different from what you described, the locksmith explains why and offers a new quote, which you are free to refuse.", "Le prix annoncé au téléphone comprend la TVA et la main-d'œuvre. Il est confirmé par un devis écrit avant toute intervention : si la situation sur place est différente de ce que vous avez décrit, le serrurier vous explique pourquoi et vous propose un nouveau devis, que vous êtes libre de refuser.")}</p>
   <div class="trust-duo">{inclus_block()}{engagements_short()}</div>
-  <h2>Frequently asked questions</h2>
+  <h2>{t("Frequently asked questions", "Questions fréquentes")}</h2>
   {faq_html(s["faq"])}
-  <h2>Our other services</h2><div class="chips">{others}</div>
+  <h2>{t("Our other services", "Nos autres services")}</h2><div class="chips">{others}</div>
 </article>'''
         card = hero_card(prix_txt(s), s["court"])
-        body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} in Paris',
-                    f'{E(s["resume"])} Anywhere in Paris, 24/7.',
-                    ticks(["Price given before we travel", "Signed quote before any work", "Invoice for your insurer"], "ticks light inline"), kicker="Service", card=card, quote=s["court"])
+        body = hero([("Services", "/services/"), (s["court"], None)], f'{E(s["nom"])} {t("in Paris", "à Paris")}',
+                    f'{E(s["resume"])} {t("Anywhere in Paris, 24/7.", "Partout dans Paris, 24h/24.")}',
+                    ticks(t(["Price given before we travel", "Signed quote before any work", "Invoice for your insurer"],
+                            ["Prix annoncé avant le déplacement", "Devis signé avant toute intervention", "Facture pour votre assurance"]), "ticks light inline"),
+                    kicker="Service", card=card, quote=s["court"])
         body += f'<section class="sec"><div class="wrap layout">{content}<div class="side-col">{video_card(s["slug"], "side")}{side_box(quote=s["court"])}</div></div></section>'
-        body += assureurs_strip() + reviews_block() + contact_band(f"{s['court']}? We'll be there fast.", "Call us or leave your details: we call you back with a clear price.", source=path, service=s["court"])
+        body += assureurs_strip() + reviews_block() + contact_band(t(f"{s['court']}? We'll be there fast.", f"{s['court']} ? Nous arrivons vite."),
+                                                                   t("Call us or leave your details: we call you back with a clear price.", "Appelez-nous ou laissez vos coordonnées : nous vous rappelons avec un prix clair."),
+                                                                   source=path, service=s["court"])
         ld = [ld_business(), ld_crumbs([("Services", "/services/"), (s["court"], path)]), ld_faq(s["faq"]),
               {"@context": "https://schema.org", "@type": "Service", "name": s["nom"], "serviceType": s["nom"], "url": URL + path,
                "provider": {"@id": BID}, "areaServed": {"@type": "City", "name": "Paris"},
                **({"offers": {"@type": "Offer", "priceSpecification": {"@type": "PriceSpecification", "minPrice": s["prix_num"], "priceCurrency": "EUR"}}} if s["prix_num"] else {})}]
         if s["slug"] in VIDEOS:
             ld.append(ld_video(s["slug"], path))
-        page(path, f'{s["nom"]} Paris 24/7 – {s["prix"]} | {NOM}',
-             f'{s["nom"]} in Paris, 24/7. {s["resume"]} Price given before we travel. ☎ {TEL}', body, ld, active="/services/")
+        page(path, t(f'{s["nom"]} Paris 24/7 – {s["prix"]} | {NOM}', f'{s["nom"]} à Paris 24h/24 – {s["prix"]} | {NOM}'),
+             t(f'{s["nom"]} in Paris, 24/7. {s["resume"]} Price given before we travel. ☎ {TEL}',
+               f'{s["nom"]} à Paris, 24h/24. {s["resume"]} Prix annoncé avant le déplacement. ☎ {TEL}'), body, ld, active="/services/")
 
 
 # ---------------------------------------------------------------------------
@@ -1203,7 +1336,22 @@ ARR_INTROS = [
 ]
 
 
+def de(x):
+    """« de » + nom en français : du jardin, des passages, de l'île, de la rue."""
+    for a, b in (("le ", "du "), ("les ", "des ")):
+        if x.startswith(a):
+            return b + x[len(a):]
+    return "de " + x
+
+
 def arr_faq(z):
+    if LANG == "fr":
+        return [
+            (f"Combien coûte un serrurier {z['a_court']} ?", f"L'ouverture d'une porte claquée {z['a']} coûte 110 € TTC en semaine en journée, 160 € en soirée et le week-end, et 220 € la nuit. Un changement de cylindre démarre à 160 €. Le prix est toujours annoncé avant le déplacement et confirmé par écrit."),
+            (f"En combien de temps pouvez-vous arriver {z['a']} ?", "Environ 30 minutes en moyenne. Le délai exact dépend de la circulation parisienne et vous est annoncé au téléphone avant le départ du serrurier."),
+            (f"Intervenez-vous la nuit {z['a_court']} ?", "Oui, 24h/24 et 7j/7, dimanches et jours fériés compris, avec un tarif de nuit annoncé à l'avance."),
+            ("Ma facture sera-t-elle remboursée ?", "Notre facture détaillée est acceptée par les assureurs habitation. Le remboursement dépend de votre contrat (effraction, vol ou perte de clés)."),
+        ]
     return [
         (f"How much does a locksmith cost {z['a_court']}?", f"Opening a slammed door {z['a']} costs €110 incl. VAT on weekdays, €160 in the evening and on weekends and €220 at night. A cylinder replacement starts at €160. The price is always given before we travel and confirmed in writing."),
         (f"How quickly can you get here {z['a']}?", "About 30 minutes on average. The exact time depends on Paris traffic and is given on the phone before the locksmith sets off."),
@@ -1216,9 +1364,9 @@ def local_services(z, i, lst):
     cards = []
     for s in lst:
         k = i + SERVICES.index(s)
-        loc = SVC_LOCAL[s["slug"]]
-        intro = loc["intros"][k % 3].format(a=z["a"], nom=E(NOM))
-        prix = f'from <b>{eur(s["prix_num"])}</b>' if s["prix_num"] else "<b>free quote</b>"
+        loc_ = SVC_LOCAL[s["slug"]]
+        intro = loc_["intros"][k % 3].format(a=z["a"], nom=E(NOM))
+        prix = f'{t("from", "dès")} <b>{eur(s["prix_num"])}</b>' if s["prix_num"] else f'<b>{t("free quote", "sur devis gratuit")}</b>'
         ph = photo(s["slug"], "", "sl-photo", "(max-width: 760px) 100vw, 540px")
         if ph and os.path.exists(os.path.join(ROOT, "assets", "img", "thumbs", f'{s["slug"]}.webp')):
             # sur téléphone, la miniature légère (11 Ko) au lieu de la grande photo
@@ -1227,8 +1375,8 @@ def local_services(z, i, lst):
   {ph}
   <div class="sl-head"><span class="svc-ic">{ico(s["icon"])}</span><div><h3>{E(s["nom"])}</h3><span class="sl-price">{prix}</span></div></div>
   <p>{intro}</p>
-  <p class="sl-tip"><strong>Tip:</strong> {E(loc["conseil"])}</p>
-  <div class="sl-acts">{btn_wa_svc(s)}<a class="text-link" href="{svc_url(s)}">How we work {ico("i-arrow", "ic sm")}</a></div>
+  <p class="sl-tip"><strong>{t("Tip:", "Conseil :")}</strong> {E(loc_["conseil"])}</p>
+  <div class="sl-acts">{btn_wa_svc(s)}<a class="text-link" href="{svc_url(s)}">{t("How we work", "Notre méthode")} {ico("i-arrow", "ic sm")}</a></div>
 </article>''')
     return '<div class="sl-grid">' + "".join(cards) + "</div>"
 
@@ -1238,85 +1386,101 @@ def recent_jobs(z):
     if not jobs:
         return ""
     lis = "".join(f'<li><small>{E(d)} · {E(rue)}</small><b>{E(txt)}</b></li>' for d, rue, txt in jobs)
-    return f'<h2>Recent jobs {E(z["a"])}</h2><ul class="jobs">{lis}</ul>'
+    return f'<h2>{t("Recent jobs", "Interventions récentes")} {E(z["a"])}</h2><ul class="jobs">{lis}</ul>'
 
 
 def build_arr_pages():
-    body = hero([("Arrondissements", None)], "Locksmith in all <em>20 Paris arrondissements</em>",
-                "Choose your arrondissement: prices, neighborhoods covered and services available near you.", kicker="Paris 75")
+    fr = LANG == "fr"
+    body = hero([("Arrondissements", None)], t("Locksmith in all <em>20 Paris arrondissements</em>", "Serrurier dans les <em>20 arrondissements de Paris</em>"),
+                t("Choose your arrondissement: prices, neighborhoods covered and services available near you.",
+                  "Choisissez votre arrondissement : prix, quartiers couverts et services disponibles près de chez vous."), kicker="Paris 75")
     body += f'''<section class="sec"><div class="wrap">
   {arr_grid(label=lambda z: z["surnom"])}
   <div class="prose narrow">
-    <h2>A Paris locksmith, not a call center</h2>
-    <p>{E(NOM)} works exclusively within Paris. That focus lets us arrive quickly and know Parisian buildings well: landing doors in Haussmann buildings, multi-point armored doors, old mortise locks and modern badge-access residences.</p>
-    <p class="note-box">{ico("i-pin")}Just outside Paris? Call us on <a href="{TEL_HREF}">{TEL}</a>: depending on availability, we can sometimes come, with travel costs given in advance.</p>
+    <h2>{t("A Paris locksmith, not a call center", "Un serrurier parisien, pas un centre d'appels")}</h2>
+    <p>{E(NOM)} {t("works exclusively within Paris. That focus lets us arrive quickly and know Parisian buildings well: landing doors in Haussmann buildings, multi-point armored doors, old mortise locks and modern badge-access residences.", "intervient exclusivement dans Paris. Cela nous permet d'arriver vite et de bien connaître les immeubles parisiens : portes palières haussmanniennes, portes blindées multipoints, vieilles serrures à larder et résidences modernes à badge.")}</p>
+    <p class="note-box">{ico("i-pin")}{t("Just outside Paris? Call us on", "Juste à l'extérieur de Paris ? Appelez-nous au")} <a href="{TEL_HREF}">{TEL}</a>{t(": depending on availability, we can sometimes come, with travel costs given in advance.", " : selon nos disponibilités, nous pouvons parfois venir, avec des frais de déplacement annoncés à l'avance.")}</p>
   </div>
 </div></section>''' + reviews_block() + contact_band(source="/locksmith-paris/")
-    page("/locksmith-paris/", f"Locksmith Paris: all 20 arrondissements 24/7 | {NOM}",
-         f"Locksmith everywhere in Paris, from the 1st to the 20th arrondissement, 24/7. Door opening from €110 incl. VAT, price given before we travel. ☎ {TEL}",
+    page("/locksmith-paris/", t(f"Locksmith Paris: all 20 arrondissements 24/7 | {NOM}", f"Serrurier Paris : les 20 arrondissements 24h/24 | {NOM}"),
+         t(f"Locksmith everywhere in Paris, from the 1st to the 20th arrondissement, 24/7. Door opening from €110 incl. VAT, price given before we travel. ☎ {TEL}",
+           f"Serrurier partout dans Paris, du 1er au 20e arrondissement, 24h/24. Ouverture de porte dès 110 € TTC, prix annoncé avant le déplacement. ☎ {TEL}"),
          body, [ld_business(full=True), ld_crumbs([("Arrondissements", "/locksmith-paris/")])], active="/locksmith-paris/")
 
+    serrurier = t("Locksmith", "Serrurier")
     for i, z in enumerate(ARR):
         path = z["url"]
         intro = ARR_INTROS[i % 4].format(a=z["a"], nom=E(NOM), num=z["num"], r0=z["reperes"][0], r1=z["reperes"][1],
-                                         pop=fmt_int(z["pop"]), surnom=z["surnom"], q=et(z["quartiers"][:2]))
+                                         pop=fmt_int(z["pop"]), surnom=z["surnom"], q=et(z["quartiers"][:2]),
+                                         de_r0=de(z["reperes"][0]), de_r1=de(z["reperes"][1]))
+        intro = intro[0].upper() + intro[1:]
         facts = f'''<div class="facts">
-  <div><small>Postcode</small><b>{E(" / ".join(z["cp"]))}</b></div>
-  <div><small>Door opening</small><b>from €110</b></div>
-  <div><small>Availability</small><b>24/7</b></div>
-  <div><small>Average arrival</small><b>≈ 30 min</b></div>
+  <div><small>{t("Postcode", "Code postal")}</small><b>{E(" / ".join(z["cp"]))}</b></div>
+  <div><small>{t("Door opening", "Ouverture de porte")}</small><b>{t("from", "dès")} {eur(110)}</b></div>
+  <div><small>{t("Availability", "Disponibilité")}</small><b>{t("24/7", "24h/24")}</b></div>
+  <div><small>{t("Average arrival", "Arrivée moyenne")}</small><b>≈ 30 min</b></div>
 </div>'''
         nav_arr = ""
+
         def pn(o, sens):
             return (f'<a class="pn pn-{sens}" href="{o["url"]}"><img src="/assets/img/arr/{o["n"]}.webp" alt="" width="176" height="176" loading="lazy" decoding="async">'
-                    f'<span><small>{"← Previous" if sens == "prev" else "Next →"}</small><b>Locksmith {E(o["court"])}</b></span></a>')
+                    f'<span><small>{t("← Previous", "← Précédent") if sens == "prev" else t("Next →", "Suivant →")}</small><b>{serrurier} {E(o["court"])}</b></span></a>')
         if z["prev"]:
             nav_arr += pn(z["prev"], "prev")
         if z["next"]:
             nav_arr += pn(z["next"], "next")
         faq = arr_faq(z)
+        habitat = z["habitat"][0].upper() + z["habitat"][1:]
         content = f'''<article class="prose">
   <p class="intro">{intro}</p>
   {facts}
-  <h2>Our services {E(z["a"])}</h2>
-  <h3 class="group-title">{ico("i-clock")}Emergency call-outs <small>24/7</small></h3>
+  <h2>{t("Our services", "Nos services")} {E(z["a"])}</h2>
+  <h3 class="group-title">{ico("i-clock")}{t("Emergency call-outs <small>24/7</small>", "Dépannage d'urgence <small>24h/24</small>")}</h3>
   {local_services(z, i, SVC_URG)}
-  <h3 class="group-title">{ico("i-shield")}Works, armored doors &amp; installation <small>by appointment</small></h3>
+  <h3 class="group-title">{ico("i-shield")}{t("Works, armored doors &amp; installation <small>by appointment</small>", "Travaux, portes blindées et installation <small>sur rendez-vous</small>")}</h3>
   {local_services(z, i, SVC_TRAV)}
   {recent_jobs(z)}
-  <h2>Neighborhoods covered in the {z["num"]}</h2>
-  <p>We cover the arrondissement's four administrative quarters: <strong>{E(et(z["quartiers"]))}</strong>. Whether you live near {E(et(z["reperes"]))}, a locksmith can be with you quickly.</p>
+  <h2>{t("Neighborhoods covered in the", "Quartiers couverts dans le")} {z["num"]}</h2>
+  <p>{t("We cover the arrondissement's four administrative quarters:", "Nous couvrons les quatre quartiers administratifs de l'arrondissement :")} <strong>{E(et(z["quartiers"]))}</strong>. {t("Whether you live near " + E(et(z["reperes"])), "Que vous habitiez près " + E(", ".join(de(r) for r in z["reperes"][:-1]) + " ou " + de(z["reperes"][-1])))}, {t("a locksmith can be with you quickly.", "un serrurier peut être chez vous rapidement.")}</p>
   <div class="local">
-    <div>{ico("i-metro")}<h3>Landmarks</h3><p>Metro: {E(et(z["metros"]))}</p></div>
-    <div>{ico("i-home")}<h3>Buildings</h3><p>{E(z["habitat"][0].upper() + z["habitat"][1:])}.</p></div>
-    <div>{ico("i-pin")}<h3>Population</h3><p>{fmt_int(z["pop"])} residents (INSEE)</p></div>
+    <div>{ico("i-metro")}<h3>{t("Landmarks", "Repères")}</h3><p>{t("Metro:", "Métro :")} {E(et(z["metros"]))}</p></div>
+    <div>{ico("i-home")}<h3>{t("Buildings", "Habitat")}</h3><p>{E(habitat)}.</p></div>
+    <div>{ico("i-pin")}<h3>Population</h3><p>{fmt_int(z["pop"])} {t("residents (INSEE)", "habitants (Insee)")}</p></div>
   </div>
-  <h2>Why call us {E(z["a"])}?</h2>
-  <p>When you need an emergency locksmith {E(z["a_court"])}, you often come across anonymous numbers and unrealistic teaser prices. With {E(NOM)}, you know who you are dealing with: an identified company, published prices, a signed quote before every job and public customer reviews on Google.</p>
+  <h2>{t("Why call us", "Pourquoi nous appeler")} {E(z["a"])}{t("?", " ?")}</h2>
+  <p>{t(f"When you need an emergency locksmith {E(z['a_court'])}, you often come across anonymous numbers and unrealistic teaser prices. With {E(NOM)}, you know who you are dealing with: an identified company, published prices, a signed quote before every job and public customer reviews on Google.", f"Quand vous cherchez un serrurier en urgence {E(z['a_court'])}, vous tombez souvent sur des numéros anonymes et des prix d'appel irréalistes. Avec {E(NOM)}, vous savez à qui vous avez affaire : une entreprise identifiée, des tarifs publiés, un devis signé avant chaque intervention et des avis clients publics sur Google.")}</p>
   <ul class="check-list">
-    <li>{ico("i-check")}<span><strong>Price given on the phone</strong>, then a written quote signed before any work.</span></li>
+    {t(f'''<li>{ico("i-check")}<span><strong>Price given on the phone</strong>, then a written quote signed before any work.</span></li>
     <li>{ico("i-check")}<span><strong>Damage-free opening</strong> in the vast majority of cases.</span></li>
     <li>{ico("i-check")}<span><strong>Detailed invoice</strong> accepted by French home insurers.</span></li>
-    <li>{ico("i-check")}<span><strong>Public reviews</strong> you can check on <a href="{E(MAPS)}" target="_blank" rel="noopener">our Google profile</a>.</span></li>
+    <li>{ico("i-check")}<span><strong>Public reviews</strong> you can check on <a href="{E(MAPS)}" target="_blank" rel="noopener">our Google profile</a>.</span></li>''',
+    f'''<li>{ico("i-check")}<span><strong>Prix annoncé au téléphone</strong>, puis devis écrit signé avant toute intervention.</span></li>
+    <li>{ico("i-check")}<span><strong>Ouverture sans casse</strong> dans l'immense majorité des cas.</span></li>
+    <li>{ico("i-check")}<span><strong>Facture détaillée</strong> acceptée par les assureurs habitation.</span></li>
+    <li>{ico("i-check")}<span><strong>Avis publics</strong> à consulter sur <a href="{E(MAPS)}" target="_blank" rel="noopener">notre fiche Google</a>.</span></li>''')}
   </ul>
-  <h2>Frequently asked questions {E(z["a_court"])}</h2>
+  <h2>{t("Frequently asked questions", "Questions fréquentes")} {E(z["a_court"])}</h2>
   {faq_html(faq)}
-  <nav class="prev-next" aria-label="Neighboring arrondissements">{nav_arr}</nav>
+  <nav class="prev-next" aria-label="{t("Neighboring arrondissements", "Arrondissements voisins")}">{nav_arr}</nav>
 </article>'''
-        h1 = f'Locksmith {E(z["court"])} <em>24/7</em>'
-        lead = f'Door opening from €110 incl. VAT, jammed locks, broken keys, lock replacement {E(z["a"])} ({E(z["surnom"])}). Price given before we travel, free quote.'
+        h1 = f'{serrurier} {E(z["court"])} <em>{t("24/7", "24h/24")}</em>'
+        lead = t(f'Door opening from €110 incl. VAT, jammed locks, broken keys, lock replacement {E(z["a"])} ({E(z["surnom"])}). Price given before we travel, free quote.',
+                 f'Ouverture de porte dès 110 € TTC, serrure bloquée, clé cassée, changement de serrure {E(z["a"])} ({E(z["surnom"])}). Prix annoncé avant le déplacement, devis gratuit.')
         crumb_items = [("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", None)]
-        body = hero(crumb_items, h1, lead, ticks(["Free quote", "No hidden fees", "Nights, weekends, holidays"], "ticks light inline"),
+        body = hero(crumb_items, h1, lead, ticks(t(["Free quote", "No hidden fees", "Nights, weekends, holidays"], ["Devis gratuit", "Aucun frais caché", "Nuits, week-ends, jours fériés"]), "ticks light inline"),
                     kicker=f"{z['cp'][0]} · {z['surnom']}", bg=zone_bg(z))
-        body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"Locksmith {z["court"]}")}</div></section>'
-        body += assureurs_strip() + contact_band(f"Locked out {z['a_court']}?", "Call us: price given on the phone, locksmith on the way straight away.", source=path, arr=z["court"])
+        body += f'<section class="sec"><div class="wrap layout">{content}{side_box(f"{serrurier} {z["court"]}")}</div></section>'
+        body += assureurs_strip() + contact_band(t(f"Locked out {z['a_court']}?", f"Porte claquée {z['a_court']} ?"),
+                                                 t("Call us: price given on the phone, locksmith on the way straight away.", "Appelez-nous : prix annoncé au téléphone, serrurier en route aussitôt."),
+                                                 source=path, arr=z["court"])
         ld = [ld_business(), ld_crumbs([("Arrondissements", "/locksmith-paris/"), (f"Paris {z['num']}", path)]), ld_faq(faq),
-              {"@context": "https://schema.org", "@type": "Service", "name": f"Locksmith {z['nom']}", "serviceType": "24/7 locksmith services",
+              {"@context": "https://schema.org", "@type": "Service", "name": f"{serrurier} {z['nom']}", "serviceType": t("24/7 locksmith services", "Serrurerie 24h/24"),
                "url": URL + path, "provider": {"@id": BID},
                "areaServed": {"@type": "AdministrativeArea", "name": z["nom"], "postalCode": z["cp"][0]},
                "offers": {"@type": "Offer", "priceSpecification": {"@type": "PriceSpecification", "minPrice": 110, "priceCurrency": "EUR"}}}]
-        page(path, f"Locksmith {z['court']} ({z['cp'][0]}) 24/7 – {TEL}",
-             f"Locksmith {z['court']} ({z['cp'][0]}), 24/7: door opening from €110 incl. VAT, jammed locks, broken keys, lock replacement. Price given before we travel. ☎ {TEL}",
+        page(path, t(f"Locksmith {z['court']} ({z['cp'][0]}) 24/7 – {TEL}", f"Serrurier {z['court']} ({z['cp'][0]}) 24h/24 – {TEL}"),
+             t(f"Locksmith {z['court']} ({z['cp'][0]}), 24/7: door opening from €110 incl. VAT, jammed locks, broken keys, lock replacement. Price given before we travel. ☎ {TEL}",
+               f"Serrurier {z['court']} ({z['cp'][0]}), 24h/24 : ouverture de porte dès 110 € TTC, serrure bloquée, clé cassée, changement de serrure. Prix annoncé avant le déplacement. ☎ {TEL}"),
              body, ld, active="/locksmith-paris/")
 
 
@@ -1419,119 +1583,164 @@ def simple(path, crumb, h1, lead, prose, title, desc, extra_ld=(), active=None, 
 def ld_tarifs():
     offers = []
     for p, jour, *_ in TARIFS:
-        m = re.search(r"€([\d,]+)", jour)
+        m = re.search(r"\d[\d,\s ]*", jour)
         if not m:
             continue
-        val = int(m.group(1).replace(",", ""))
+        val = int(re.sub(r"\D", "", m.group(0)))
         spec = {"@type": "PriceSpecification", "priceCurrency": "EUR", "valueAddedTaxIncluded": True}
-        spec.update({"minPrice": val} if jour.startswith("From") else {"price": val})
+        spec.update({"minPrice": val} if jour.startswith(("From", "À partir")) else {"price": val})
         offers.append({"@type": "Offer", "name": p, "priceSpecification": spec, "itemOffered": {"@type": "Service", "name": p}, "seller": {"@id": BID}})
-    return {"@context": "https://schema.org", "@type": "OfferCatalog", "name": f"{NOM} prices", "url": URL + "/prices/", "itemListElement": offers}
+    return {"@context": "https://schema.org", "@type": "OfferCatalog", "name": t(f"{NOM} prices", f"Tarifs {NOM}"), "url": URL + "/prices/", "itemListElement": offers}
 
 
 def build_static():
     # Prices
-    body = hero([("Prices", None)], "Fully <em>transparent</em> prices",
-                "Prices per service and per time of day. Everything is given before we travel and nothing is added on the way.", kicker="No hidden fees")
-    body += f'''<section class="sec"><div class="wrap">
-  {tarif_table()}
-  <div class="layout" style="margin-top:56px">
-    <article class="prose">
-      <h2>What the price includes</h2>
+    body = hero([(t("Prices", "Tarifs"), None)], t("Fully <em>transparent</em> prices", "Des tarifs <em>totalement transparents</em>"),
+                t("Prices per service and per time of day. Everything is given before we travel and nothing is added on the way.",
+                  "Les prix par prestation et par heure d'intervention. Tout est annoncé avant le déplacement et rien ne s'ajoute en route."),
+                kicker=t("No hidden fees", "Aucun frais caché"))
+    prose = t('''<h2>What the price includes</h2>
       <ul><li>The locksmith's labor.</li><li>Travel within Paris, free if work is carried out.</li><li>VAT: all our prices include VAT.</li><li>A detailed invoice suitable for your insurer.</li></ul>
       <h2>Our commitments</h2>
       <ul><li><strong>Price given</strong> before the locksmith sets off.</li><li><strong>Written, signed quote</strong> before any work.</li><li><strong>No surprise surcharge</strong>: the evening or night rate is given on the phone.</li><li><strong>Certified equipment</strong> from recognized brands.</li></ul>
       <h2>Broken keys, smart locks, break-ins</h2>
       <p>These jobs depend heavily on the situation: they come with a <strong>free quote</strong>, given on the phone and then confirmed in writing.</p>
-      <h2>Payment</h2><p>Card, cash or bank transfer.</p>
+      <h2>Payment</h2><p>Card, cash or bank transfer.</p>''',
+              '''<h2>Ce que comprend le prix</h2>
+      <ul><li>La main-d'œuvre du serrurier.</li><li>Le déplacement dans Paris, offert si des travaux sont réalisés.</li><li>La TVA : tous nos prix sont TTC.</li><li>Une facture détaillée, conforme pour votre assurance.</li></ul>
+      <h2>Nos engagements</h2>
+      <ul><li><strong>Prix annoncé</strong> avant le départ du serrurier.</li><li><strong>Devis écrit et signé</strong> avant toute intervention.</li><li><strong>Aucune majoration surprise</strong> : le tarif de soirée ou de nuit est annoncé au téléphone.</li><li><strong>Matériel certifié</strong> de marques reconnues.</li></ul>
+      <h2>Clés cassées, serrures connectées, effractions</h2>
+      <p>Ces interventions dépendent beaucoup de la situation : elles font l'objet d'un <strong>devis gratuit</strong>, annoncé au téléphone puis confirmé par écrit.</p>
+      <h2>Paiement</h2><p>Carte bancaire, espèces ou virement.</p>''')
+    body += f'''<section class="sec"><div class="wrap">
+  {tarif_table()}
+  <div class="layout" style="margin-top:56px">
+    <article class="prose">
+      {prose}
     </article>
-    {side_box("Your price on the phone", "Describe the situation: you know the exact price before we set off.")}
+    {side_box(t("Your price on the phone", "Votre prix au téléphone"), t("Describe the situation: you know the exact price before we set off.", "Décrivez la situation : vous connaissez le prix exact avant notre départ."))}
   </div>
 </div></section>''' + assureurs_strip() + contact_band(source="/prices/")
-    page("/prices/", f"Locksmith prices Paris – day, evening, night | {NOM}",
-         "Locksmith prices in Paris: slammed door opening €110 incl. VAT during the day, locked door from €180, cylinder replacement from €160. Evening and night rates shown.",
-         body, [ld_business(), ld_crumbs([("Prices", "/prices/")]), ld_tarifs()], active="/prices/")
+    page("/prices/", t(f"Locksmith prices Paris – day, evening, night | {NOM}", f"Tarifs serrurier Paris – jour, soir, nuit | {NOM}"),
+         t("Locksmith prices in Paris: slammed door opening €110 incl. VAT during the day, locked door from €180, cylinder replacement from €160. Evening and night rates shown.",
+           "Tarifs serrurier à Paris : ouverture de porte claquée 110 € TTC en journée, porte fermée à clé dès 180 €, changement de cylindre dès 160 €. Tarifs de soirée et de nuit affichés."),
+         body, [ld_business(), ld_crumbs([(t("Prices", "Tarifs"), "/prices/")]), ld_tarifs()], active="/prices/")
 
     # Insurance
-    simple("/insurance/", "Insurance", "Locksmith &amp; insurance: <em>getting reimbursed</em>",
-           "Our invoices are accepted by French home insurers. Here is how to get a locksmith call-out reimbursed.",
-           f'''<h2>When does insurance pay?</h2>
+    note_ins = f'<p class="note-box">{ico("i-shield")}{E(NOM)} {t("is an independent company with no partnership with insurance companies. Reimbursement depends on your policy.", "est une entreprise indépendante, sans partenariat avec les compagnies d’assurance. Le remboursement dépend de votre contrat.")}</p>'
+    simple("/insurance/", t("Insurance", "Assurance"), t("Locksmith &amp; insurance: <em>getting reimbursed</em>", "Serrurier et assurance : <em>se faire rembourser</em>"),
+           t("Our invoices are accepted by French home insurers. Here is how to get a locksmith call-out reimbursed.",
+             "Nos factures sont acceptées par les assureurs habitation. Voici comment vous faire rembourser une intervention de serrurier."),
+           t('''<h2>When does insurance pay?</h2>
 <p>Most French home insurance policies (multirisque habitation) cover locksmith costs after a <strong>burglary or attempted break-in</strong>. Some also cover <strong>theft</strong> or <strong>loss of keys</strong>, sometimes as an option. A door that has simply slammed shut is rarely covered, unless you have an assistance guarantee: check your policy. If you are a visitor, your travel insurance may also include assistance.</p>
 <h2>Documents to provide</h2>
 <ul><li>The <strong>police report receipt</strong> in case of break-in or theft.</li><li>Our <strong>detailed invoice</strong> (work done, parts fitted, price including VAT).</li><li>The <strong>signed quote</strong> and, on request, <strong>before/after photos</strong>.</li></ul>
 <h2>Deadlines</h2>
 <p>After a theft or burglary, you usually have <strong>2 working days</strong> to notify your insurer. For other claims, the deadline is often 5 working days. Your policy is the reference.</p>
 <h2>How we help</h2>
-<p>We give you all the supporting documents and can temporarily secure your door until the insurance assessor visits.</p>
-<p class="note-box">{ico("i-shield")}{E(NOM)} is an independent company with no partnership with insurance companies. Reimbursement depends on your policy.</p>''',
-           f"Locksmith &amp; home insurance: reimbursable invoice | {NOM}".replace("&amp;", "&"),
-           "How to get a locksmith reimbursed by your home insurance in France: guarantees, documents, deadlines. Our invoices are accepted by insurers.",
+<p>We give you all the supporting documents and can temporarily secure your door until the insurance assessor visits.</p>''',
+             '''<h2>Quand l'assurance prend-elle en charge ?</h2>
+<p>La plupart des contrats multirisques habitation couvrent les frais de serrurier après un <strong>cambriolage ou une tentative d'effraction</strong>. Certains couvrent aussi le <strong>vol</strong> ou la <strong>perte des clés</strong>, parfois en option. Une porte simplement claquée est rarement couverte, sauf garantie assistance : vérifiez votre contrat. Si vous êtes de passage, votre assurance voyage peut aussi inclure une assistance.</p>
+<h2>Les documents à fournir</h2>
+<ul><li>Le <strong>récépissé de dépôt de plainte</strong> en cas d'effraction ou de vol.</li><li>Notre <strong>facture détaillée</strong> (travaux réalisés, pièces posées, prix TTC).</li><li>Le <strong>devis signé</strong> et, sur demande, des <strong>photos avant/après</strong>.</li></ul>
+<h2>Les délais</h2>
+<p>Après un vol ou un cambriolage, vous disposez en général de <strong>2 jours ouvrés</strong> pour prévenir votre assureur. Pour les autres sinistres, le délai est souvent de 5 jours ouvrés. Votre contrat fait foi.</p>
+<h2>Notre accompagnement</h2>
+<p>Nous vous remettons tous les justificatifs et pouvons sécuriser provisoirement votre porte jusqu'au passage de l'expert de l'assurance.</p>''') + note_ins,
+           t(f"Locksmith & home insurance: reimbursable invoice | {NOM}", f"Serrurier et assurance habitation : facture remboursable | {NOM}"),
+           t("How to get a locksmith reimbursed by your home insurance in France: guarantees, documents, deadlines. Our invoices are accepted by insurers.",
+             "Comment se faire rembourser un serrurier par son assurance habitation : garanties, documents, délais. Nos factures sont acceptées par les assureurs."),
            after=assureurs_strip() + contact_band(source="/insurance/"))
 
     # FAQ
     allfaq = HOME_FAQ + [q for s in SERVICES for q in s["faq"]]
-    simple("/faq/", "FAQ", "Frequently asked <em>questions</em>",
-           "Prices, arrival times, insurance, opening techniques: everything we are asked most often.",
-           "<h2>General</h2>" + faq_html(HOME_FAQ) + "".join(f'<h2>{E(s["court"])}</h2>' + faq_html(s["faq"]) for s in SERVICES),
-           f"FAQ – locksmith Paris | {NOM}",
-           "Door opening prices, arrival times, insurance reimbursement, damage-free opening: our answers.",
+    simple("/faq/", "FAQ", t("Frequently asked <em>questions</em>", "Questions <em>fréquentes</em>"),
+           t("Prices, arrival times, insurance, opening techniques: everything we are asked most often.",
+             "Prix, délais, assurance, techniques d'ouverture : tout ce qu'on nous demande le plus souvent."),
+           f"<h2>{t('General', 'Général')}</h2>" + faq_html(HOME_FAQ) + "".join(f'<h2>{E(s["court"])}</h2>' + faq_html(s["faq"]) for s in SERVICES),
+           t(f"FAQ – locksmith Paris | {NOM}", f"Questions fréquentes – serrurier Paris | {NOM}"),
+           t("Door opening prices, arrival times, insurance reimbursement, damage-free opening: our answers.",
+             "Prix d'une ouverture de porte, délais d'intervention, remboursement par l'assurance, ouverture sans casse : nos réponses."),
            extra_ld=[ld_faq(allfaq)], after=contact_band(source="/faq/"))
 
     # Reviews
-    body = hero([("Customer reviews", None)], "Customer reviews <em>on Google</em>",
-                "Our customers post their reviews on our Google Business Profile: they are public and verifiable.", google_badge("g-badge dark"))
-    body += reviews_block("Our reputation, fully transparent") + contact_band(source="/reviews/")
-    page("/reviews/", f"Customer reviews – locksmith Paris | {NOM}", "Read our customers' Google reviews and leave your own. Locksmith in Paris, 24/7.",
-         body, [ld_business(), ld_crumbs([("Customer reviews", "/reviews/")])], active="/reviews/")
+    crumb = t("Customer reviews", "Avis clients")
+    body = hero([(crumb, None)], t("Customer reviews <em>on Google</em>", "Avis clients <em>sur Google</em>"),
+                t("Our customers post their reviews on our Google Business Profile: they are public and verifiable.",
+                  "Nos clients publient leurs avis sur notre fiche Google : ils sont publics et vérifiables."), google_badge("g-badge dark"))
+    body += reviews_block(t("Our reputation, fully transparent", "Notre réputation, en toute transparence")) + contact_band(source="/reviews/")
+    page("/reviews/", t(f"Customer reviews – locksmith Paris | {NOM}", f"Avis clients – serrurier Paris | {NOM}"),
+         t("Read our customers' Google reviews and leave your own. Locksmith in Paris, 24/7.", "Lisez les avis Google de nos clients et laissez le vôtre. Serrurier à Paris, 24h/24."),
+         body, [ld_business(), ld_crumbs([(crumb, "/reviews/")])], active="/reviews/")
 
     # Contact
-    body = hero([("Contact", None)], "Contact <em>your locksmith</em>",
-                "For an emergency, calling is fastest. For a quote or planned work, write to us.")
+    body = hero([("Contact", None)], t("Contact <em>your locksmith</em>", "Contactez <em>votre serrurier</em>"),
+                t("For an emergency, calling is fastest. For a quote or planned work, write to us.",
+                  "En cas d'urgence, le plus rapide est d'appeler. Pour un devis ou des travaux, écrivez-nous."))
     body += f'''<section class="sec cream"><div class="wrap contact-grid">
   <div class="contact-card">
     <h2>{E(NOM)}</h2>
-    <p>{E(CONFIG["slogan"])} in all 20 Paris arrondissements, 24/7. We speak English and French.</p>
-    <a class="c-line" href="{TEL_HREF}" data-track="call_contact">{ico("i-phone")}<span><small>Phone 24/7</small><b>{TEL}</b></span></a>
-    <a class="c-line" href="{E(wa_link(WA_MSG))}" target="_blank" rel="noopener" data-track="wa_contact">{ico("i-wa")}<span><small>WhatsApp</small><b>Send a photo</b></span></a>
+    <p>{t(f"{E(slogan())} in all 20 Paris arrondissements, 24/7. We speak English and French.", f"{E(slogan())} dans les 20 arrondissements de Paris, 24h/24. Nous parlons français et anglais.")}</p>
+    <a class="c-line" href="{TEL_HREF}" data-track="call_contact">{ico("i-phone")}<span><small>{t("Phone 24/7", "Téléphone 24h/24")}</small><b>{TEL}</b></span></a>
+    <a class="c-line" href="{E(wa_link(WA_MSG))}" target="_blank" rel="noopener" data-track="wa_contact">{ico("i-wa")}<span><small>WhatsApp</small><b>{t("Send a photo", "Envoyer une photo")}</b></span></a>
     <a class="c-line" href="mailto:{CONFIG["email"]}">{ico("i-mail")}<span><small>Email</small><b>{CONFIG["email"]}</b></span></a>
     <a class="c-line" href="{CONFIG["instagram"]}" target="_blank" rel="noopener me">{ico("i-insta")}<span><small>Instagram</small><b>@securelockserrurerie</b></span></a>
-    <div class="c-line">{ico("i-pin")}<span><small>Service area</small><b>Paris, 1st to 20th arrondissement</b></span></div>
+    <div class="c-line">{ico("i-pin")}<span><small>{t("Service area", "Zone d'intervention")}</small><b>{t("Paris, 1st to 20th arrondissement", "Paris, du 1er au 20e arrondissement")}</b></span></div>
   </div>
-  {lead_form("/contact/", titre="Write to us", sous="Quote, call-back, question: quick reply, 7 days a week.")}
+  {lead_form("/contact/", titre=t("Write to us", "Écrivez-nous"), sous=t("Quote, call-back, question: quick reply, 7 days a week.", "Devis, rappel, question : réponse rapide, 7 jours sur 7."))}
 </div></section>
-<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">Google Business Profile</span><h2>Find us</h2></div>{map_embed()}</div></section>''' + reviews_block()
-    page("/contact/", f"Contact – locksmith Paris 24/7 | {NOM}",
-         f"Contact {NOM} on {TEL}, 24/7, by phone, WhatsApp or email. Free quote, fast call-out anywhere in Paris. English spoken.",
+<section class="sec"><div class="wrap"><div class="sec-head"><span class="eyebrow">{t("Google Business Profile", "Fiche Google")}</span><h2>{t("Find us", "Nous trouver")}</h2></div>{map_embed()}</div></section>''' + reviews_block()
+    page("/contact/", t(f"Contact – locksmith Paris 24/7 | {NOM}", f"Contact – serrurier Paris 24h/24 | {NOM}"),
+         t(f"Contact {NOM} on {TEL}, 24/7, by phone, WhatsApp or email. Free quote, fast call-out anywhere in Paris. English spoken.",
+           f"Contactez {NOM} au {TEL}, 24h/24, par téléphone, WhatsApp ou email. Devis gratuit, intervention rapide partout dans Paris."),
          body, [ld_business(full=True), ld_crumbs([("Contact", "/contact/")])], active="/contact/")
 
     # Legal notice
-    lignes = [E(CONFIG["raison_sociale"]) + (f" (trading as {E(NOM)})" if NOM != CONFIG["raison_sociale"] else "")]
+    lignes = [E(CONFIG["raison_sociale"]) + (f" ({t('trading as', 'nom commercial :')} {E(NOM)})" if NOM != CONFIG["raison_sociale"] else "")]
     if CONFIG["responsable"]:
-        lignes.append(f"Publication director: {E(CONFIG['responsable'])}")
+        lignes.append(f"{t('Publication director', 'Directeur de la publication')} : {E(CONFIG['responsable'])}")
     if CONFIG["siren"]:
-        lignes.append(f"SIREN: {CONFIG['siren']}")
+        lignes.append(f"SIREN : {CONFIG['siren']}")
     if CONFIG["siret"]:
-        lignes.append(f"SIRET: {CONFIG['siret']}")
-    lignes += [f"Address: {E(adresse_txt())}", f"Phone: {TEL}", f"Email: {CONFIG['email']}"]
-    mediateur = E(CONFIG["mediateur"]) or "their contact details are available on request at " + CONFIG["email"]
-    simple("/legal-notice/", "Legal notice", "Legal notice", "Legal information about this website and the company.",
-           f'''<h2>Website publisher</h2><p>{"<br>".join(lignes)}</p>
+        lignes.append(f"SIRET : {CONFIG['siret']}")
+    lignes += [f"{t('Address:', 'Adresse :')} {E(adresse_txt())}", f"{t('Phone:', 'Téléphone :')} {TEL}", f"Email{t(':', ' :')} {CONFIG['email']}"]
+    mediateur = E(CONFIG["mediateur"]) or t("their contact details are available on request at ", "ses coordonnées sont disponibles sur demande à ") + CONFIG["email"]
+    simple("/legal-notice/", t("Legal notice", "Mentions légales"), t("Legal notice", "Mentions légales"),
+           t("Legal information about this website and the company.", "Informations légales sur ce site et l'entreprise."),
+           t(f'''<h2>Website publisher</h2><p>{"<br>".join(lignes)}</p>
 <h2>Hosting</h2><p>Netlify, Inc. – 44 Montgomery Street, Suite 300, San Francisco, CA 94104, United States.</p>
 <h2>Intellectual property</h2><p>The texts, logo and graphic elements of this website belong to {E(NOM)}, unless otherwise stated. Insurance company and brand names are mentioned for information only and do not imply any partnership.</p>
 <h2>Consumer mediation</h2><p>In accordance with article L612-1 of the French Consumer Code, you may use a consumer mediator free of charge: {mediateur}.</p>
 <h2>Prices and quotes</h2><p>Prices shown are starting prices including VAT. In accordance with the French decree of 24 January 2017 on repair and maintenance call-outs in the building sector, a free, detailed quote is given and signed before any work, and a detailed invoice is provided at the end.</p>
 <h2>Liability</h2><p>The information on this website is provided for guidance and may change.</p>''',
-           f"Legal notice | {NOM}", f"Legal notice of the {NOM} website, locksmith in Paris.", aside=False)
+             f'''<h2>Éditeur du site</h2><p>{"<br>".join(lignes)}</p>
+<h2>Hébergement</h2><p>Netlify, Inc. – 44 Montgomery Street, Suite 300, San Francisco, CA 94104, États-Unis.</p>
+<h2>Propriété intellectuelle</h2><p>Les textes, le logo et les éléments graphiques de ce site appartiennent à {E(NOM)}, sauf mention contraire. Les noms des compagnies d'assurance et des marques sont cités à titre informatif et n'impliquent aucun partenariat.</p>
+<h2>Médiation de la consommation</h2><p>Conformément à l'article L612-1 du Code de la consommation, vous pouvez recourir gratuitement à un médiateur de la consommation : {mediateur}.</p>
+<h2>Prix et devis</h2><p>Les prix affichés sont des prix de départ TTC. Conformément à l'arrêté du 24 janvier 2017 relatif aux prestations de dépannage, de réparation et d'entretien dans le secteur du bâtiment, un devis détaillé gratuit est remis et signé avant toute intervention, et une facture détaillée est remise à la fin.</p>
+<h2>Responsabilité</h2><p>Les informations de ce site sont fournies à titre indicatif et peuvent évoluer.</p>'''),
+           t(f"Legal notice | {NOM}", f"Mentions légales | {NOM}"),
+           t(f"Legal notice of the {NOM} website, locksmith in Paris.", f"Mentions légales du site {NOM}, serrurier à Paris."), aside=False)
 
-    simple("/privacy/", "Privacy", "Privacy policy", "How we handle your personal data.",
-           f'''<h2>Data collected</h2><p>When you contact us (phone, WhatsApp, email or form), we only collect what is needed to handle your request: name, phone number, call-out address and description of the problem.</p>
+    simple("/privacy/", t("Privacy", "Confidentialité"), t("Privacy policy", "Politique de confidentialité"),
+           t("How we handle your personal data.", "Comment nous traitons vos données personnelles."),
+           t(f'''<h2>Data collected</h2><p>When you contact us (phone, WhatsApp, email or form), we only collect what is needed to handle your request: name, phone number, call-out address and description of the problem.</p>
 <h2>Purpose</h2><p>This data is used to organize the call-out and to issue the quote and invoice. It is never sold or passed on.</p>
 <h2>Form and WhatsApp</h2><p>Requests sent through the form are processed by Netlify Forms (our website host). WhatsApp messages are subject to WhatsApp's (Meta's) terms.</p>
 <h2 id="cookies">Cookies and analytics</h2><p>Only with your consent, this website uses <strong>Google Tag Manager</strong> and <strong>Google Analytics</strong> (Google Ireland Ltd) to measure traffic and the use of the call, WhatsApp and form buttons. Without consent, none of these tools is loaded.</p>
 <p>Your choice is stored for 6 months in your browser and can be changed at any time with the "Cookies" link at the bottom of each page.</p>
 <h2>Retention</h2><p>Billing data is kept for 10 years (legal requirement). Other data is deleted no later than 3 years after the last contact.</p>
 <h2>Your rights</h2><p>Under the GDPR, you have the right to access, correct, delete and object to the processing of your data. Write to {CONFIG["email"]}. You may also contact the French data protection authority (CNIL).</p>''',
-           f"Privacy policy | {NOM}", f"Privacy policy of the {NOM} website.", aside=False)
+             f'''<h2>Données collectées</h2><p>Lorsque vous nous contactez (téléphone, WhatsApp, email ou formulaire), nous recueillons uniquement ce qui est nécessaire pour traiter votre demande : nom, numéro de téléphone, adresse d'intervention et description du problème.</p>
+<h2>Finalité</h2><p>Ces données servent à organiser l'intervention et à établir le devis et la facture. Elles ne sont jamais vendues ni cédées.</p>
+<h2>Formulaire et WhatsApp</h2><p>Les demandes envoyées par le formulaire sont traitées par Netlify Forms (hébergeur du site). Les messages WhatsApp sont soumis aux conditions de WhatsApp (Meta).</p>
+<h2 id="cookies">Cookies et mesure d'audience</h2><p>Uniquement avec votre accord, ce site utilise <strong>Google Tag Manager</strong> et <strong>Google Analytics</strong> (Google Ireland Ltd) pour mesurer la fréquentation et l'utilisation des boutons d'appel, WhatsApp et formulaire. Sans accord, aucun de ces outils n'est chargé.</p>
+<p>Votre choix est conservé 6 mois dans votre navigateur et peut être modifié à tout moment avec le lien « Cookies » en bas de chaque page.</p>
+<h2>Durée de conservation</h2><p>Les données de facturation sont conservées 10 ans (obligation légale). Les autres données sont supprimées au plus tard 3 ans après le dernier contact.</p>
+<h2>Vos droits</h2><p>Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement et d'opposition au traitement de vos données. Écrivez à {CONFIG["email"]}. Vous pouvez également saisir la CNIL.</p>'''),
+           t(f"Privacy policy | {NOM}", f"Politique de confidentialité | {NOM}"),
+           t(f"Privacy policy of the {NOM} website.", f"Politique de confidentialité du site {NOM}."), aside=False)
 
 
 URG_FAQ = [
@@ -1565,8 +1774,9 @@ GUIDE = [
 
 
 def guide_block():
-    data = {k: {"label": l, "url": svc_url(SVC_BY_SLUG[slug]), "service": SVC_BY_SLUG[slug]["court"], "prices": p, "from": f, "tip": t}
-            for k, l, slug, p, f, t in GUIDE}
+    data = {k: {"label": l, "url": svc_url(SVC_BY_SLUG[slug]), "service": SVC_BY_SLUG[slug]["court"], "prices": p, "from": f, "tip": tip}
+            for k, l, slug, p, f, tip in GUIDE}
+
     def gd_img(k, slug):
         if os.path.exists(os.path.join(ROOT, "assets", "img", "urgences", f"{k}.webp")):
             return f'<img class="gd-img" src="/assets/img/urgences/{k}.webp" alt="" width="640" height="360" loading="lazy" decoding="async">'
@@ -1577,19 +1787,19 @@ def guide_block():
                     for k, i, l, h in SLOTS)
     return f'''<div class="guide" data-guide>
   <div class="gd-step">
-    <p class="gd-q"><b>1</b>What happened?</p>
+    <p class="gd-q"><b>1</b>{t("What happened?", "Que s'est-il passé ?")}</p>
     <div class="gd-opts">{opts}</div>
   </div>
   <div class="gd-step">
-    <p class="gd-q"><b>2</b>When do you need us? <small class="gd-auto" hidden></small></p>
+    <p class="gd-q"><b>2</b>{t("When do you need us?", "Quand avez-vous besoin de nous ?")} <small class="gd-auto" hidden></small></p>
     <div class="gd-slots">{slots}</div>
   </div>
   <div class="gd-result" aria-live="polite">
-    <div class="gd-empty">{ico("i-arrow")}<span>Choose your situation above to see your price and what to do now.</span></div>
+    <div class="gd-empty">{ico("i-arrow")}<span>{t("Choose your situation above to see your price and what to do now.", "Choisissez votre situation ci-dessus pour voir votre prix et quoi faire maintenant.")}</span></div>
     <div class="gd-out" hidden>
       <div class="gd-price"><small data-g="slotlabel"></small><b data-g="price"></b><span data-g="note"></span></div>
-      <div class="gd-tip">{ico("i-award")}<p><strong>What to do now:</strong> <span data-g="tip"></span></p></div>
-      <div class="gd-acts">{btn_call("Call now · " + TEL, cls="btn btn-gold btn-lg", track="call_guide")}<a class="btn btn-wa btn-lg" data-g="wa" href="{E(WA)}" target="_blank" rel="noopener" data-track="wa_guide">{ico("i-wa")}<span>WhatsApp</span></a><a class="btn btn-outline btn-lg" data-g="more" href="/services/">{ico("i-file")}<span>How we handle it</span></a></div>
+      <div class="gd-tip">{ico("i-award")}<p><strong>{t("What to do now:", "Que faire maintenant :")}</strong> <span data-g="tip"></span></p></div>
+      <div class="gd-acts">{btn_call(t("Call now · ", "Appeler · ") + TEL, cls="btn btn-gold btn-lg", track="call_guide")}<a class="btn btn-wa btn-lg" data-g="wa" href="{E(WA)}" target="_blank" rel="noopener" data-track="wa_guide">{ico("i-wa")}<span>WhatsApp</span></a><a class="btn btn-outline btn-lg" data-g="more" href="/services/">{ico("i-file")}<span>{t("How we handle it", "Notre intervention")}</span></a></div>
     </div>
   </div>
   <script type="application/json" id="guide-data">{json.dumps(data, ensure_ascii=False)}</script>
@@ -1597,62 +1807,80 @@ def guide_block():
 
 
 def build_urgence():
-    steps = "".join(f"<li><b>{i}</b><div><h3>{E(t)}</h3><p>{E(d)}</p></div></li>" for i, (t, d) in enumerate([
+    etapes = t([
         ("Stay calm and safe", "If someone may still be inside after a break-in, don't go in and call the police (17)."),
         ("Call us", f"On {TEL}, 24/7. Describe the door and the situation, or send a photo on WhatsApp."),
         ("You get the price", "Before the locksmith sets off, depending on the time of day. It doesn't change on the way."),
         ("Signed quote, then the work", "On site, the price is confirmed in writing. The locksmith only starts once you have signed."),
-    ], start=1))
-    body = hero([("Emergency 24/7", None)], "Emergency locksmith in Paris, <em>24/7</em>",
-                "Lockout, broken key, jammed lock, burglary: a locksmith comes right away anywhere in the 20 arrondissements, at night, at weekends and on public holidays. Price given before we travel.",
-                ticks(["Arrival ≈ 30 min", "Price given on the phone", "Signed quote before work"], "ticks light inline"), kicker="Immediate call-out", bg="tour-eiffel")
+    ], [
+        ("Restez calme et en sécurité", "Si quelqu'un est peut-être encore à l'intérieur après une effraction, n'entrez pas et appelez la police (17)."),
+        ("Appelez-nous", f"Au {TEL}, 24h/24. Décrivez la porte et la situation, ou envoyez une photo sur WhatsApp."),
+        ("Vous connaissez le prix", "Avant le départ du serrurier, selon l'heure d'intervention. Il ne change pas en route."),
+        ("Devis signé, puis intervention", "Sur place, le prix est confirmé par écrit. Le serrurier ne commence qu'une fois le devis signé."),
+    ])
+    steps = "".join(f"<li><b>{i}</b><div><h3>{E(h)}</h3><p>{E(d)}</p></div></li>" for i, (h, d) in enumerate(etapes, start=1))
+    crumb = t("Emergency 24/7", "Urgence 24h/24")
+    body = hero([(crumb, None)], t("Emergency locksmith in Paris, <em>24/7</em>", "Serrurier en urgence à Paris, <em>24h/24</em>"),
+                t("Lockout, broken key, jammed lock, burglary: a locksmith comes right away anywhere in the 20 arrondissements, at night, at weekends and on public holidays. Price given before we travel.",
+                  "Porte claquée, clé cassée, serrure bloquée, cambriolage : un serrurier arrive tout de suite dans les 20 arrondissements, la nuit, le week-end et les jours fériés. Prix annoncé avant le déplacement."),
+                ticks(t(["Arrival ≈ 30 min", "Price given on the phone", "Signed quote before work"], ["Arrivée ≈ 30 min", "Prix annoncé au téléphone", "Devis signé avant intervention"]), "ticks light inline"),
+                kicker=t("Immediate call-out", "Intervention immédiate"), bg="tour-eiffel")
     body += f'''<section class="sec"><div class="wrap">
-  <div class="sec-head split"><div><span class="eyebrow">Your price in 2 clicks</span><h2>What is your emergency?</h2></div>
-  <p>Answer two questions: you get the price that applies right now and what to do while you wait. Then call us, or leave your number and we call you back.</p></div>
+  <div class="sec-head split"><div><span class="eyebrow">{t("Your price in 2 clicks", "Votre prix en 2 clics")}</span><h2>{t("What is your emergency?", "Quelle est votre urgence ?")}</h2></div>
+  <p>{t("Answer two questions: you get the price that applies right now and what to do while you wait. Then call us, or leave your number and we call you back.", "Répondez à deux questions : vous obtenez le prix qui s'applique maintenant et quoi faire en attendant. Appelez-nous ensuite, ou laissez votre numéro et nous vous rappelons.")}</p></div>
   {guide_block()}
 </div></section>
 <section class="sec soft"><div class="wrap layout"><article class="prose">
-  <h2>What to do in an emergency</h2>
+  <h2>{t("What to do in an emergency", "Que faire en cas d'urgence")}</h2>
   <ol class="urg-steps">{steps}</ol>
-  <h2>Our emergency prices</h2>
-  <p>Our prices depend on the time of day: day (weekdays 8am–6pm), evening (weekdays 6pm–10pm) and night (10pm–8am). On Saturdays, Sundays and public holidays there is no daytime rate: the evening rate applies from 8am to 10pm. The current time slot is selected automatically.</p>
-</article>{side_box("Emergency: call now", "A locksmith answers directly and gives you the price before setting off.")}</div>
+  <h2>{t("Our emergency prices", "Nos tarifs d'urgence")}</h2>
+  <p>{t("Our prices depend on the time of day: day (weekdays 8am–6pm), evening (weekdays 6pm–10pm) and night (10pm–8am). On Saturdays, Sundays and public holidays there is no daytime rate: the evening rate applies from 8am to 10pm. The current time slot is selected automatically.", "Nos prix dépendent de l'heure : journée (en semaine 8h–18h), soirée (en semaine 18h–22h) et nuit (22h–8h). Le samedi, le dimanche et les jours fériés, il n'y a pas de tarif de journée : le tarif de soirée s'applique de 8h à 22h. La tranche horaire actuelle est sélectionnée automatiquement.")}</p>
+</article>{side_box(t("Emergency: call now", "Urgence : appelez maintenant"), t("A locksmith answers directly and gives you the price before setting off.", "Un serrurier vous répond directement et vous annonce le prix avant de partir."))}</div>
 <div class="wrap" style="margin-top:28px">{tarif_table()}</div></section>
-<section class="sec"><div class="wrap faq-wrap"><div class="sec-head"><span class="eyebrow">Questions</span><h2>Emergencies: your questions</h2></div>{faq_html(URG_FAQ)}</div></section>'''
-    body += assureurs_strip() + contact_band("Locked out? Call us.", "A locksmith answers right away and gives you the price before travelling.", source="/emergency/")
-    page("/emergency/", f"Emergency locksmith Paris 24/7 – {TEL} | {NOM}",
-         f"Emergency locksmith in Paris, 24/7: lockouts from €110 incl. VAT, broken keys, jammed locks, burglaries. Arrival in about 30 min, price given before we travel. English spoken. ☎ {TEL}",
-         body, [ld_business(full=True), ld_crumbs([("Emergency 24/7", "/emergency/")]), ld_faq(URG_FAQ)], active="/emergency/")
+<section class="sec"><div class="wrap faq-wrap"><div class="sec-head"><span class="eyebrow">Questions</span><h2>{t("Emergencies: your questions", "Urgences : vos questions")}</h2></div>{faq_html(URG_FAQ)}</div></section>'''
+    body += assureurs_strip() + contact_band(t("Locked out? Call us.", "Porte claquée ? Appelez-nous."),
+                                             t("A locksmith answers right away and gives you the price before travelling.", "Un serrurier vous répond tout de suite et vous annonce le prix avant de se déplacer."),
+                                             source="/emergency/")
+    page("/emergency/", t(f"Emergency locksmith Paris 24/7 – {TEL} | {NOM}", f"Serrurier urgence Paris 24h/24 – {TEL} | {NOM}"),
+         t(f"Emergency locksmith in Paris, 24/7: lockouts from €110 incl. VAT, broken keys, jammed locks, burglaries. Arrival in about 30 min, price given before we travel. English spoken. ☎ {TEL}",
+           f"Serrurier en urgence à Paris, 24h/24 : porte claquée dès 110 € TTC, clé cassée, serrure bloquée, cambriolage. Arrivée en 30 min environ, prix annoncé avant le déplacement. ☎ {TEL}"),
+         body, [ld_business(full=True), ld_crumbs([(crumb, "/emergency/")]), ld_faq(URG_FAQ)], active="/emergency/")
 
 
 def build_charte():
-    items = "".join(f'<div class="charte-item">{ico(i)}<div><h2>{E(t)}</h2><p>{E(d)}</p></div></div>' for i, t, d in CHARTE)
-    body = hero([("Our commitments", None)], "Our trust charter",
-                "Eight concrete commitments, applied to every job, day and night. Feel free to remind us of them at any time.",
-                kicker="Transparency")
+    items = "".join(f'<div class="charte-item">{ico(i)}<div><h2>{E(h)}</h2><p>{E(d)}</p></div></div>' for i, h, d in CHARTE)
+    crumb = t("Our commitments", "Nos engagements")
+    body = hero([(crumb, None)], t("Our trust charter", "Notre charte de confiance"),
+                t("Eight concrete commitments, applied to every job, day and night. Feel free to remind us of them at any time.",
+                  "Huit engagements concrets, appliqués à chaque intervention, de jour comme de nuit. N'hésitez pas à nous les rappeler à tout moment."),
+                kicker=t("Transparency", "Transparence"))
     body += f'''<section class="sec"><div class="wrap layout"><article class="prose">
-  <p class="intro">Emergency locksmiths suffer from a bad reputation: misleading teaser prices, inflated invoices, locks replaced for no reason. We built {E(NOM)} on the opposite principle. Here is exactly what we commit to, for every customer.</p>
+  <p class="intro">{t(f"Emergency locksmiths suffer from a bad reputation: misleading teaser prices, inflated invoices, locks replaced for no reason. We built {E(NOM)} on the opposite principle. Here is exactly what we commit to, for every customer.", f"Le dépannage en serrurerie souffre d'une mauvaise réputation : prix d'appel trompeurs, factures gonflées, serrures changées sans raison. Nous avons construit {E(NOM)} sur le principe inverse. Voici précisément ce à quoi nous nous engageons, pour chaque client.")}</p>
   <div class="charte">{items}</div>
-  <h2>What you will never see from us</h2>
+  <h2>{t("What you will never see from us", "Ce que vous ne verrez jamais chez nous")}</h2>
   {comparatif_block()}
-  <h2>Your rights with a locksmith in France</h2>
-  <p>For a home call-out, the professional must inform you of their prices and give you a detailed quote before the work (decree of 24 January 2017). You can refuse the quote. At the end, a detailed invoice must be given to you. In the event of a dispute, you can contact the consumer mediator named in our <a href="/legal-notice/">legal notice</a> free of charge, or report a practice on the government's SignalConso website.</p>
-  <h2>Check for yourself</h2>
-  <p>Before calling us, read <a href="{E(MAPS)}" target="_blank" rel="noopener">our {CONFIG["avis_nombre"]} Google reviews</a>, our <a href="/prices/">price list</a> and our <a href="/legal-notice/">legal information</a>. And if any point of this charter were not respected, tell us: it's the only way to stay up to standard.</p>
-</article>{side_box("A clear price from the first call", "Describe your situation: you get the price before anyone travels.")}</div></section>'''
+  <h2>{t("Your rights with a locksmith in France", "Vos droits face à un serrurier")}</h2>
+  <p>{t('For a home call-out, the professional must inform you of their prices and give you a detailed quote before the work (decree of 24 January 2017). You can refuse the quote. At the end, a detailed invoice must be given to you. In the event of a dispute, you can contact the consumer mediator named in our <a href="/legal-notice/">legal notice</a> free of charge, or report a practice on the government\'s SignalConso website.', 'Pour un dépannage à domicile, le professionnel doit vous informer de ses tarifs et vous remettre un devis détaillé avant l\'intervention (arrêté du 24 janvier 2017). Vous pouvez refuser le devis. À la fin, une facture détaillée doit vous être remise. En cas de litige, vous pouvez saisir gratuitement le médiateur de la consommation indiqué dans nos <a href="/legal-notice/">mentions légales</a>, ou signaler une pratique sur le site SignalConso.')}</p>
+  <h2>{t("Check for yourself", "Vérifiez par vous-même")}</h2>
+  <p>{t(f'Before calling us, read <a href="{E(MAPS)}" target="_blank" rel="noopener">our {CONFIG["avis_nombre"]} Google reviews</a>, our <a href="/prices/">price list</a> and our <a href="/legal-notice/">legal information</a>. And if any point of this charter were not respected, tell us: it\'s the only way to stay up to standard.', f'Avant de nous appeler, lisez <a href="{E(MAPS)}" target="_blank" rel="noopener">nos {CONFIG["avis_nombre"]} avis Google</a>, notre <a href="/prices/">grille tarifaire</a> et nos <a href="/legal-notice/">informations légales</a>. Et si un point de cette charte n\'était pas respecté, dites-le-nous : c\'est la seule façon de rester à la hauteur.')}</p>
+</article>{side_box(t("A clear price from the first call", "Un prix clair dès le premier appel"), t("Describe your situation: you get the price before anyone travels.", "Décrivez votre situation : vous connaissez le prix avant tout déplacement."))}</div></section>'''
     body += reviews_block() + contact_band(source="/our-commitments/")
-    page("/our-commitments/", f"Our commitments: trust charter | {NOM}",
-         "Price given before we travel, signed quote before any work, no unnecessary damage, detailed invoice: the trust charter of our Paris locksmith company.",
-         body, [ld_business(), ld_crumbs([("Our commitments", "/our-commitments/")])], active="/our-commitments/")
+    page("/our-commitments/", t(f"Our commitments: trust charter | {NOM}", f"Nos engagements : charte de confiance | {NOM}"),
+         t("Price given before we travel, signed quote before any work, no unnecessary damage, detailed invoice: the trust charter of our Paris locksmith company.",
+           "Prix annoncé avant le déplacement, devis signé avant toute intervention, pas de casse inutile, facture détaillée : la charte de confiance de notre entreprise de serrurerie parisienne."),
+         body, [ld_business(), ld_crumbs([(crumb, "/our-commitments/")])], active="/our-commitments/")
 
 
 def build_conseils():
-    body = hero([("Advice", None)], "Locksmith advice <em>for Paris residents and visitors</em>",
-                "Practical guides to react in an emergency, secure your home and avoid nasty surprises.")
+    crumb = t("Advice", "Conseils")
+    body = hero([(crumb, None)], t("Locksmith advice <em>for Paris residents and visitors</em>", "Conseils de serrurier <em>pour les Parisiens et les visiteurs</em>"),
+                t("Practical guides to react in an emergency, secure your home and avoid nasty surprises.",
+                  "Des guides pratiques pour réagir en cas d'urgence, sécuriser votre logement et éviter les mauvaises surprises."))
     body += f'<section class="sec"><div class="wrap">{articles_cards(ARTICLES)}</div></section>' + contact_band(source="/advice/")
-    page("/advice/", f"Locksmith & security advice in Paris | {NOM}",
-         "Lost keys, armored doors in Parisian buildings, locksmith scams, after a burglary: our practical guides.",
-         body, [ld_business(), ld_crumbs([("Advice", "/advice/")])], active="/advice/")
+    page("/advice/", t(f"Locksmith & security advice in Paris | {NOM}", f"Conseils serrurerie et sécurité à Paris | {NOM}"),
+         t("Lost keys, armored doors in Parisian buildings, locksmith scams, after a burglary: our practical guides.",
+           "Clés perdues, porte blindée en immeuble parisien, arnaques au serrurier, après un cambriolage : nos guides pratiques."),
+         body, [ld_business(), ld_crumbs([(crumb, "/advice/")])], active="/advice/")
     for a in ARTICLES:
         path = f"/advice/{a['slug']}/"
         parts = []
@@ -1661,49 +1889,59 @@ def build_conseils():
                 parts.append(f"<{kind}>" + "".join(f"<li>{v}</li>" for v in val) + f"</{kind}>")
             else:
                 parts.append(f"<{kind}>{val}</{kind}>")
-        prose = "".join(parts) + (f'<div class="note-box">{ico("i-phone")}<p><strong>Need a locksmith now?</strong> {E(NOM)} works 24/7 across Paris. '
-                                  f'Call <a href="{TEL_HREF}">{TEL}</a>: the price is given on the phone. See also our <a href="/services/">services</a> and <a href="/prices/">prices</a>.</p></div>')
+        prose = "".join(parts) + (f'<div class="note-box">{ico("i-phone")}<p>' + t(
+            f'<strong>Need a locksmith now?</strong> {E(NOM)} works 24/7 across Paris. Call <a href="{TEL_HREF}">{TEL}</a>: the price is given on the phone. See also our <a href="/services/">services</a> and <a href="/prices/">prices</a>.',
+            f'<strong>Besoin d\'un serrurier maintenant ?</strong> {E(NOM)} intervient 24h/24 dans tout Paris. Appelez le <a href="{TEL_HREF}">{TEL}</a> : le prix est annoncé au téléphone. Voir aussi nos <a href="/services/">services</a> et nos <a href="/prices/">tarifs</a>.')
+            + '</p></div>')
         rel = articles_cards([o for o in ARTICLES if o is not a][:3])
-        body = hero([("Advice", "/advice/"), (a["court"], None)], E(a["titre"]), E(a["desc"]),
-                    f'<p class="post-by">{E(a["cat"])} · {fr_date(a["date"])} · by the {E(NOM)} team</p>')
+        body = hero([(crumb, "/advice/"), (a["court"], None)], E(a["titre"]), E(a["desc"]),
+                    f'<p class="post-by">{E(a["cat"])} · {fr_date(a["date"])} · {t("by the", "par l\'équipe")} {E(NOM)}{t(" team", "")}</p>')
         body += f'<section class="sec"><div class="wrap layout"><article class="prose">{prose}</article>{side_box()}</div></section>'
-        body += f'<section class="sec cream"><div class="wrap"><div class="sec-head"><h2>Read next</h2></div>{rel}</div></section>' + contact_band(source=path)
-        ld = [ld_business(), ld_crumbs([("Advice", "/advice/"), (a["court"], path)]),
+        body += f'<section class="sec cream"><div class="wrap"><div class="sec-head"><h2>{t("Read next", "À lire aussi")}</h2></div>{rel}</div></section>' + contact_band(source=path)
+        ld = [ld_business(), ld_crumbs([(crumb, "/advice/"), (a["court"], path)]),
               {"@context": "https://schema.org", "@type": "BlogPosting", "headline": a["titre"], "description": a["desc"],
-               "datePublished": a["date"], "dateModified": a["date"], "inLanguage": "en", "mainEntityOfPage": URL + path,
+               "datePublished": a["date"], "dateModified": a["date"], "inLanguage": LANG, "mainEntityOfPage": URL + path,
                "author": {"@type": "Organization", "name": NOM, "url": URL + "/"}, "publisher": {"@id": BID}, "image": URL + "/assets/img/og.jpg"}]
         page(path, f'{a["titre"]} | {NOM}', a["desc"], body, ld, active="/advice/", og_type="article")
 
 
 def build_misc():
     conv = CONFIG["ads_conv"].get("form")
+    home = t("Back to home", "Retour à l'accueil")
     body = f'''<section class="phero center-page"><div class="wrap">
   <span class="big-ic">{ico("i-check")}</span>
-  <h1>Thank you, your request has been sent</h1>
-  <p class="lead">We will call you back very soon. For an emergency (lockout, break-in), call us directly: it's the fastest way.</p>
-  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_merci")}<a class="btn btn-outline-light btn-lg" href="/">Back to home</a></div>
+  <h1>{t("Thank you, your request has been sent", "Merci, votre demande a bien été envoyée")}</h1>
+  <p class="lead">{t("We will call you back very soon. For an emergency (lockout, break-in), call us directly: it's the fastest way.", "Nous vous rappelons très vite. En cas d'urgence (porte claquée, effraction), appelez-nous directement : c'est le plus rapide.")}</p>
+  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_merci")}<a class="btn btn-outline-light btn-lg" href="/">{home}</a></div>
 </div></section>'''
     if CONFIG["ads_id"] and conv:
         body += f"<script>gtag('event','conversion',{{'send_to':'{CONFIG['ads_id']}/{conv}','value':1.0,'currency':'EUR'}});</script>"
-    page("/thank-you/", f"Request sent | {NOM}", "Your request has been sent.", body, robots="noindex, nofollow")
+    page("/thank-you/", t(f"Request sent | {NOM}", f"Demande envoyée | {NOM}"), t("Your request has been sent.", "Votre demande a bien été envoyée."), body, robots="noindex, nofollow")
 
     body = f'''<section class="phero center-page"><div class="wrap">
   <p class="err">404</p>
-  <h1>Page not found</h1>
-  <p class="lead">It may have moved. Need a locksmith? We are available 24/7.</p>
-  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_404")}<a class="btn btn-outline-light btn-lg" href="/">Back to home</a></div>
+  <h1>{t("Page not found", "Page introuvable")}</h1>
+  <p class="lead">{t("It may have moved. Need a locksmith? We are available 24/7.", "Elle a peut-être été déplacée. Besoin d'un serrurier ? Nous sommes disponibles 24h/24.")}</p>
+  <div class="cta-row center">{btn_call(cls="btn btn-gold btn-lg", track="call_404")}<a class="btn btn-outline-light btn-lg" href="/">{home}</a></div>
 </div></section>'''
-    page("/404.html", f"Page not found | {NOM}", "This page doesn't exist.", body, robots="noindex, follow")
+    page("/404.html", t(f"Page not found | {NOM}", f"Page introuvable | {NOM}"), t("This page doesn't exist.", "Cette page n'existe pas."), body, robots="noindex, follow")
 
-    groups = [("Main pages", [("Home", "/"), ("Emergency 24/7", "/emergency/"), ("Services", "/services/"), ("Arrondissements", "/locksmith-paris/"), ("Prices", "/prices/"),
-                              ("Our commitments", "/our-commitments/"), ("Insurance", "/insurance/"), ("Customer reviews", "/reviews/"), ("FAQ", "/faq/"),
-                              ("Advice", "/advice/"), ("Contact", "/contact/")]),
+    serrurier = t("Locksmith", "Serrurier")
+    groups = [(t("Main pages", "Pages principales"), t(
+                  [("Home", "/"), ("Emergency 24/7", "/emergency/"), ("Services", "/services/"), ("Arrondissements", "/locksmith-paris/"), ("Prices", "/prices/"),
+                   ("Our commitments", "/our-commitments/"), ("Insurance", "/insurance/"), ("Customer reviews", "/reviews/"), ("FAQ", "/faq/"),
+                   ("Advice", "/advice/"), ("Contact", "/contact/")],
+                  [("Accueil", "/"), ("Urgence 24h/24", "/emergency/"), ("Services", "/services/"), ("Arrondissements", "/locksmith-paris/"), ("Tarifs", "/prices/"),
+                   ("Nos engagements", "/our-commitments/"), ("Assurance", "/insurance/"), ("Avis clients", "/reviews/"), ("Questions fréquentes", "/faq/"),
+                   ("Conseils", "/advice/"), ("Contact", "/contact/")])),
               ("Services", [(s["nom"], svc_url(s)) for s in SERVICES]),
-              ("Arrondissements", [(f"Locksmith {z['court']}", z["url"]) for z in ARR]),
-              ("Advice", [(a["court"], f"/advice/{a['slug']}/") for a in ARTICLES])]
-    prose = "".join(f'<h2>{E(t)}</h2><div class="chips">' + "".join(f'<a class="chip" href="{u}">{E(l)}</a>' for l, u in lst) + "</div>" for t, lst in groups)
-    simple("/site-map/", "Site map", "Site map", f"Every page of the {NOM} website.", prose,
-           f"Site map | {NOM}", f"Site map of {NOM}: services, arrondissements, advice.", aside=False)
+              ("Arrondissements", [(f"{serrurier} {z['court']}", z["url"]) for z in ARR]),
+              (t("Advice", "Conseils"), [(a["court"], f"/advice/{a['slug']}/") for a in ARTICLES])]
+    prose = "".join(f'<h2>{E(g)}</h2><div class="chips">' + "".join(f'<a class="chip" href="{u}">{E(l)}</a>' for l, u in lst) + "</div>" for g, lst in groups)
+    other = t('<h2>Version française</h2><p><a class="chip" href="/fr/plan-du-site/" hreflang="fr" lang="fr">Plan du site en français</a></p>',
+              '<h2>English version</h2><p><a class="chip" href="%%EN_SITEMAP%%" hreflang="en" lang="en">Site map in English</a></p>')
+    simple("/site-map/", t("Site map", "Plan du site"), t("Site map", "Plan du site"), t(f"Every page of the {NOM} website.", f"Toutes les pages du site {NOM}."), prose + other,
+           t(f"Site map | {NOM}", f"Plan du site | {NOM}"), t(f"Site map of {NOM}: services, arrondissements, advice.", f"Plan du site {NOM} : services, arrondissements, conseils."), aside=False)
 
 
 # ---------------------------------------------------------------------------
@@ -1714,7 +1952,7 @@ def write(name, content):
         f.write(content)
 
 
-# Ancien site en français → nouvelles adresses en anglais (301)
+# Ancien site en français (adresses à la racine) : correspondance avec les pages anglaises
 FR_SVC = {"ouverture-de-porte": "door-opening", "serrure-bloquee": "jammed-lock", "cle-cassee": "broken-key",
           "changement-de-serrure": "lock-replacement", "serrure-connectee": "smart-lock", "apres-effraction": "break-in-repair",
           "blindage-de-porte": "door-armoring", "porte-blindee": "armored-door", "porte-de-cave": "cellar-door", "boite-aux-lettres": "mailbox-lock"}
@@ -1729,20 +1967,55 @@ FR_PAGES = {"/urgence/": "/emergency/", "/tarifs/": "/prices/", "/assurance/": "
             "/english-locksmith-paris": "/", "/cerrajero-paris": "/"}
 
 
+# Adresses de la version française : page anglaise -> page française
+def build_fr_paths():
+    m = {"/": "/fr/", "/services/": "/fr/services/", "/contact/": "/fr/contact/", "/404.html": "/fr/404.html"}
+    m.update({en: "/fr" + fr for fr, en in FR_PAGES.items() if fr.endswith("/")})
+    m.update({f"/services/{en}/": f"/fr/services/{fr}/" for fr, en in FR_SVC.items()})
+    m.update({z["url"]: f"/fr/{z['fr_slug']}/" for z in build_arr()})
+    return m
+
+
+FR_PATHS = build_fr_paths()
+
+# Contenu qui change avec la langue (data.py / data_fr.py et constantes de ce fichier)
+LANG_KEYS = ["SERVICES", "URGENCES", "ARRONDISSEMENTS", "TARIFS", "MARQUES", "ARTICLES", "COMPARATIF", "CHARTE", "INCLUS", "VIDEOS",
+             "WA_MSG", "NAV", "SLOTS", "SLOTS_WE", "WEEKEND_NOTE", "PARIS_BG", "HOME_FAQ", "MOIS", "ARR_INTROS", "URG_FAQ", "GUIDE", "SVC_LOCAL"]
+_EN_STATE = {}
+
+
+def set_lang(lang):
+    global LANG, SERVICES, SVC_URG, SVC_TRAV, SVC_BY_SLUG, ARR
+    g = globals()
+    if not _EN_STATE:
+        _EN_STATE.update({k: g[k] for k in LANG_KEYS})
+    g.update(_EN_STATE if lang == "en" else {k: getattr(DATA_FR, k) for k in LANG_KEYS})
+    LANG = lang
+    SERVICES = sort_services(SERVICES)
+    SVC_URG = [s for s in SERVICES if s["cat"] == "urgence"]
+    SVC_TRAV = [s for s in SERVICES if s["cat"] != "urgence"]
+    SVC_BY_SLUG = {s["slug"]: s for s in SERVICES}
+    ARR = build_arr(ARRONDISSEMENTS, lang)
+    _BG_N[0] = 0
+
+
 def build_redirects():
-    rules = list(FR_PAGES.items())
-    rules += [(f"/services/{fr}/", f"/services/{en}/") for fr, en in FR_SVC.items()]
+    # Anciennes adresses françaises (à la racine) -> nouvelle version française dans /fr/
+    rules = [(fr, FR_PATHS.get(en, en)) for fr, en in FR_PAGES.items()]
+    rules += [(f"/services/{fr}/", f"/fr/services/{fr}/") for fr in FR_SVC]
     for z in ARR:
-        rules.append((f"/{z['fr_slug']}/", z["url"]))
-        rules += [(f"/{z['fr_slug']}/{fr}/", f"{z['url']}#{en}") for fr, en in FR_SVC.items()]
-        # anciennes pages « service × arrondissement », fusionnées dans la page de l'arrondissement
+        fr_z = f"/fr/{z['fr_slug']}/"
+        rules.append((f"/{z['fr_slug']}/", fr_z))
+        rules += [(f"/{z['fr_slug']}/{fr}/", f"{fr_z}#{en}") for fr, en in FR_SVC.items()]
+        # anciennes pages anglaises « service × arrondissement », fusionnées dans la page de l'arrondissement
         rules += [(combo_url(s, z), f"{z['url']}#{s['slug']}") for s in SERVICES]
     lines = []
     for old, new in rules:
         lines.append(f"{old}  {new}  301")
         if old.endswith("/"):
             lines.append(f"{old.rstrip('/')}  {new}  301")
-    write("_redirects", "# Ancienne version française du site → version anglaise\n" + "\n".join(lines) + "\n")
+    write("_redirects", "# Anciennes adresses françaises → version française (/fr/) ; anciennes pages service × arrondissement → page de l'arrondissement\n"
+          + "\n".join(lines) + "\n# Page 404 en français\n/fr/*  /fr/404.html  404\n")
     return len(rules)
 
 
@@ -1757,13 +2030,26 @@ def build_seo():
         if p.startswith("/locksmith-paris-"):
             return "0.7"
         return "0.5"
-    urls = "".join(f"  <url><loc>{URL}{p}</loc><lastmod>{TODAY}</lastmod><priority>{prio(p)}</priority></url>\n" for p in SITEMAP)
-    write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + "</urlset>\n")
-    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /_src/\nDisallow: /thank-you/\n\nSitemap: {URL}/sitemap.xml\n")
+
+    # Chaque page existe en anglais et en français : les deux adresses sont listées avec leurs équivalents (hreflang)
+    urls = ""
+    for p in SITEMAP:
+        fr = fr_path(p)
+        alt = (f'    <xhtml:link rel="alternate" hreflang="en" href="{URL}{p}"/>\n'
+               f'    <xhtml:link rel="alternate" hreflang="fr" href="{URL}{fr}"/>\n'
+               f'    <xhtml:link rel="alternate" hreflang="x-default" href="{URL}{p}"/>\n') if fr else ""
+        for u in (p, fr) if fr else (p,):
+            urls += f"  <url>\n    <loc>{URL}{u}</loc>\n{alt}    <lastmod>{TODAY}</lastmod>\n    <priority>{prio(p)}</priority>\n  </url>\n"
+    write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+          'xmlns:xhtml="http://www.w3.org/1999/xhtml">\n' + urls + "</urlset>\n")
+    write("robots.txt", f"User-agent: *\nAllow: /\nDisallow: /_src/\nDisallow: /thank-you/\nDisallow: /fr/merci/\n\nSitemap: {URL}/sitemap.xml\n")
 
     svc = "\n".join(f"- [{s['nom']}]({URL}{svc_url(s)}): {s['prix']}. {s['resume']}" for s in SERVICES)
-    grille = "\n".join(f"- {t[0]}: " + " / ".join(v or "quote" for v in t[1:]) for t in TARIFS)
+    grille = "\n".join(f"- {r[0]}: " + " / ".join(v or "quote" for v in r[1:]) for r in TARIFS)
     arr = "\n".join(f"- [Locksmith {z['court']}]({URL}{z['url']}) – {z['cp'][0]}" for z in ARR)
+    fr_pages = "\n".join(f"- [{l}]({URL}{FR_PATHS[p]})" for l, p in [
+        ("Accueil", "/"), ("Urgence 24h/24", "/emergency/"), ("Services", "/services/"), ("Tarifs", "/prices/"),
+        ("Arrondissements", "/locksmith-paris/"), ("Nos engagements", "/our-commitments/"), ("Contact", "/contact/")])
     note = f"- Google rating: {CONFIG['avis_note']}/5 ({CONFIG['avis_nombre']} reviews)\n" if CONFIG["avis_note"] else ""
     write("llms.txt", f"""# {NOM}
 
@@ -1774,7 +2060,7 @@ def build_seo():
 - Phone: {TEL}, 24/7
 - WhatsApp: {WA}
 - Email: {CONFIG['email']}
-- Website: {URL}/
+- Website: {URL}/ (English) and {URL}/fr/ (French)
 - Area: Paris only, 1st to 20th arrondissement
 - Average arrival: about 30 minutes
 - Languages: English, French
@@ -1790,6 +2076,10 @@ def build_seo():
 {arr}
 
 Each arrondissement page lists every service with its price and local details (e.g. {URL}{ARR[14]["url"]}#door-opening).
+
+## Version française (French version)
+Every page also exists in French, under /fr/ (e.g. {URL}{FR_PATHS[ARR[14]["url"]]}).
+{fr_pages}
 """)
     write("site.webmanifest", json.dumps({
         "name": f"{NOM} – 24/7 locksmith", "short_name": "Secure Locksmith", "lang": "en", "start_url": "/",
@@ -1799,17 +2089,20 @@ Each arrondissement page lists every service with its price and local details (e
 
 
 def main():
-    build_home()
-    build_services()
-    build_arr_pages()
-    build_static()
-    build_urgence()
-    build_charte()
-    build_conseils()
-    build_misc()
+    for lang in ("en", "fr"):
+        set_lang(lang)
+        build_home()
+        build_services()
+        build_arr_pages()
+        build_static()
+        build_urgence()
+        build_charte()
+        build_conseils()
+        build_misc()
+    set_lang("en")
     build_seo()
     n = build_redirects()
-    print(f"{len(SITEMAP)} pages indexables générées, {n} redirections depuis l'ancienne version française.")
+    print(f"{len(SITEMAP)} pages indexables générées par langue (anglais + français), {n} redirections.")
 
 
 if __name__ == "__main__":

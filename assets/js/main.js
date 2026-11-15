@@ -1,4 +1,8 @@
 (function(){
+  // Langue de la page (les textes affichés par ce script existent en anglais et en français)
+  var FR = document.documentElement.lang === "fr";
+  function tr(en, fr){ return FR ? fr : en; }
+
   // Menu mobile
   var burger = document.querySelector(".burger"), drawer = document.getElementById("drawer");
   if (burger && drawer) {
@@ -35,12 +39,18 @@
   }
   var isHoliday = holiday(y, mo, d), offDay = dow === 0 || dow === 6 || isHoliday;
   var current = offDay ? (h >= 8 && h < 22 ? "soir" : "nuit") : (h >= 8 && h < 18 ? "jour" : (h >= 18 && h < 22 ? "soir" : "nuit"));
-  var dayName = isHoliday ? "a public holiday" : ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][dow];
-  function fmtH(x){ return (x % 12 || 12) + (x < 12 ? "am" : "pm"); }
-  var labels = offDay
-    ? {jour:"day (weekdays only)", soir:"evening (8am – 10pm on weekends and public holidays)", nuit:"night (10pm – 8am)"}
-    : {jour:"day (8am – 6pm)", soir:"evening (6pm – 10pm)", nuit:"night (10pm – 8am)"};
-  var nowTxt = "It is " + fmtH(h) + " on " + dayName + " in Paris";
+  var dayName = FR
+    ? (isHoliday ? "un jour férié" : ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"][dow])
+    : (isHoliday ? "a public holiday" : ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][dow]);
+  function fmtH(x){ return FR ? x + "h" : (x % 12 || 12) + (x < 12 ? "am" : "pm"); }
+  var labels = FR
+    ? (offDay
+      ? {jour:"de journée (en semaine uniquement)", soir:"de soirée (8h – 22h le week-end et les jours fériés)", nuit:"de nuit (22h – 8h)"}
+      : {jour:"de journée (8h – 18h)", soir:"de soirée (18h – 22h)", nuit:"de nuit (22h – 8h)"})
+    : (offDay
+      ? {jour:"day (weekdays only)", soir:"evening (8am – 10pm on weekends and public holidays)", nuit:"night (10pm – 8am)"}
+      : {jour:"day (8am – 6pm)", soir:"evening (6pm – 10pm)", nuit:"night (10pm – 8am)"});
+  var nowTxt = FR ? "Il est " + fmtH(h) + ", " + dayName + ", à Paris" : "It is " + fmtH(h) + " on " + dayName + " in Paris";
   if (offDay) document.querySelectorAll("small[data-h-we]").forEach(function(sm){
     sm.textContent = sm.getAttribute("data-h-we");
     var btn = sm.closest("button"); if (btn && btn.getAttribute("data-slot") === "jour") btn.classList.add("is-off");
@@ -58,8 +68,8 @@
       card.querySelectorAll(".pv[data-slot]").forEach(function(v){ v.hidden = v.getAttribute("data-slot") !== slot; });
       if (now) {
         now.innerHTML = slot === current
-          ? "<i></i>" + nowTxt + ": these are our " + labels[slot] + " prices."
-          : "Prices for " + labels[slot] + ". " + nowTxt + ".";
+          ? "<i></i>" + nowTxt + tr(": these are our " + labels[slot] + " prices.", " : voici nos tarifs " + labels[slot] + ".")
+          : tr("Prices for " + labels[slot] + ". ", "Tarifs " + labels[slot] + ". ") + nowTxt + ".";
         now.hidden = false;
       }
     }
@@ -93,7 +103,7 @@
       e.preventDefault();
       if (!form.reportValidity()) return;
       var btn = form.querySelector("button[type=submit]"), label = btn.innerHTML;
-      btn.disabled = true; btn.textContent = "Sending…";
+      btn.disabled = true; btn.textContent = tr("Sending…", "Envoi…");
       fetch("/", {method: "POST", headers: {"Content-Type": "application/x-www-form-urlencoded"},
                   body: new URLSearchParams(new FormData(form)).toString()})
         .then(function(r){
@@ -114,11 +124,19 @@
     var data = {};
     try { data = JSON.parse(document.getElementById("guide-data").textContent); } catch(e) {}
     var sit = null, slot = current, idx = {jour:0, soir:1, nuit:2};
-    var slotNames = offDay
-      ? {jour:"Daytime rate (weekdays only)", soir:"Weekend & holiday rate (8am–10pm)", nuit:"Night rate (10pm–8am)"}
-      : {jour:"Daytime rate (8am–6pm)", soir:"Evening rate (6pm–10pm)", nuit:"Night rate (10pm–8am)"};
+    var slotNames = FR
+      ? (offDay
+        ? {jour:"Tarif de journée (en semaine uniquement)", soir:"Tarif week-end et jours fériés (8h–22h)", nuit:"Tarif de nuit (22h–8h)"}
+        : {jour:"Tarif de journée (8h–18h)", soir:"Tarif de soirée (18h–22h)", nuit:"Tarif de nuit (22h–8h)"})
+      : (offDay
+        ? {jour:"Daytime rate (weekdays only)", soir:"Weekend & holiday rate (8am–10pm)", nuit:"Night rate (10pm–8am)"}
+        : {jour:"Daytime rate (8am–6pm)", soir:"Evening rate (6pm–10pm)", nuit:"Night rate (10pm–8am)"});
     var auto = g.querySelector(".gd-auto");
-    if (auto) { auto.textContent = "· it is " + fmtH(h) + " on " + dayName + " in Paris, we selected it for you"; auto.hidden = false; }
+    if (auto) {
+      auto.textContent = FR ? "· il est " + fmtH(h) + ", " + dayName + ", à Paris : nous l'avons choisie pour vous"
+                            : "· it is " + fmtH(h) + " on " + dayName + " in Paris, we selected it for you";
+      auto.hidden = false;
+    }
     function q(n){ return g.querySelector('[data-g="' + n + '"]'); }
     function render(){
       g.querySelectorAll(".gd-opt").forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-sit") === sit ? "true" : "false"); });
@@ -129,14 +147,14 @@
       g.querySelector(".gd-out").hidden = false;
       q("slotlabel").textContent = d.label;
       if (d.prices) {
-        q("price").textContent = (d.from ? "from " : "") + "€" + d.prices[idx[slot]];
-        q("note").textContent = "incl. VAT · " + slotNames[slot] + " · confirmed on the phone";
+        q("price").textContent = FR ? (d.from ? "dès " : "") + d.prices[idx[slot]] + "\u00a0€" : (d.from ? "from " : "") + "€" + d.prices[idx[slot]];
+        q("note").textContent = tr("incl. VAT · ", "TTC · ") + slotNames[slot] + tr(" · confirmed on the phone", " · confirmé au téléphone");
       } else {
-        q("price").textContent = "Free quote";
-        q("note").textContent = "The price depends on your lock: we give it on the phone before we travel.";
+        q("price").textContent = tr("Free quote", "Devis gratuit");
+        q("note").textContent = tr("The price depends on your lock: we give it on the phone before we travel.", "Le prix dépend de votre serrure : nous vous l'annonçons au téléphone avant de nous déplacer.");
       }
       q("tip").textContent = d.tip;
-      q("wa").setAttribute("href", q("wa").getAttribute("href").split("?")[0] + "?text=" + encodeURIComponent("Hello, I need a locksmith in Paris: " + d.label + "."));
+      q("wa").setAttribute("href", q("wa").getAttribute("href").split("?")[0] + "?text=" + encodeURIComponent(tr("Hello, I need a locksmith in Paris: ", "Bonjour, j'ai besoin d'un serrurier à Paris : ") + d.label + "."));
       q("more").setAttribute("href", d.url);
       push("guide_urgence", {situation: sit, creneau: slot});
     }
@@ -165,7 +183,7 @@
       var found = false;
       for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].text === svc) { sel.selectedIndex = i; found = true; } }
       if (!found) sel.selectedIndex = sel.options.length - 1;
-      qmSvc.innerHTML = "<small>Free quote</small>" + svc.replace(/[<>&]/g, "");
+      qmSvc.innerHTML = "<small>" + tr("Free quote", "Devis gratuit") + "</small>" + svc.replace(/[<>&]/g, "");
       qmForm.querySelector("input[name=page]").value = location.pathname + " (popup)";
       qmForm.querySelector(".form-ok").hidden = true;
       qm.showModal();
@@ -218,7 +236,7 @@
       if (b) b.addEventListener("click", function(){
         v.muted = !v.muted;
         b.classList.toggle("on", !v.muted);
-        b.setAttribute("aria-label", v.muted ? "Turn sound on" : "Turn sound off");
+        b.setAttribute("aria-label", v.muted ? tr("Turn sound on", "Activer le son") : tr("Turn sound off", "Couper le son"));
         if (v.paused) v.play().catch(function(){});
         push("video_son", {video: v.getAttribute("src").split("/").pop().split("?")[0], son: v.muted ? "off" : "on"});
       });
