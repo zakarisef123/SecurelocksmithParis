@@ -80,7 +80,7 @@ CONFIG = {
     "reviews_widget": "",
     # Entreprise (affichée sur le site et dans les mentions légales)
     "raison_sociale": "Secure Lock Serrurerie",
-    "adresse": {"rue": "5 rue Camille du Gast", "cp": "92390", "ville": "Villeneuve-la-Garenne"},
+    "adresse": {"rue": "47 rue Vivienne", "cp": "75002", "ville": "Paris"},
     "siren": "",   # 9 chiffres
     "siret": "",   # 14 chiffres
     "responsable": "",
