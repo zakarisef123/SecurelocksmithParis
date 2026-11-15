@@ -1000,7 +1000,7 @@ def build_home():
   <div class="wrap hero-grid">
     <div class="hero-text">
       <span class="eyebrow light">Locksmith in Paris · all 20 arrondissements</span>
-      <h1>Locksmith in Paris,<br><span class="gold">24/7</span></h1>
+      <h1>English Speaking Locksmith in Paris,<br><span class="gold">24/7</span></h1>
       <p class="lead">Locked out, jammed lock, broken key, break-in: a qualified, English-speaking locksmith comes to you in about 30 minutes on average. The price is given on the phone and the quote is signed before any work.</p>
       <div class="cta-row">{btn_call(cls="btn btn-gold btn-xl", track="call_hero")}{btn_wa(cls="btn btn-wa btn-xl", track="wa_hero")}</div>
       <div class="hero-proof">
