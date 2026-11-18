@@ -70,10 +70,13 @@ CONFIG = {
     "avis_note": "5.0",
     "avis_nombre": 101,
     # Mesure d'audience (chargée seulement après accord du visiteur)
-    "gtm_id": "GTM-N742H7F8",
+    "gtm_id": "GTM-TXSNDJQV",  # compte GTM « Secure Lock » : balises Google Ads appel + formulaire
     "ga_id": "G-GL99Q7CQKN",
     "ads_id": "AW-17925645444",
-    "ads_conv": {"call": "pIa-CPq274YcEITJzuNC", "wa": "", "form": ""},
+    # Conversions Google Ads envoyées directement par le site. Laisser vide : les conversions
+    # « Clic appel site (GTM) » et « Formulaire de contact site (GTM) » sont envoyées par GTM
+    # (événements clic_appel et envoi_formulaire). Remplir ici les compterait deux fois.
+    "ads_conv": {"call": "", "wa": "", "form": ""},
     "google_verification": "26oalrhYl1sf4O17TalfT0E-_m-pbH7o4PDT2PE984Q",
     # Widget d'avis Google qui se met à jour tout seul (Trustindex, Elfsight, EmbedSocial…) :
     # collez ici le code d'intégration fourni par le service ; il remplace le carrousel ci-dessous.
@@ -1916,6 +1919,8 @@ def build_misc():
 </div></section>'''
     if CONFIG["ads_id"] and conv:
         body += f"<script>gtag('event','conversion',{{'send_to':'{CONFIG['ads_id']}/{conv}','value':1.0,'currency':'EUR'}});</script>"
+    # Envoi sans JavaScript (page rechargée) : même événement que main.js, capté par GTM
+    body += "<script>window.dataLayer=window.dataLayer||[];dataLayer.push({event:'envoi_formulaire',emplacement:'merci'});</script>"
     page("/thank-you/", t(f"Request sent | {NOM}", f"Demande envoyée | {NOM}"), t("Your request has been sent.", "Votre demande a bien été envoyée."), body, robots="noindex, nofollow")
 
     body = f'''<section class="phero center-page"><div class="wrap">
