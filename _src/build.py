@@ -188,6 +188,7 @@ ICONS.update({
     "i-card": f'<symbol id="i-card" viewBox="0 0 24 24" {_S}><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></symbol>',
     "i-badge": f'<symbol id="i-badge" viewBox="0 0 24 24" {_S}><path d="m12 2.5 2.4 1.8 3 .1.9 2.9 2.4 1.8-.9 2.9.9 2.9-2.4 1.8-.9 2.9-3 .1L12 21.5l-2.4-1.8-3-.1-.9-2.9L3.3 15l.9-2.9-.9-2.9 2.4-1.8.9-2.9 3-.1z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>',
     "i-chev": f'<symbol id="i-chev" viewBox="0 0 24 24" {_S} stroke-width="2.2"><path d="m9 6 6 6-6 6"/></symbol>',
+    "i-globe": f'<symbol id="i-globe" viewBox="0 0 24 24" {_S}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>',
 })
 SPRITE = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + "".join(ICONS.values()) + "</defs></svg>"
 
@@ -806,6 +807,15 @@ def lang_switch(path, cls="lang"):
             + "</nav>")
 
 
+def lang_menu(path):
+    """En-tête : menu déroulant compact (langue actuelle, puis les trois langues), pour ne pas élargir l'en-tête."""
+    cur = ' aria-current="true"'
+    links = [("en", path, "English"), ("fr", fr_path(path) or "/fr/", "Français"), ("es", es_path(path) or "/es/", "Español")]
+    items = "".join(f'<a href="{u}" hreflang="{l}" lang="{l}"{cur if LANG == l else ""}><b>{l.upper()}</b>{n}</a>' for l, u, n in links)
+    return (f'<details class="lang-dd"><summary aria-label="Language / Langue / Idioma">{ico("i-globe")}<span>{LANG.upper()}</span>{ico("i-chev", "ic dd-chev")}</summary>'
+            f'<nav class="lang-menu" aria-label="Language / Langue / Idioma">{items}</nav></details>')
+
+
 def alt_links(path):
     """Équivalents d'une page anglaise dans chaque langue : [(langue, adresse)], vide si la page n'est pas traduite."""
     fr, es = fr_path(path), es_path(path)
@@ -919,7 +929,7 @@ window.SLP_CONV={conv};
         doc = localize(doc)
     indexable = robots.startswith("index")
     doc = (doc.replace("<!--ALT-->", alternates(path) if indexable else "")
-              .replace("<!--LANGSW-->", lang_switch(path))
+              .replace("<!--LANGSW-->", lang_menu(path))
               .replace("<!--LANGFOOT-->", lang_switch(path, "lang lang-foot"))
               .replace("%%EN_SITEMAP%%", "/site-map/"))
     real = loc(path)
