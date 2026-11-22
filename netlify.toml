@@ -21,7 +21,7 @@
 
 [[redirects]]
   from = "/cerrajero-paris"
-  to = "/"
+  to = "/es/"
   status = 301
 
 [[headers]]

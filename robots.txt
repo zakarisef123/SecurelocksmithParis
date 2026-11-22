@@ -3,5 +3,6 @@ Allow: /
 Disallow: /_src/
 Disallow: /thank-you/
 Disallow: /fr/merci/
+Disallow: /es/gracias/
 
 Sitemap: https://securelockserrurerie.com/sitemap.xml
