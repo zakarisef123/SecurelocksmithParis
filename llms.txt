@@ -7,7 +7,7 @@
 - Phone: +33 6 67 96 96 20, 24/7
 - WhatsApp: https://wa.me/33667969620
 - Email: securelockserrurerie@gmail.com
-- Website: https://securelockserrurerie.com/ (English) and https://securelockserrurerie.com/fr/ (French)
+- Website: https://securelockserrurerie.com/ (English), https://securelockserrurerie.com/fr/ (French) and https://securelockserrurerie.com/es/ (Spanish)
 - Area: Paris only, 1st to 20th arrondissement
 - Average arrival: about 30 minutes
 - Languages: English, French
@@ -70,3 +70,13 @@ Every page also exists in French, under /fr/ (e.g. https://securelockserrurerie.
 - [Arrondissements](https://securelockserrurerie.com/fr/serrurier-paris/)
 - [Nos engagements](https://securelockserrurerie.com/fr/nos-engagements/)
 - [Contact](https://securelockserrurerie.com/fr/contact/)
+
+## Versión en español (Spanish version)
+Every page also exists in Spanish, under /es/ (e.g. https://securelockserrurerie.com/es/cerrajero-paris-15/).
+- [Inicio](https://securelockserrurerie.com/es/)
+- [Urgencias 24/7](https://securelockserrurerie.com/es/urgencias/)
+- [Servicios](https://securelockserrurerie.com/es/servicios/)
+- [Precios](https://securelockserrurerie.com/es/precios/)
+- [Distritos](https://securelockserrurerie.com/es/cerrajero-paris/)
+- [Nuestros compromisos](https://securelockserrurerie.com/es/nuestros-compromisos/)
+- [Contacto](https://securelockserrurerie.com/es/contacto/)

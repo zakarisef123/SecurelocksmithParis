@@ -31,8 +31,8 @@
 /conseils/reconnaitre-serrurier-honnete  /fr/conseils/reconnaitre-serrurier-honnete/  301
 /conseils/apres-cambriolage-appartement/  /fr/conseils/apres-cambriolage-appartement/  301
 /conseils/apres-cambriolage-appartement  /fr/conseils/apres-cambriolage-appartement/  301
-/english-locksmith-paris  /fr/  301
-/cerrajero-paris  /fr/  301
+/english-locksmith-paris  /  301
+/cerrajero-paris  /es/  301
 /services/ouverture-de-porte/  /fr/services/ouverture-de-porte/  301
 /services/ouverture-de-porte  /fr/services/ouverture-de-porte/  301
 /services/serrure-bloquee/  /fr/services/serrure-bloquee/  301
@@ -893,5 +893,6 @@
 /locksmith-paris-20th/cellar-door  /locksmith-paris-20th/#cellar-door  301
 /locksmith-paris-20th/mailbox-lock/  /locksmith-paris-20th/#mailbox-lock  301
 /locksmith-paris-20th/mailbox-lock  /locksmith-paris-20th/#mailbox-lock  301
-# Page 404 en français
+# Pages 404 en français et en espagnol
 /fr/*  /fr/404.html  404
+/es/*  /es/404.html  404
