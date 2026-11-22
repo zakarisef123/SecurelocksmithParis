@@ -3,6 +3,12 @@
   var LG = document.documentElement.lang, FR = LG === "fr", ES = LG === "es";
   function tr(en, fr, es){ return FR ? fr : ES ? es : en; }
 
+  // Menu des langues (en-tête) : se ferme quand on clique ailleurs ou avec Échap
+  document.querySelectorAll("details.lang-dd").forEach(function(dd){
+    document.addEventListener("click", function(e){ if (dd.open && !dd.contains(e.target)) dd.open = false; });
+    document.addEventListener("keydown", function(e){ if (e.key === "Escape" && dd.open) { dd.open = false; dd.querySelector("summary").focus(); } });
+  });
+
   // Menu mobile
   var burger = document.querySelector(".burger"), drawer = document.getElementById("drawer");
   if (burger && drawer) {
