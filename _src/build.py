@@ -1265,7 +1265,8 @@ def build_home():
 {contact_band()}'''
     ld = [ld_business(full=True), ld_faq(HOME_FAQ),
           {"@context": "https://schema.org", "@type": "WebSite", "name": NOM, "url": URL + "/", "inLanguage": LANG, "publisher": {"@id": BID}}]
-    page("/", t(f"Locksmith Paris 24/7 – English-speaking – {TEL} | {NOM}", f"Serrurier Paris 24h/24 – Dépannage rapide – {TEL} | {NOM}", f"Cerrajero París 24/7 – Urgencias – {TEL} | {NOM}"),
+    page("/", t("Locksmith Paris 24/7 | Emergency & Lockout Service – Secure Locksmith", "Serrurier Paris 24h/24 | Dépannage & Urgence – Secure Locksmith",
+                "Cerrajero París 24/7 | Urgencias y Aperturas – Secure Locksmith"),
          t(f"English-speaking locksmith in Paris, 24/7 across all 20 arrondissements. Door opening from €110 incl. VAT, price given before we travel, signed quote, invoice for your insurer. ☎ {TEL}",
            f"Serrurier à Paris 24h/24 dans les 20 arrondissements. Ouverture de porte dès 110 € TTC, prix annoncé avant le déplacement, devis signé, facture pour votre assurance. ☎ {TEL}", f"Cerrajero en París 24/7 en los 20 distritos. Apertura de puerta desde 110 € IVA incl., precio anunciado antes del desplazamiento, presupuesto firmado, factura para su seguro. ☎ {TEL}"),
          body, ld)
@@ -2106,8 +2107,8 @@ def set_lang(lang):
 def build_redirects():
     # Anciennes adresses françaises (à la racine) -> nouvelle version française dans /fr/
     rules = [(fr, FR_PATHS.get(en, en)) for fr, en in FR_PAGES.items()]
-    # ancienne page espagnole de l'ancien site -> version espagnole
-    rules = [(old, "/es/" if old == "/cerrajero-paris" else new) for old, new in rules]
+    # anciennes pages anglaise et espagnole de l'ancien site -> versions anglaise et espagnole
+    rules = [(old, {"/cerrajero-paris": "/es/", "/english-locksmith-paris": "/"}.get(old, new)) for old, new in rules]
     rules += [(f"/services/{fr}/", f"/fr/services/{fr}/") for fr in FR_SVC]
     for z in ARR:
         fr_z = f"/fr/{z['fr_slug']}/"
